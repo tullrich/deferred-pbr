@@ -1,3 +1,4 @@
 build/
+bin/Deferred
 *.sublime-project
 *.sublime-workspace
