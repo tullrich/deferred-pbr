@@ -17,6 +17,12 @@ find_package( AntTweakBar REQUIRED )
 
 add_executable(Deferred 
 	src/main.c
+	src/utility.h
+	src/utility.c
+	src/gbuffer.h
+	src/gbuffer.c
+	src/deferred.h
+	src/deferred.c
 )
 
 include_directories(
