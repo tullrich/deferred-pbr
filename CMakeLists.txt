@@ -12,6 +12,7 @@ find_package( GLM REQUIRED )
 find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
+find_package( AntTweakBar REQUIRED )
 
 
 add_executable(Deferred 
@@ -20,15 +21,17 @@ add_executable(Deferred
 
 include_directories(
 	${GLM_INCLUDE_DIRS}
-	${SDL2_INCLUDE_DIR}
+	${SDL_INCLUDE_DIR}
 	${OPENGL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIR}
+	${ANT_TWEAK_BAR_INCLUDE_PATH}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
 target_link_libraries(Deferred
-	${SDL2_LIBRARY}
+	${SDL_LIBRARY}
 	${OPENGL_LIBRARIES}
 	${GLEW_LIBRARIES}
+	${ANT_TWEAK_BAR_LIBRARY}
 	"-lm"
 )
