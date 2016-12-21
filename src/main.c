@@ -1,16 +1,164 @@
-#include "utility.h"
-#include "deferred.h"
 #include "common.h"
+#include "particles.h"
+#include "scene.h"
+#include "deferred.h"
+#include "forward.h"
 
-Scene 		gScene;
-Deferred 	gDef;
+#include "stdio.h"
+#include "time.h"
 
-float accum;
+static Scene 				gScene;
+static Deferred 			gDeferred;
+static Forward 				gForward;
+static ParticleEmitterDesc 	gEmitterDesc;
+static ParticleEmitter 		gEmitter;
 
-int initialize()
+static int burst_count = 150;
+static int rotate_cam = 0;
+
+static const TwEnumVal render_mode_def[] = {
+	{RENDER_MODE_SHADED, "Shaded"},
+	{RENDER_MODE_POSITION, "Position"},
+	{RENDER_MODE_DIFFUSE, "Diffuse"},
+	{RENDER_MODE_NORMAL, "Normal"},
+	{RENDER_MODE_SPECULAR, "Specular"},
+	{RENDER_MODE_DEPTH, "Depth"},
+};
+
+static const TwEnumVal particle_shading_mode_def[] = {
+	{PARTICLE_SHADING_FLAT, "Flat"},
+	{PARTICLE_SHADING_TEXTURED, "Textured"},
+};
+
+static const char* gTexturePaths[] = {
+	"images/particles/flare.png",
+	"images/particles/particle.png",
+	"images/particles/smoke.png",
+	"images/particles/divine.png",
+	"images/uv_map.png",
+};
+
+static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
+
+static const TwEnumVal particle_texture_def[] =
 {
-	accum = 0.0f;
+	{0, "Flare"},
+	{1, "Particle"},
+	{2, "Smoke"},
+	{3, "Divine"},
+	{4, "UV Debug"},
+};
 
+static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
+	memset(out, 0, sizeof(ParticleEmitterDesc));
+	out->max = 1024;
+	out->spawn_rate = 60;
+	vec4_dup(out->start_color, Yellow);
+	vec4_dup(out->end_color, Red); out->end_color[3] = 0.0f;
+	out->billboard = 1;
+	out->speed = 8.0f; out->speed_variance = 5.0f;
+	out->life_time = 2.5f; out->life_time_variance = 0.5f;
+	out->shading_mode = PARTICLE_SHADING_TEXTURED;
+	out->texture = gTextures[0];
+	out->start_scale = 1.0f; out->end_scale = 0.01f;
+};
+
+static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
+	memset(out, 0, sizeof(ParticleEmitterDesc));
+	out->max = 1024;
+	out->spawn_rate = 60.0f;
+	vec4_rgba(out->start_color, 100, 100, 255, 255);
+	vec4_dup(out->end_color, White); out->end_color[3] = 0.0f;
+	out->billboard = 1;
+	out->speed = 4.0f;
+	out->speed_variance = 1.0f;
+	out->life_time = 2.5f;
+	out->life_time_variance = 0.5f;
+	out->shading_mode = PARTICLE_SHADING_TEXTURED;
+	out->texture = gTextures[1];
+	out->start_scale = 0.1f;
+	out->end_scale = 0.5f;
+};
+
+static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
+	memset(out, 0, sizeof(ParticleEmitterDesc));
+	out->max = 1024;
+	out->spawn_rate = 24.0f;
+	vec4_dup(out->start_color, Green); out->start_color[3] = 0.4f;
+	vec4_dup(out->end_color, White); out->end_color[3] = 0.0f;
+	out->billboard = 1;
+	out->speed = 3.0f;
+	out->speed_variance = 0.0f;
+	out->life_time = 3.0f;
+	out->life_time_variance = 0.0f;
+	out->shading_mode = PARTICLE_SHADING_TEXTURED;
+	out->texture = gTextures[2];
+	out->start_scale = 2.0f;
+	out->end_scale = 4.5f;
+};
+
+static int initialize_particle_textures() {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gTexturePaths); i++) {
+		if ((gTextures[i] = utility_load_image(GL_TEXTURE_2D, gTexturePaths[i])) < 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void get_particle_texture(void* value, void* user) {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gTexturePaths); i++) {
+		if (gEmitterDesc.texture == gTextures[i]) {
+			*((int*)value) = i;
+			return;
+		}
+	}
+	*((int*)value) = 0;
+}
+
+static void set_particle_texture(const void* value,void* user) {
+	gEmitterDesc.texture = gTextures[*((int*)value)];
+}
+
+static void init_main_light() {
+	gScene.ambient_color[0] = 0.15f;
+	gScene.ambient_color[1] = 0.60f;
+	gScene.ambient_color[2] = 0.15f;
+	gScene.ambient_intensity = 0.45f;
+
+	gScene.main_light.position[0] = 5.0f;
+	gScene.main_light.position[1] = 10.0f;
+	gScene.main_light.position[2] = 5.0f;
+
+	gScene.main_light.color[0] = 1.0f;
+	gScene.main_light.color[1] = 0.15f;
+	gScene.main_light.color[2] = 0.25f;
+
+	gScene.main_light.intensity = 1.0f;
+}
+
+static void refresh_emitter() {
+	// delete existing
+	if (gEmitter.desc) {
+		particle_emitter_destroy(&gEmitter);
+		gScene.emitters[0] = NULL;
+	}
+
+	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
+	gScene.emitters[0] = &gEmitter;
+}
+
+static void burst() {
+	particle_emitter_burst(&gEmitter, burst_count);
+}
+
+static void set_preset(void *clientData) {
+	void(*preset_func)(ParticleEmitterDesc*) = clientData;
+	preset_func(&gEmitterDesc);
+	refresh_emitter();
+}
+
+static int initialize() {
 	// Initialize AntTweakBar
 	if (!TwInit(TW_OPENGL, NULL))
 		return 1;
@@ -18,60 +166,123 @@ int initialize()
 	TwWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     TwBar *bar;
-	bar = TwNewBar("Ctrls");
+	bar = TwNewBar("Controls");
+
+	TwAddSeparator(bar, "Renderer", "");
+	TwAddVarRW(bar, "Cam Rotate", TW_TYPE_BOOL32, &rotate_cam, "");
+	TwAddVarRW(bar, "Render Mode", TwDefineEnum("", render_mode_def
+		, STATIC_ELEMENT_COUNT(render_mode_def)), &gDeferred.render_mode, "");
+	TwAddVarRW(bar, "Show Box", TW_TYPE_BOOL32, &gScene.show_box, "");
+	TwAddVarRW(bar, "Ambient Color", TW_TYPE_COLOR3F, &gScene.ambient_color, "");
+	TwAddVarRW(bar, "Ambient Intensity", TW_TYPE_FLOAT, &gScene.ambient_intensity, "step='0.01' min=0 max=1");
+	TwAddVarRW(bar, "Light Position", TW_TYPE_DIR3F, &gScene.main_light.position, "");
+	TwAddVarRW(bar, "Light Color", TW_TYPE_COLOR3F, &gScene.main_light.color, "");
+	TwAddVarRW(bar, "Light Intensity", TW_TYPE_FLOAT, &gScene.main_light.intensity, "step='0.01' min=0 max=1");
+	TwAddSeparator(bar, "Emitter", "");
+	TwAddButton(bar, "Refresh", refresh_emitter, NULL, "");
+	TwAddVarRW(bar, "Spawn Rate", TW_TYPE_FLOAT, &gEmitterDesc.spawn_rate, "");
+	TwAddVarRW(bar, "Shading Mode", TwDefineEnum("", particle_shading_mode_def
+		, STATIC_ELEMENT_COUNT(particle_shading_mode_def)), &gEmitterDesc.shading_mode, "");
+	TwAddVarCB(bar, "Texture", TwDefineEnum("", particle_texture_def
+		, STATIC_ELEMENT_COUNT(particle_texture_def)), &set_particle_texture, &get_particle_texture, NULL, "");
+	TwAddVarRW(bar, "Start Scale", TW_TYPE_FLOAT, &gEmitterDesc.start_scale, "step='0.25' min=.01 max=10");
+	TwAddVarRW(bar, "End Scale", TW_TYPE_FLOAT, &gEmitterDesc.end_scale, "step='0.25' min=.01 max=10");
+	TwAddVarRW(bar, "Start Color", TW_TYPE_COLOR3F, &gEmitterDesc.start_color, "");
+	TwAddVarRW(bar, "End Color", TW_TYPE_COLOR3F, &gEmitterDesc.end_color, "");
+	TwAddVarRW(bar, "Start Alpha", TW_TYPE_FLOAT, &gEmitterDesc.start_color[3], "step='0.01' min=0 max=1");
+	TwAddVarRW(bar, "End Alpha", TW_TYPE_FLOAT, &gEmitterDesc.end_color[3], "step='0.01' min=0 max=1");
+	TwAddVarRW(bar, "Billboard", TW_TYPE_BOOL32, &gEmitterDesc.billboard, "");
+	TwAddVarRW(bar, "Life Time", TW_TYPE_FLOAT, &gEmitterDesc.life_time, "step='0.25' min=0 max=10");
+	TwAddVarRW(bar, "Life Time Variance", TW_TYPE_FLOAT, &gEmitterDesc.life_time_variance, "step='0.25' min=0 max=10");
+	TwAddVarRW(bar, "Speed", TW_TYPE_FLOAT, &gEmitterDesc.speed, "step='1' min=0 max=10");
+	TwAddVarRW(bar, "Speed Variance", TW_TYPE_FLOAT, &gEmitterDesc.speed_variance, "step='1' min=0 max=10");
+	TwAddVarRW(bar, "Max", TW_TYPE_INT32, &gEmitter.max, "step='1' min=1 max=2048");
+	TwAddVarRW(bar, "Local Scale", TW_TYPE_FLOAT, &gEmitter.scale, "step='0.05' min=.01 max=5");
+	TwAddVarRW(bar, "Local Rotate", TW_TYPE_QUAT4F, &gEmitter.rot, "");
+	TwAddVarRW(bar, "Local Translation", TW_TYPE_DIR3F, &gEmitter.pos, "");
+	TwAddVarRW(bar, "Mute", TW_TYPE_BOOL32, &gEmitter.muted, "");
+	TwAddButton(bar, "Burst", burst, NULL, "");
+	TwAddVarRW(bar, "Bust Count", TW_TYPE_INT32, &burst_count, "step='20' min=0 max=1000");
+	TwAddSeparator(bar, "Presets", "");
+	TwAddButton(bar, "Flare", set_preset, &emitter_desc_preset_flare, "");
+	TwAddButton(bar, "Particle", set_preset, &emitter_desc_preset_particle, "");
+	TwAddButton(bar, "Smoke", set_preset, &emitter_desc_preset_smoke, "");
 
 	glewExperimental = 1;
 	glewInit();
 
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_TEXTURE_2D);
+	srand(time(0));
 
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-
-	glEnable(GL_DEPTH_TEST);
-
-	if(deferred_initialize(&gDef))
+	if(deferred_initialize(&gDeferred))
 		return 1;
 
+	if(forward_initialize(&gForward))
+		return 1;
+
+	initialize_particle_textures();
+
 	memset(&gScene, 0, sizeof(Scene));
+	gScene.camera.boomLen = 15.0f;
+	init_main_light();
 
+	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
+	emitter_desc_preset_flare(&gEmitterDesc);
+	refresh_emitter();
+
+	GL_CHECK_ERROR();
 	return 0;
 }
 
-void update_scene()
-{
-/*	vec3 eye = { 0.0f, 0.0f, sinf(accum) };
-	vec3 center = { 0.0f };
-	vec3 up = { 0.0f, 1.0f, 0.0f };
-	mat4x4_look_at(view, eye, center, up);*/
+static void update_scene(float dt) {
+	if (rotate_cam) {
+		gScene.camera.rot[1] += dt * M_PI/10.0f;
+	}
 
-	mat4x4 view;
-	mat4x4_identity(view);
-	mat4x4_translate_in_place(view, 0.0f, 0.0f, -2.0f);
-	mat4x4_rotate_X(view, view, 2.5f * gScene.rot[0]);
-	mat4x4_rotate_Y(view, view, 2.5f * -gScene.rot[1]);
-	mat4x4_translate_in_place(view, -0.5f, -0.5f, -0.5f);
+	// calculate view matrix
+	mat4x4_identity(gScene.camera.view);
+	mat4x4_rotate_X(gScene.camera.view, gScene.camera.view, 2.5f * gScene.camera.rot[0]);
+	mat4x4_rotate_Y(gScene.camera.view, gScene.camera.view, 2.5f * -gScene.camera.rot[1]);
+	gScene.camera.view[3][2] = -gScene.camera.boomLen;
 
-	mat4x4 proj;
-	mat4x4_perspective(proj, 80.0f * M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, 0.1f, 100.0f);
-
-	mat4x4_mul(gScene.camera, proj, view);
+	// calculate view-projection matrix
+	mat4x4_perspective(gScene.camera.proj, 80.0f * M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, 0.1f, 100.0f);
+	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
 }
 
-int frame()
-{
-	update_scene();
-	deferred_render(&gDef, &gScene);
+static int frame() {
+	// calc dt
+	static float prevFrameTime = 0.0f;
+	float frameTime = utility_secs_since_launch();
+	float dt = frameTime - prevFrameTime;
+	prevFrameTime = frameTime;
+
+	// update camera
+	update_scene(dt);
+
+	// update emitter
+	particle_emitter_update(&gEmitter, dt);
+
+	// clear backbuffer
+	utility_set_clear_color(0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// render
+	deferred_render(&gDeferred, &gScene);
+	forward_render(&gForward, &gScene);
+
+	// render gui
 	TwDraw();
+
+	// swap
 	SDL_GL_SwapBuffers();
+
+	GL_CHECK_ERROR();
 	return 0;
 }
 
-int main() 
-{
+int main() {
 	SDL_Init(SDL_INIT_VIDEO);              // Initialize SDL
- 
+
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,          8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,           8);
@@ -82,14 +293,16 @@ int main()
     SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
- 
+
  	SDL_Surface *Surf_Display;
     if((Surf_Display = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, SDL_HWSURFACE | SDL_GL_DOUBLEBUFFER | SDL_OPENGL)) == NULL) {
         return 1;
     }
 
-	if(initialize())
+	if(initialize()) {
+		printf("Failed to initialize. Exiting.\n");
 		return 1;
+	}
 
 	// The window is open: enter program loop (see SDL_PollEvent)
 	int quit = 0;
@@ -116,8 +329,8 @@ int main()
 			}
 			else if (event.type == SDL_MOUSEMOTION) {
 				if (event.motion.state & SDL_BUTTON_LMASK) {
-					gScene.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
-					gScene.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
+					gScene.camera.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
+					gScene.camera.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
 				}
 			}
 			else if (event.type == SDL_QUIT) {

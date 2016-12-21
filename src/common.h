@@ -1,12 +1,128 @@
 #pragma once
-
 #include <stdio.h>
 
 #include <SDL.h>
 #include <GL/glew.h>
 #include "AntTweakBar.h"
+#include "stb_image.h"
 
 #include "linmath.h"
 
-#define WINDOW_WIDTH 640
+static inline void vec3_dup(vec3 r, vec3 const v) {
+	for(int i=0; i<3; ++i)
+		r[i] = v[i];
+}
+static inline void vec3_swizzle(vec3 r, float val) {
+	r[0] = r[1] = r[2] = val;
+}
+static inline void vec3_zero(vec3 r) {
+	r[0] = r[1] = r[2] = 0.0f;
+}
+static inline void vec3_negate_in_place(vec4 r) {
+	for(int i=0; i<3; ++i)
+		r[i] = -r[i];
+}
+static inline float vec3_angle(vec3 a, vec3 b) {
+	float cosAngle = vec3_mul_inner(a, b);
+	return acosf(cosAngle);
+}
+static inline void vec4_dup(vec4 r, vec4 const v) {
+	for(int i=0; i<4; ++i)
+		r[i] = v[i];
+}
+static inline void vec4_swizzle(vec4 r, float val) {
+	r[0] = r[1] = r[2] = r[3] = val;
+}
+static inline void vec4_zero(vec4 r) {
+	r[0] = r[1] = r[2] = r[3] = 0.0f;
+}
+static inline void vec4_negate_in_place(vec4 r) {
+	for(int i=0; i<4; ++i)
+		r[i] = -r[i];
+}
+static inline void vec4_rgba(vec4 out, unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
+	out[0] = r/255.0f; out[1] = g/255.0f;
+	out[2] = b/255.0f; out[3] = a/255.0f;
+}
+static inline void quat_dup(quat r, quat const v) {
+	for(int i=0; i<4; ++i)
+		r[i] = v[i];
+}
+static inline void quat_to_axis_angle(float* angle, vec3 axis, quat const q) {
+	*angle = acosf(q[3]) * 2.0f;
+	float sin_half_angle = sqrt(1.0f-q[3]*q[3]);
+	for(int i=0; i<3; ++i) {
+		if(sin_half_angle > 0.0f) {
+			axis[i] = q[i] / sin_half_angle;
+		} else {
+			axis[i] = 0.0f;
+		}
+	}
+}
+static inline void mat4x4_printf(mat4x4 m) {
+	printf("[ %f, %f, %f, %f\n", m[0][0], m[0][1], m[0][2], m[0][3]);
+	printf("  %f, %f, %f, %f\n", m[1][0], m[1][1], m[1][2], m[1][3]);
+	printf("  %f, %f, %f, %f\n", m[2][0], m[2][1], m[2][2], m[2][3]);
+	printf("  %f, %f, %f, %f ]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
+}
+static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
+	float r31 = m[2][0];
+	 if (r31 == 1.0f) {
+		euler[0] = atan2f(-m[0][1], -m[0][2]);
+   		euler[1] = -M_PI/2.0f;
+		euler[2] = 0.0f;
+	 } else if (r31 == -1.0f) {
+		euler[0] = atan2f(m[0][1], m[0][2]);
+   		euler[1] = M_PI/2.0f;
+		euler[2] = 0.0f;
+	 } else {
+   		euler[1] = -asinf(r31);
+		float cosTheta = cos(euler[1]);
+
+		euler[0] = atan2f(m[2][1]/cosTheta,m[2][2]/cosTheta);
+		euler[2] = atan2f(m[1][0]/cosTheta,m[0][0]/cosTheta);
+	 }
+ }
+ static inline void mat4x4_make_transform(mat4x4 r, vec3 const scale, quat const rotation, vec3 const translation) {
+	 mat4x4_identity(r);
+	 mat4x4_from_quat(r, rotation);
+	 mat4x4_scale_aniso(r, r, scale[0], scale[1], scale[2]);
+	 vec3_dup(r[3], translation);
+	 r[3][3] = 1.0f;
+ }
+ static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, quat const rotation, vec3 const translation) {
+	 vec3 scaleVec;
+	 vec3_swizzle(scaleVec, scale);
+	 mat4x4_make_transform(r, scaleVec, rotation, translation);
+ }
+
+ #define FORMAT_VEC3(v) v[0], v[1], v[2]
+ #define FORMAT_VEC4(v) v[0], v[1], v[2], v[3]
+
+const static vec4 Black = {0.0f, 0.0f, 0.0f, 1.0f};
+const static vec4 White = {1.0f, 1.0f, 1.0f, 1.0f};
+const static vec4 Red = {1.0f, 0.0f, 0.0f, 1.0f};
+const static vec4 Green = {0.0f, 1.0f, 0.0f, 1.0f};
+const static vec4 Blue = {0.0f, 0.0f, 1.0f, 1.0f};
+const static vec4 Yellow = {1.0f, 1.0f, 0.0f, 1.0f};
+const static vec4 Zero = {0.0f, 0.0f, 0.0f, 0.0f};
+const static vec4 Axis_Forward = {0.0f, 0.0f, -1.0f, 0.0f};
+const static vec4 Axis_Up = {0.0f, 1.0f, 0.0f, 0.0f};
+const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
+
+#define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 640
+
+#define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
+
+typedef enum
+{
+	RENDER_MODE_SHADED,
+	RENDER_MODE_POSITION,
+	RENDER_MODE_DIFFUSE,
+	RENDER_MODE_NORMAL,
+	RENDER_MODE_SPECULAR,
+	RENDER_MODE_DEPTH
+} RenderMode;
+
+#include "utility.h"

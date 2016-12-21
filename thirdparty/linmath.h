@@ -149,7 +149,7 @@ static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b)
 	}
 	mat4x4_dup(M, temp);
 }
-static inline void mat4x4_mul_vec4(vec4 r, mat4x4 M, vec4 v)
+static inline void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)
 {
 	int i, j;
 	for(j=0; j<4; ++j) {
@@ -209,7 +209,7 @@ static inline void mat4x4_rotate(mat4x4 R, mat4x4 M, float x, float y, float z, 
 		mat4x4_add(T, T, C);
 		mat4x4_add(T, T, S);
 
-		T[3][3] = 1.;		
+		T[3][3] = 1.;
 		mat4x4_mul(R, M, T);
 	} else {
 		mat4x4_dup(R, M);
@@ -251,7 +251,7 @@ static inline void mat4x4_rotate_Z(mat4x4 Q, mat4x4 M, float angle)
 	};
 	mat4x4_mul(Q, M, R);
 }
-static inline void mat4x4_invert(mat4x4 T, mat4x4 M)
+static inline void mat4x4_invert(mat4x4 T, mat4x4 const M)
 {
 	float s[6];
 	float c[6];
@@ -268,10 +268,10 @@ static inline void mat4x4_invert(mat4x4 T, mat4x4 M)
 	c[3] = M[2][1]*M[3][2] - M[3][1]*M[2][2];
 	c[4] = M[2][1]*M[3][3] - M[3][1]*M[2][3];
 	c[5] = M[2][2]*M[3][3] - M[3][2]*M[2][3];
-	
+
 	/* Assumes it is invertible */
 	float idet = 1.0f/( s[0]*c[5]-s[1]*c[4]+s[2]*c[3]+s[3]*c[2]-s[4]*c[1]+s[5]*c[0] );
-	
+
 	T[0][0] = ( M[1][1] * c[5] - M[1][2] * c[4] + M[1][3] * c[3]) * idet;
 	T[0][1] = (-M[0][1] * c[5] + M[0][2] * c[4] - M[0][3] * c[3]) * idet;
 	T[0][2] = ( M[3][1] * s[5] - M[3][2] * s[4] + M[3][3] * s[3]) * idet;
@@ -299,7 +299,7 @@ static inline void mat4x4_orthonormalize(mat4x4 R, mat4x4 M)
 	vec3 h;
 
 	vec3_norm(R[2], R[2]);
-	
+
 	s = vec3_mul_inner(R[1], R[2]);
 	vec3_scale(h, R[2], s);
 	vec3_sub(R[1], R[1], h);
@@ -320,7 +320,7 @@ static inline void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, 
 {
 	M[0][0] = 2.f*n/(r-l);
 	M[0][1] = M[0][2] = M[0][3] = 0.f;
-	
+
 	M[1][1] = 2.*n/(t-b);
 	M[1][0] = M[1][2] = M[1][3] = 0.f;
 
@@ -328,7 +328,7 @@ static inline void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, 
 	M[2][1] = (t+b)/(t-b);
 	M[2][2] = -(f+n)/(f-n);
 	M[2][3] = -1.f;
-	
+
 	M[3][2] = -2.f*(f*n)/(f-n);
 	M[3][0] = M[3][1] = M[3][3] = 0.f;
 }
@@ -342,7 +342,7 @@ static inline void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, fl
 
 	M[2][2] = -2.f/(f-n);
 	M[2][0] = M[2][1] = M[2][3] = 0.f;
-	
+
 	M[3][0] = -(r+l)/(r-l);
 	M[3][1] = -(t+b)/(t-b);
 	M[3][2] = -(f+n)/(f-n);
@@ -374,7 +374,7 @@ static inline void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float
 	m[3][2] = -((2.f * f * n) / (f - n));
 	m[3][3] = 0.f;
 }
-static inline void mat4x4_look_at(mat4x4 m, vec3 eye, vec3 center, vec3 up)
+static inline void mat4x4_look_at(mat4x4 m, vec3 const eye, vec3 const center, vec3 const up)
 {
 	/* Adapted from Android's OpenGL Matrix.java.                        */
 	/* See the OpenGL GLUT documentation for gluLookAt for a description */
@@ -383,9 +383,9 @@ static inline void mat4x4_look_at(mat4x4 m, vec3 eye, vec3 center, vec3 up)
 	/* TODO: The negation of of can be spared by swapping the order of
 	 *       operands in the following cross products in the right way. */
 	vec3 f;
-	vec3_sub(f, center, eye);	
-	vec3_norm(f, f);	
-	
+	vec3_sub(f, center, eye);
+	vec3_norm(f, f);
+
 	vec3 s;
 	vec3_mul_cross(s, f, up);
 	vec3_norm(s, s);
@@ -465,7 +465,7 @@ static inline void quat_conj(quat r, quat q)
 		r[i] = -q[i];
 	r[3] = q[3];
 }
-static inline void quat_rotate(quat r, float angle, vec3 axis) {
+static inline void quat_rotate(quat r, float angle, vec3 const axis) {
 	vec3 v;
 	vec3_scale(v, axis, sinf(angle / 2));
 	int i;
@@ -474,7 +474,7 @@ static inline void quat_rotate(quat r, float angle, vec3 axis) {
 	r[3] = cosf(angle / 2);
 }
 #define quat_norm vec4_norm
-static inline void quat_mul_vec3(vec3 r, quat q, vec3 v)
+static inline void quat_mul_vec3(vec3 r, quat const q, vec3 const v)
 {
 /*
  * Method by Fabian 'ryg' Giessen (of Farbrausch)
@@ -493,7 +493,7 @@ v' = v + q.w * t + cross(q.xyz, t)
 	vec3_add(r, v, t);
 	vec3_add(r, r, u);
 }
-static inline void mat4x4_from_quat(mat4x4 M, quat q)
+static inline void mat4x4_from_quat(mat4x4 M, quat const q)
 {
 	float a = q[3];
 	float b = q[0];
@@ -503,7 +503,7 @@ static inline void mat4x4_from_quat(mat4x4 M, quat q)
 	float b2 = b*b;
 	float c2 = c*c;
 	float d2 = d*d;
-	
+
 	M[0][0] = a2 + b2 - c2 - d2;
 	M[0][1] = 2.f*(b*c + a*d);
 	M[0][2] = 2.f*(b*d - a*c);
@@ -523,7 +523,7 @@ static inline void mat4x4_from_quat(mat4x4 M, quat q)
 	M[3][3] = 1.f;
 }
 
-static inline void mat4x4o_mul_quat(mat4x4 R, mat4x4 M, quat q)
+static inline void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)
 {
 /*  XXX: The way this is written only works for othogonal matrices. */
 /* TODO: Take care of non-orthogonal case. */
@@ -534,7 +534,7 @@ static inline void mat4x4o_mul_quat(mat4x4 R, mat4x4 M, quat q)
 	R[3][0] = R[3][1] = R[3][2] = 0.f;
 	R[3][3] = 1.f;
 }
-static inline void quat_from_mat4x4(quat q, mat4x4 M)
+static inline void quat_from_mat4x4(quat q, mat4x4 const M)
 {
 	float r=0.f;
 	int i;
@@ -553,15 +553,15 @@ static inline void quat_from_mat4x4(quat q, mat4x4 M)
 	r = sqrtf(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]] );
 
 	if(r < 1e-6) {
-		q[0] = 1.f;
-		q[1] = q[2] = q[3] = 0.f;
+		q[0] = q[1] = q[2] = 0.f;
+		q[3] = 1.f;
 		return;
 	}
 
-	q[0] = r/2.f;
-	q[1] = (M[p[0]][p[1]] - M[p[1]][p[0]])/(2.f*r);
-	q[2] = (M[p[2]][p[0]] - M[p[0]][p[2]])/(2.f*r);
-	q[3] = (M[p[2]][p[1]] - M[p[1]][p[2]])/(2.f*r);
+	q[0] = (M[p[0]][p[1]] - M[p[1]][p[0]])/(2.f*r);
+	q[1] = (M[p[2]][p[0]] - M[p[0]][p[2]])/(2.f*r);
+	q[2] = (M[p[2]][p[1]] - M[p[1]][p[2]])/(2.f*r);
+	q[3] = r/2.f;
 }
 
 #endif
