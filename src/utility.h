@@ -19,6 +19,7 @@ GLuint utility_load_image(GLenum target, const char *filepath);
 float utility_secs_since_launch();
 float utility_mod_time(float modulus);
 
-int utility_random01();
-float utility_random_float(); //[-1, 1]
-float utility_randomRange(float min, float max); // inclusive
+int utility_random_bool();
+float utility_random_real01(); //[0, 1]
+float utility_random_real11(); //[-1, 1]
+float utility_random_range(float min, float max); // [min, max]

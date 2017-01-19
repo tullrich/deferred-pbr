@@ -21,7 +21,6 @@ static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const P
 	vec3 cam_forward, cam_up;
 	scene_camera_forward(s, cam_forward);
 	scene_camera_up(s, cam_up);
-	//cam_forward[2] = cam_up[2] = 0.0f;
 
 	mat4x4 invModel;
 	mat4x4_invert(invModel, model2);

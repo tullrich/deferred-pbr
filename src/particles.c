@@ -1,8 +1,8 @@
 #include "particles.h"
 
 static void random_direction(vec3 out) {
-	float theta = utility_randomRange(0.0f, 2.0f * (float)M_PI);
-	float phi = acosf( 1.0f - 2.0f * utility_randomRange( 0.0f, 1.0f ) );
+	float theta = utility_random_range(0.0f, 2.0f * (float)M_PI);
+	float phi = acosf( 1.0f - 2.0f * utility_random_real01() );
 	out[0] = cosf( theta )*sinf( phi );
 	out[1] = sinf( theta )*sinf( phi );
 	out[2] = -cosf( phi );
@@ -56,13 +56,13 @@ Particle* particle_emitter_emit_one(ParticleEmitter* emitter) {
 	}
 	Particle* part = &emitter->particles[emitter->count++];
 	memset(part, 0, sizeof(Particle));
-	part->ttl = desc->life_time + utility_random_float() * desc->life_time_variance;
+	part->ttl = desc->life_time + utility_random_real11() * desc->life_time_variance;
 	part->scale[0] = part->scale[1] = part->scale[2] = desc->start_scale;
 	vec3_swizzle(part->delta_scale, (desc->end_scale - desc->start_scale) / part->ttl);
 	random_direction(part->velocity);
 	vec3_dup(part->rot, part->velocity);
 	//quat_rotation_between(part->rot, part->velocity, Axis_Forward);
-	vec3_scale(part->velocity, part->velocity, desc->speed + utility_random_float() * desc->speed_variance);
+	vec3_scale(part->velocity, part->velocity, desc->speed + utility_random_real11() * desc->speed_variance);
 	vec4_dup(part->color, desc->start_color);
 	vec4_sub(part->delta_color, desc->end_color, desc->start_color);
 	vec4_scale(part->delta_color, part->delta_color, 1.0f/part->ttl);

@@ -48,7 +48,7 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 		printf( "Unable to open shader file %s.\n", filename );
 		return 0;
 	}
-	lengths[i] = len;
+	lengths[i] = (GLint)len;
 
 	GLuint shader = glCreateShader(shader_type);
 	glShaderSource(shader, i+1, sources, lengths);
@@ -240,14 +240,18 @@ float utility_mod_time(float modulus) {
 	return fmodf(utility_secs_since_launch(), modulus); // in seconds
 }
 
-int utility_random01() {
+int utility_random_bool() {
 	return rand() >= (float)RAND_MAX/2;
 }
 
-float utility_random_float() {
+float utility_random_real01() {
+	return (float)rand() / (float)RAND_MAX;
+}
+
+float utility_random_real11() {
 	return -1.0f + 2.0f * rand() / (float)RAND_MAX;
 }
 
-float utility_randomRange(float min, float max) {
+float utility_random_range(float min, float max) {
 	return min + rand() / (float)RAND_MAX * (max - min);
 }
