@@ -1,7 +1,10 @@
 #pragma once
 
 #include "common.h"
+#include "gbuffer.h"
 #include "scene.h"
+
+struct GBuffer;
 
 typedef struct
 {
@@ -18,12 +21,17 @@ typedef struct
 	// uniforms
 	GLint modelviewproj_loc;
 	GLint texture_loc;
+	GLint gbuffer_depth_loc;
 } ParticleShader;
 
 typedef struct
 {
 	ParticleShader particle_shader_flat;
 	ParticleShader particle_shader_textured;
+	ParticleShader particle_shader_textured_soft;
+
+	// Optional gbuffer
+	GBuffer* g_buffer;
 } Forward;
 
 int forward_initialize(Forward* f);

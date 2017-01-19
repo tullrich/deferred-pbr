@@ -152,6 +152,7 @@ static void render_shading(Deferred* d, Scene *s)
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
+
 	for(int i = 0; i < GBUFFER_ATTACHMENTS_COUNT; i++)
 	{
 		glActiveTexture(GL_TEXTURE0 + i);

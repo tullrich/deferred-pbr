@@ -21,7 +21,7 @@ static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const P
 	vec3 cam_forward, cam_up;
 	scene_camera_forward(s, cam_forward);
 	scene_camera_up(s, cam_up);
-	cam_forward[3] = cam_up[3] = 0.0f;
+	//cam_forward[2] = cam_up[2] = 0.0f;
 
 	mat4x4 invModel;
 	mat4x4_invert(invModel, model2);
@@ -30,7 +30,7 @@ static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const P
 	mat4x4_mul_vec4(model_cam_forward, invModel, cam_forward);
 	vec4_negate_in_place(model_cam_forward);
 	mat4x4_mul_vec4(model_cam_up, invModel, cam_up);
-	vec4_negate_in_place(model_cam_up);
+	//vec4_negate_in_place(model_cam_up);
 
 	mat4x4 lookAt;
 	vec3 zero;
@@ -38,15 +38,13 @@ static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const P
 	mat4x4_look_at(lookAt, zero, model_cam_forward, model_cam_up);
 
 	vec3_zero(euler);
-	if (emitter->desc->billboard) {
-		mat4x4_to_euler(euler, lookAt);
-	}
+	mat4x4_to_euler(euler, lookAt);
 }
 
-static int load_particle_shader(ParticleShader* shader, const char* vert, const char* frag) {
+static int load_particle_shader(ParticleShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
 	// initialize particle shader
-	if (!(shader->program = utility_create_program(vert, frag))) {
-		printf("Unable to load shader [%f. %f]\n", vert, frag);
+	if (!(shader->program = utility_create_program_defines(vert, frag, defines, defines_count))) {
+		printf("Unable to load shader [%s. %s]\n", vert, frag);
 		return 1;
 	}
 	shader->vert_loc = glGetAttribLocation(shader->program, "vert");
@@ -57,15 +55,24 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 	shader->color_loc = glGetAttribLocation(shader->program, "color");
 	shader->modelviewproj_loc = glGetUniformLocation(shader->program, "ModelViewProj");
 	shader->texture_loc = glGetUniformLocation(shader->program, "Texture");
+	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
 	return 0;
 }
 
 int forward_initialize(Forward* f) {
 	memset(f, 0, sizeof(Forward));
-	if (load_particle_shader(&f->particle_shader_flat, "shaders/particle.vert", "shaders/particle_flat.frag")) {
+	if (load_particle_shader(&f->particle_shader_flat, "shaders/particle.vert", "shaders/particle_flat.frag", NULL, 0)) {
 		return 1;
 	}
-	if (load_particle_shader(&f->particle_shader_textured, "shaders/particle.vert", "shaders/particle_textured.frag")) {
+	if (load_particle_shader(&f->particle_shader_textured, "shaders/particle.vert", "shaders/particle_textured.frag", NULL, 0 )) {
+		return 1;
+	}
+
+	const char* soft_defines[] = {
+		"#define SOFT_PARTICLES\n"
+	};
+	if (load_particle_shader(&f->particle_shader_textured_soft, "shaders/particle.vert", "shaders/particle_textured.frag"
+			, soft_defines, STATIC_ELEMENT_COUNT(soft_defines))) {
 		return 1;
 	}
 	return 0;
@@ -79,17 +86,23 @@ void forward_render(Forward* f, Scene *s) {
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// draw emitters (nieve implementation)
+	// draw emitters
 	for (int i = 0; i < SCENE_EMITTERS_MAX, s->emitters[i]; i++) {
-		const ParticleEmitter* emitter = s->emitters[i];
+		ParticleEmitter* emitter = s->emitters[i];
 		const ParticleEmitterDesc* desc = emitter->desc;
 
 		const ParticleShader* shader = NULL;
 		switch (desc->shading_mode) {
-			case PARTICLE_SHADING_TEXTURED: shader = &f->particle_shader_textured; break;
+			case PARTICLE_SHADING_TEXTURED: {
+				if (desc->soft) {
+					shader = &f->particle_shader_textured_soft;
+				}
+				else {
+					shader = &f->particle_shader_textured;
+				}
+				break;
+			}
 			case PARTICLE_SHADING_FLAT: //  fallthrough
 			default: shader = &f->particle_shader_flat;
 		}
@@ -98,6 +111,14 @@ void forward_render(Forward* f, Scene *s) {
 		glUseProgram(shader->program);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
+
+		// depth sort and select blend mode
+		if (desc->depth_sort_alpha_blend) {
+			particle_emitter_sort(emitter, s->camera.pos);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha blend
+		} else {
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive blend
+		}
 
 		// calculate model matrix
 		mat4x4 model;
@@ -108,24 +129,37 @@ void forward_render(Forward* f, Scene *s) {
 		mat4x4_mul(mvp, s->camera.viewProj, model);
 		glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
+		// bind depth texture for 'soft' particles
+		if (desc->soft && f->g_buffer && shader->gbuffer_depth_loc != -1) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, f->g_buffer->depth_render_buffer);
+			glUniform1i(shader->gbuffer_depth_loc, 0);
+		}
+
 		// bind texture
 		if (shader->texture_loc >= 0 && desc->texture >= 0) {
-			glActiveTexture(GL_TEXTURE0);
+			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, desc->texture);
-			glUniform1i(shader->texture_loc, 0);
+			glUniform1i(shader->texture_loc, 1);
 		}
 
 		// calc optional billboarding euler angles
 		vec3 euler;
-		if (desc->billboard) {
+		if (desc->orient_mode == PARTICLE_ORIENT_SCREEN_ALIGNED) {
 			calculate_emitter_billboard_euler(euler, model, emitter, s);
 		}
 
 		// draw particles
 		for (int j = 0; j < emitter->count; j++) {
-			const Particle* part = &emitter->particles[j];
+			const Particle* part;
+			if (desc->depth_sort_alpha_blend) {
+				part = &emitter->particles[emitter->sort_records[j].index];
+			} else {
+				part = &emitter->particles[j];
+			}
+
 			vec3 rot;
-			if (desc->billboard) {
+			if (desc->orient_mode == PARTICLE_ORIENT_SCREEN_ALIGNED) {
 				vec3_dup(rot, euler);
 			} else {
 				vec3_dup(rot, part->rot);
@@ -136,4 +170,6 @@ void forward_render(Forward* f, Scene *s) {
 	}
 
 	glDepthMask(GL_TRUE);
+
+	GL_CHECK_ERROR();
 }

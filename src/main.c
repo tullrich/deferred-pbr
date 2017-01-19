@@ -4,18 +4,17 @@
 #include "deferred.h"
 #include "forward.h"
 
-#include "stdio.h"
-#include "time.h"
-
 static Scene 				gScene;
 static Deferred 			gDeferred;
 static Forward 				gForward;
+
 static ParticleEmitterDesc 	gEmitterDesc;
 static ParticleEmitter 		gEmitter;
 
 static int burst_count = 150;
 static int rotate_cam = 0;
 
+// box render modes Tw def
 static const TwEnumVal render_mode_def[] = {
 	{RENDER_MODE_SHADED, "Shaded"},
 	{RENDER_MODE_POSITION, "Position"},
@@ -25,11 +24,28 @@ static const TwEnumVal render_mode_def[] = {
 	{RENDER_MODE_DEPTH, "Depth"},
 };
 
+// particle shading modes Tw def
 static const TwEnumVal particle_shading_mode_def[] = {
 	{PARTICLE_SHADING_FLAT, "Flat"},
 	{PARTICLE_SHADING_TEXTURED, "Textured"},
 };
 
+// particle orientation mode Tw def
+static const TwEnumVal particle_orient_mode_def[] = {
+	{PARTICLE_ORIENT_FREE, "Free" },
+	{PARTICLE_ORIENT_SCREEN_ALIGNED, "Screen Aligned" },
+};
+
+// particle texture index Tw def
+static const TwEnumVal particle_texture_def[] = {
+	{0, "Flare"},
+	{1, "Particle"},
+	{2, "Smoke"},
+	{3, "Divine"},
+	{4, "UV Debug"},
+};
+
+// particle texture index -> paths LUT
 static const char* gTexturePaths[] = {
 	"images/particles/flare.png",
 	"images/particles/particle.png",
@@ -40,22 +56,14 @@ static const char* gTexturePaths[] = {
 
 static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
 
-static const TwEnumVal particle_texture_def[] =
-{
-	{0, "Flare"},
-	{1, "Particle"},
-	{2, "Smoke"},
-	{3, "Divine"},
-	{4, "UV Debug"},
-};
-
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	memset(out, 0, sizeof(ParticleEmitterDesc));
 	out->max = 1024;
 	out->spawn_rate = 60;
 	vec4_dup(out->start_color, Yellow);
 	vec4_dup(out->end_color, Red); out->end_color[3] = 0.0f;
-	out->billboard = 1;
+	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
+	out->depth_sort_alpha_blend = 0;
 	out->speed = 8.0f; out->speed_variance = 5.0f;
 	out->life_time = 2.5f; out->life_time_variance = 0.5f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
@@ -68,8 +76,9 @@ static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
 	out->max = 1024;
 	out->spawn_rate = 60.0f;
 	vec4_rgba(out->start_color, 100, 100, 255, 255);
-	vec4_dup(out->end_color, White); out->end_color[3] = 0.0f;
-	out->billboard = 1;
+	vec4_dup( out->end_color, White ); out->end_color[ 3 ] = 0.0f;
+	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
+	out->depth_sort_alpha_blend = 0;
 	out->speed = 4.0f;
 	out->speed_variance = 1.0f;
 	out->life_time = 2.5f;
@@ -86,7 +95,8 @@ static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
 	out->spawn_rate = 24.0f;
 	vec4_dup(out->start_color, Green); out->start_color[3] = 0.4f;
 	vec4_dup(out->end_color, White); out->end_color[3] = 0.0f;
-	out->billboard = 1;
+	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
+	out->depth_sort_alpha_blend = 1;
 	out->speed = 3.0f;
 	out->speed_variance = 0.0f;
 	out->life_time = 3.0f;
@@ -137,7 +147,7 @@ static void init_main_light() {
 	gScene.main_light.intensity = 1.0f;
 }
 
-static void refresh_emitter() {
+static void refresh_emitter( void *clientData ) {
 	// delete existing
 	if (gEmitter.desc) {
 		particle_emitter_destroy(&gEmitter);
@@ -155,12 +165,15 @@ static void burst() {
 static void set_preset(void *clientData) {
 	void(*preset_func)(ParticleEmitterDesc*) = clientData;
 	preset_func(&gEmitterDesc);
-	refresh_emitter();
+	refresh_emitter( NULL );
 }
 
 static int initialize() {
+	glewExperimental = 1;
+	glewInit();
+
 	// Initialize AntTweakBar
-	if (!TwInit(TW_OPENGL, NULL))
+	if (!TwInit(TW_OPENGL_CORE, NULL))
 		return 1;
 
 	TwWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -179,19 +192,22 @@ static int initialize() {
 	TwAddVarRW(bar, "Light Color", TW_TYPE_COLOR3F, &gScene.main_light.color, "");
 	TwAddVarRW(bar, "Light Intensity", TW_TYPE_FLOAT, &gScene.main_light.intensity, "step='0.01' min=0 max=1");
 	TwAddSeparator(bar, "Emitter", "");
-	TwAddButton(bar, "Refresh", refresh_emitter, NULL, "");
+	TwAddButton(bar, "Refresh", (TwButtonCallback)&refresh_emitter, NULL, "");
 	TwAddVarRW(bar, "Spawn Rate", TW_TYPE_FLOAT, &gEmitterDesc.spawn_rate, "");
 	TwAddVarRW(bar, "Shading Mode", TwDefineEnum("", particle_shading_mode_def
 		, STATIC_ELEMENT_COUNT(particle_shading_mode_def)), &gEmitterDesc.shading_mode, "");
 	TwAddVarCB(bar, "Texture", TwDefineEnum("", particle_texture_def
-		, STATIC_ELEMENT_COUNT(particle_texture_def)), &set_particle_texture, &get_particle_texture, NULL, "");
+		, STATIC_ELEMENT_COUNT(particle_texture_def)), (TwSetVarCallback)&set_particle_texture, (TwGetVarCallback)&get_particle_texture, NULL, "");
 	TwAddVarRW(bar, "Start Scale", TW_TYPE_FLOAT, &gEmitterDesc.start_scale, "step='0.25' min=.01 max=10");
 	TwAddVarRW(bar, "End Scale", TW_TYPE_FLOAT, &gEmitterDesc.end_scale, "step='0.25' min=.01 max=10");
 	TwAddVarRW(bar, "Start Color", TW_TYPE_COLOR3F, &gEmitterDesc.start_color, "");
 	TwAddVarRW(bar, "End Color", TW_TYPE_COLOR3F, &gEmitterDesc.end_color, "");
 	TwAddVarRW(bar, "Start Alpha", TW_TYPE_FLOAT, &gEmitterDesc.start_color[3], "step='0.01' min=0 max=1");
 	TwAddVarRW(bar, "End Alpha", TW_TYPE_FLOAT, &gEmitterDesc.end_color[3], "step='0.01' min=0 max=1");
-	TwAddVarRW(bar, "Billboard", TW_TYPE_BOOL32, &gEmitterDesc.billboard, "");
+	TwAddVarRW(bar, "Orientation Mode", TwDefineEnum("", particle_orient_mode_def
+		, STATIC_ELEMENT_COUNT(particle_orient_mode_def)), &gEmitterDesc.orient_mode, "");
+	TwAddVarRW( bar, "Depth Sort", TW_TYPE_BOOL32, &gEmitterDesc.depth_sort_alpha_blend, "" );
+	TwAddVarRW( bar, "Soft", TW_TYPE_BOOL32, &gEmitterDesc.soft, "");
 	TwAddVarRW(bar, "Life Time", TW_TYPE_FLOAT, &gEmitterDesc.life_time, "step='0.25' min=0 max=10");
 	TwAddVarRW(bar, "Life Time Variance", TW_TYPE_FLOAT, &gEmitterDesc.life_time_variance, "step='0.25' min=0 max=10");
 	TwAddVarRW(bar, "Speed", TW_TYPE_FLOAT, &gEmitterDesc.speed, "step='1' min=0 max=10");
@@ -201,23 +217,21 @@ static int initialize() {
 	TwAddVarRW(bar, "Local Rotate", TW_TYPE_QUAT4F, &gEmitter.rot, "");
 	TwAddVarRW(bar, "Local Translation", TW_TYPE_DIR3F, &gEmitter.pos, "");
 	TwAddVarRW(bar, "Mute", TW_TYPE_BOOL32, &gEmitter.muted, "");
-	TwAddButton(bar, "Burst", burst, NULL, "");
+	TwAddButton(bar, "Burst", (TwButtonCallback)burst, NULL, "");
 	TwAddVarRW(bar, "Bust Count", TW_TYPE_INT32, &burst_count, "step='20' min=0 max=1000");
 	TwAddSeparator(bar, "Presets", "");
-	TwAddButton(bar, "Flare", set_preset, &emitter_desc_preset_flare, "");
-	TwAddButton(bar, "Particle", set_preset, &emitter_desc_preset_particle, "");
-	TwAddButton(bar, "Smoke", set_preset, &emitter_desc_preset_smoke, "");
+	TwAddButton(bar, "Flare", (TwButtonCallback)&set_preset, &emitter_desc_preset_flare, "");
+	TwAddButton(bar, "Particle", (TwButtonCallback)&set_preset, &emitter_desc_preset_particle, "");
+	TwAddButton(bar, "Smoke", (TwButtonCallback)&set_preset, &emitter_desc_preset_smoke, "");
 
-	glewExperimental = 1;
-	glewInit();
-
-	srand(time(0));
+	srand((unsigned)time(0));
 
 	if(deferred_initialize(&gDeferred))
 		return 1;
 
 	if(forward_initialize(&gForward))
 		return 1;
+	gForward.g_buffer = &gDeferred.g_buffer;
 
 	initialize_particle_textures();
 
@@ -227,7 +241,7 @@ static int initialize() {
 
 	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
 	emitter_desc_preset_flare(&gEmitterDesc);
-	refresh_emitter();
+	refresh_emitter( NULL );
 
 	GL_CHECK_ERROR();
 	return 0;
@@ -235,17 +249,20 @@ static int initialize() {
 
 static void update_scene(float dt) {
 	if (rotate_cam) {
-		gScene.camera.rot[1] += dt * M_PI/10.0f;
+		gScene.camera.rot[1] += dt * (float)M_PI/10.0f;
 	}
 
 	// calculate view matrix
+	gScene.camera.pos[0] = gScene.camera.pos[1] = 0.0f;
+	gScene.camera.pos[2] = gScene.camera.boomLen;
 	mat4x4_identity(gScene.camera.view);
 	mat4x4_rotate_X(gScene.camera.view, gScene.camera.view, 2.5f * gScene.camera.rot[0]);
 	mat4x4_rotate_Y(gScene.camera.view, gScene.camera.view, 2.5f * -gScene.camera.rot[1]);
-	gScene.camera.view[3][2] = -gScene.camera.boomLen;
+	vec3_dup(gScene.camera.view[3], gScene.camera.pos);
+	vec3_negate_in_place(gScene.camera.view[3]);
 
 	// calculate view-projection matrix
-	mat4x4_perspective(gScene.camera.proj, 80.0f * M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, 0.1f, 100.0f);
+	mat4x4_perspective(gScene.camera.proj, 80.0f * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
 	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
 }
 
@@ -273,14 +290,11 @@ static int frame() {
 	// render gui
 	TwDraw();
 
-	// swap
-	SDL_GL_SwapBuffers();
-
 	GL_CHECK_ERROR();
 	return 0;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 	SDL_Init(SDL_INIT_VIDEO);              // Initialize SDL
 
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
@@ -294,11 +308,13 @@ int main() {
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
- 	SDL_Surface *Surf_Display;
-    if((Surf_Display = SDL_SetVideoMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, SDL_HWSURFACE | SDL_GL_DOUBLEBUFFER | SDL_OPENGL)) == NULL) {
+	SDL_Window* sdlWindow;
+    if(!(sdlWindow = SDL_CreateWindow("Particles", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+			, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
         return 1;
     }
 
+	SDL_GLContext glcontext = SDL_GL_CreateContext(sdlWindow);
 	if(initialize()) {
 		printf("Failed to initialize. Exiting.\n");
 		return 1;
@@ -339,11 +355,19 @@ int main() {
 			}
 		}
 
-		if(frame())
+		if ( frame() )
+		{
 			quit = 1;
+			break;
+		}
+
+		// swap
+		SDL_GL_SwapWindow( sdlWindow );
 	}
 
 	// Clean up
+	SDL_GL_DeleteContext(glcontext);
+	SDL_DestroyWindow( sdlWindow );
 	SDL_Quit();
 	return 0;
 }

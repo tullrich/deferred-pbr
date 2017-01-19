@@ -10,7 +10,7 @@ void utility_report_gl_err(const char * file, const char * func, int line) {
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size) {
 	FILE *fd;
 	int ret = 1;
-	if (fd = fopen(filename, "rb")) {
+	if (!fopen_s(&fd, filename, "rb")) {
 		if (!fseek(fd, 0, SEEK_END)) {
 			size_t fsize = ftell(fd);
 			rewind(fd);
@@ -28,18 +28,32 @@ int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size)
 }
 
 // one of GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER
-GLuint utility_create_shader(const char *filename, GLenum shader_type) {
-	unsigned char* buf;
-	size_t s;
-	if (utility_buffer_file(filename, &buf, &s)) {
-		printf("Unable to open shader file %s.\n", filename);
+GLuint utility_create_shader(const char *filename, GLenum shader_type, const char** defines, int defines_count) {
+	if (defines_count > 30)
 		return 0;
+
+	const char* sources[32];
+	GLint lengths[32];
+	sources[0] = "#version 130\r\n";
+	lengths[0] = (GLint)strlen(sources[0]);
+	int i = 1;
+	for (int j = 0; j < 30 && j < defines_count; j++) {
+		sources[i] = (const GLchar*)defines[j];
+		lengths[i] = (GLint)strlen(defines[j]);
+		i++;
 	}
 
+	size_t len;
+	if (utility_buffer_file(filename, (char**)&sources[i], &len)) {
+		printf( "Unable to open shader file %s.\n", filename );
+		return 0;
+	}
+	lengths[i] = len;
+
 	GLuint shader = glCreateShader(shader_type);
-	glShaderSource(shader, 1, (const GLchar**)&buf, (GLint*)&s);
+	glShaderSource(shader, i+1, sources, lengths);
 	glCompileShader(shader);
-	free(buf);
+	free((char*)sources[i]);
 
 	GLint compiled_result;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled_result);
@@ -56,13 +70,17 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type) {
 }
 
 GLuint utility_create_program(const char *vert_filename, const char *frag_filename) {
+	return utility_create_program_defines(vert_filename , frag_filename, NULL, 0);
+}
+
+GLuint utility_create_program_defines(const char *vert_filename, const char *frag_filename, const char** defines, int defines_count ) {
 	GLint vert_shader;
-	if (!(vert_shader = utility_create_shader(vert_filename, GL_VERTEX_SHADER))) {
+	if (!(vert_shader = utility_create_shader(vert_filename, GL_VERTEX_SHADER, defines, defines_count))) {
 		return 0;
 	}
 
 	GLint frag_shader;
-	if (!(frag_shader = utility_create_shader(frag_filename, GL_FRAGMENT_SHADER))) {
+	if (!(frag_shader = utility_create_shader(frag_filename, GL_FRAGMENT_SHADER, defines, defines_count))) {
 		glDeleteShader(vert_shader);
 		return 0;
 	}
@@ -208,7 +226,7 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 	return texture_id;
 }
 
-GLuint utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b) {
+void utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b) {
 	//uint32_t c = 0x606060;
 	//glClearColor((c&0xff)/255.0f, (c>>8&0xff)/255.0f, (c>>16&0xff)/255.0f, 1.0f);
 	glClearColor(r/255.0f, g/255.0f, b/255.0f, 1.0f);
@@ -222,7 +240,7 @@ float utility_mod_time(float modulus) {
 	return fmodf(utility_secs_since_launch(), modulus); // in seconds
 }
 
-float utility_random01() {
+int utility_random01() {
 	return rand() >= (float)RAND_MAX/2;
 }
 

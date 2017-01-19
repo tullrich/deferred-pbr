@@ -1,14 +1,11 @@
 #include "particles.h"
 
 static void random_direction(vec3 out) {
-	float theta = utility_randomRange(0.0f, M_PI);
-	float roe = utility_randomRange(0.0f, M_PI);
-	out[0] = cosf(roe)*sinf(theta);
-	out[1] = sinf(roe)*sinf(theta);
-	out[2] = -cosf(theta);
-	if (utility_random01()) {
-		vec3_negate_in_place(out);
-	}
+	float theta = utility_randomRange(0.0f, 2.0f * (float)M_PI);
+	float phi = acosf( 1.0f - 2.0f * utility_randomRange( 0.0f, 1.0f ) );
+	out[0] = cosf( theta )*sinf( phi );
+	out[1] = sinf( theta )*sinf( phi );
+	out[2] = -cosf( phi );
 }
 
 void particle_update(Particle* part, float dt) {
@@ -17,7 +14,7 @@ void particle_update(Particle* part, float dt) {
 	vec3_add(part->pos, part->pos, deltaPos);
 	part->ttl -= dt;
 
-	float min_dt = fmin(part->ttl, dt);
+	float min_dt = fminf(part->ttl, dt);
 
 	vec4 dt_color;
 	vec4_scale(dt_color, part->delta_color, dt);
@@ -45,6 +42,9 @@ int particle_emitter_destroy(ParticleEmitter *emitter) {
 		return 1; // error: uninitialized emitter
 	}
 	free(emitter->particles);
+	if (emitter->sort_records) {
+		free(emitter->sort_records);
+	}
 	memset(emitter, 0, sizeof(ParticleEmitter));
 	return 0;
 }
@@ -60,6 +60,8 @@ Particle* particle_emitter_emit_one(ParticleEmitter* emitter) {
 	part->scale[0] = part->scale[1] = part->scale[2] = desc->start_scale;
 	vec3_swizzle(part->delta_scale, (desc->end_scale - desc->start_scale) / part->ttl);
 	random_direction(part->velocity);
+	vec3_dup(part->rot, part->velocity);
+	//quat_rotation_between(part->rot, part->velocity, Axis_Forward);
 	vec3_scale(part->velocity, part->velocity, desc->speed + utility_random_float() * desc->speed_variance);
 	vec4_dup(part->color, desc->start_color);
 	vec4_sub(part->delta_color, desc->end_color, desc->start_color);
@@ -97,7 +99,7 @@ void particle_emitter_update(ParticleEmitter* emitter, float dt) {
 	}
 
 	// advance particle state
-	for(int i = 0; i < emitter->count; i++) {
+	for (int i = 0; i < emitter->count; i++) {
 		Particle* part = &emitter->particles[i];
 		particle_update(part, dt);
 	}
@@ -109,9 +111,51 @@ void particle_emitter_update(ParticleEmitter* emitter, float dt) {
 			particle_emitter_destroy_at_index(emitter, i);
 		}
 	}
+}
 
-	// depth sort
-	//TODO: add vec3 eye param
-	//if (emitter->depth_sort && eye) {
-	//}
+static int partition(SortRecord* recs, int low, int high) {
+	SortRecord pivot = recs[high];
+	int i = low - 1;
+	for (int j = low; j <= high - 1; j++) {
+		if (recs[j].depth <= pivot.depth) {
+			i++;
+
+			SortRecord tmp = recs[i];
+			recs[i] = recs[j];
+			recs[j] = tmp;
+		}
+	}
+	recs[high] = recs[i + 1];
+	recs[i + 1] = pivot;
+	return i + 1;
+}
+
+static void quicksort(SortRecord* recs, int low, int high) {
+	if (low < high) {
+		int pi = partition(recs, low, high);
+		quicksort(recs, low, pi - 1);
+		quicksort(recs, pi + 1, high);
+	}
+}
+
+void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position) {
+	// allocate sort records the first time we sort
+	if (!emitter->sort_records) {
+		if (emitter->max <= 0 || (emitter->sort_records = calloc(emitter->max, sizeof(SortRecord))) == NULL) {
+			return; // unable to allocate sort records
+		}
+	}
+
+	// calculate depth from camera
+	vec3 diff;
+	for (int i = 0; i < emitter->count; i++) {
+		Particle* part = &emitter->particles[i];
+		SortRecord* rec = &emitter->sort_records[i];
+		vec3_sub(diff, part->pos, cam_position);
+		rec->depth = vec3_len2(diff);
+		rec->index = i;
+	}
+
+	// sort
+	quicksort(emitter->sort_records, 0, emitter->count-1);
 }

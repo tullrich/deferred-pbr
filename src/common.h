@@ -1,8 +1,13 @@
 #pragma once
-#include <stdio.h>
 
-#include <SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include "SDL.h"
 #include <GL/glew.h>
+
 #include "AntTweakBar.h"
 #include "stb_image.h"
 
@@ -18,7 +23,7 @@ static inline void vec3_swizzle(vec3 r, float val) {
 static inline void vec3_zero(vec3 r) {
 	r[0] = r[1] = r[2] = 0.0f;
 }
-static inline void vec3_negate_in_place(vec4 r) {
+static inline void vec3_negate_in_place(vec3 r) {
 	for(int i=0; i<3; ++i)
 		r[i] = -r[i];
 }
@@ -50,7 +55,7 @@ static inline void quat_dup(quat r, quat const v) {
 }
 static inline void quat_to_axis_angle(float* angle, vec3 axis, quat const q) {
 	*angle = acosf(q[3]) * 2.0f;
-	float sin_half_angle = sqrt(1.0f-q[3]*q[3]);
+	float sin_half_angle = sqrtf(1.0f-q[3]*q[3]);
 	for(int i=0; i<3; ++i) {
 		if(sin_half_angle > 0.0f) {
 			axis[i] = q[i] / sin_half_angle;
@@ -58,6 +63,12 @@ static inline void quat_to_axis_angle(float* angle, vec3 axis, quat const q) {
 			axis[i] = 0.0f;
 		}
 	}
+}
+static inline void quat_rotation_between(quat out, const vec3 a, const vec3 b) {
+	quat rot;
+	vec3_mul_cross(rot, a, b);
+	rot[3] = sqrtf(vec3_len2(a)* vec3_len2(b)) + vec3_mul_inner(a, b);
+	quat_norm(out, rot);
 }
 static inline void mat4x4_printf(mat4x4 m) {
 	printf("[ %f, %f, %f, %f\n", m[0][0], m[0][1], m[0][2], m[0][3]);
@@ -69,15 +80,15 @@ static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
 	float r31 = m[2][0];
 	 if (r31 == 1.0f) {
 		euler[0] = atan2f(-m[0][1], -m[0][2]);
-   		euler[1] = -M_PI/2.0f;
+   		euler[1] = -(float)M_PI/2.0f;
 		euler[2] = 0.0f;
 	 } else if (r31 == -1.0f) {
 		euler[0] = atan2f(m[0][1], m[0][2]);
-   		euler[1] = M_PI/2.0f;
+   		euler[1] = (float)M_PI/2.0f;
 		euler[2] = 0.0f;
 	 } else {
    		euler[1] = -asinf(r31);
-		float cosTheta = cos(euler[1]);
+		float cosTheta = cosf(euler[1]);
 
 		euler[0] = atan2f(m[2][1]/cosTheta,m[2][2]/cosTheta);
 		euler[2] = atan2f(m[1][0]/cosTheta,m[0][0]/cosTheta);
@@ -112,6 +123,8 @@ const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
 
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 640
+#define Z_NEAR 0.1f
+#define Z_FAR 100.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 

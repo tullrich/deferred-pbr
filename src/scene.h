@@ -14,6 +14,9 @@ typedef struct
 
 typedef struct
 {
+	// position
+	vec3 pos;
+
 	// xyz-euler orientation
 	vec3 rot;
 

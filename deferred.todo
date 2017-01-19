@@ -5,9 +5,7 @@ Deferred:
 	Linear color space transform
 
 Particles:
-	Depth Sort w/ Alpha Blending
 	Particle Rotation & AngularVelocity
-	'Soft' Particles (depth fading)
 	Gravity
 	Texture atlas w/ UV Animations
 	Particle Lighting

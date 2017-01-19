@@ -7,6 +7,12 @@ typedef enum
 	PARTICLE_SHADING_TEXTURED,
 } ParticleShadingMode;
 
+typedef enum
+{
+	PARTICLE_ORIENT_FREE,
+	PARTICLE_ORIENT_SCREEN_ALIGNED,
+} ParticleOrientationMode;
+
 // single particle
 typedef struct
 {
@@ -51,7 +57,7 @@ typedef struct
 	vec4 end_color;
 
 	// if true, particles will be oriented parallel to the near plane
-	int billboard;
+	ParticleOrientationMode orient_mode;
 
 	// speed of the particles
 	float speed;
@@ -76,7 +82,23 @@ typedef struct
 
 	// ending scale of the particles
 	float end_scale;
+
+	// if true, this emitter uses depth sorting and renders with alpha blending
+	int depth_sort_alpha_blend;
+
+	// if true, renders this as 'soft' particles
+	int soft;
 } ParticleEmitterDesc;
+
+// small easily swappable data structure for depth sorting
+typedef struct
+{
+	// depth from camera for sorting purposes
+	float depth;
+
+	// index into particles
+	int index;
+} SortRecord;
 
 // instance of a ParticleEmitterDesc
 typedef struct
@@ -86,6 +108,9 @@ typedef struct
 
 	// buffer of particle
 	Particle* particles;
+
+	// doubly indirected sort record
+	SortRecord* sort_records;
 
 	// current count of living particles
 	int count;
@@ -119,3 +144,4 @@ void particle_emitter_burst(ParticleEmitter* emitter, int count);
 
 void particle_emitter_destroy_at_index(ParticleEmitter* emitter, int index);
 void particle_emitter_update(ParticleEmitter* emitter, float dt);
+void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position);
