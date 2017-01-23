@@ -8,7 +8,6 @@
 #include "SDL.h"
 #include <GL/glew.h>
 
-#include "AntTweakBar.h"
 #include "stb_image.h"
 
 #include "linmath.h"

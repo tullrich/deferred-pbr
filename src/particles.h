@@ -88,6 +88,12 @@ typedef struct
 
 	// if true, renders this as 'soft' particles
 	int soft;
+	
+	// if true, particle velocity is modified by gravity
+	int simulate_gravity;
+
+	// emitter cone axis 
+	vec3 emit_cone_axis;
 } ParticleEmitterDesc;
 
 // small easily swappable data structure for depth sorting

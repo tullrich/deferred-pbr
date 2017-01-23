@@ -4,6 +4,10 @@
 #include "deferred.h"
 #include "forward.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl_gl3.h"
+
+static SDL_Window*			gSDLWindow;
 static Scene 				gScene;
 static Deferred 			gDeferred;
 static Forward 				gForward;
@@ -14,35 +18,36 @@ static ParticleEmitter 		gEmitter;
 static int burst_count = 150;
 static int rotate_cam = 0;
 
-// box render modes Tw def
-static const TwEnumVal render_mode_def[] = {
-	{RENDER_MODE_SHADED, "Shaded"},
-	{RENDER_MODE_POSITION, "Position"},
-	{RENDER_MODE_DIFFUSE, "Diffuse"},
-	{RENDER_MODE_NORMAL, "Normal"},
-	{RENDER_MODE_SPECULAR, "Specular"},
-	{RENDER_MODE_DEPTH, "Depth"},
+// box render modes
+
+static const char* render_mode_def[] = {
+	"Shaded",
+	"Position",
+	"Diffuse",
+	"Normal",
+	"Specular",
+	"Depth",
 };
 
-// particle shading modes Tw def
-static const TwEnumVal particle_shading_mode_def[] = {
-	{PARTICLE_SHADING_FLAT, "Flat"},
-	{PARTICLE_SHADING_TEXTURED, "Textured"},
+// particle shading modes
+static const char* particle_shading_mode_def[] = {
+	"Flat",
+	"Textured",
 };
 
-// particle orientation mode Tw def
-static const TwEnumVal particle_orient_mode_def[] = {
-	{PARTICLE_ORIENT_FREE, "Free" },
-	{PARTICLE_ORIENT_SCREEN_ALIGNED, "Screen Aligned" },
+// particle orientation mode
+static const char* particle_orient_mode_def[] = {
+	"Free",
+	"Screen Aligned",
 };
 
-// particle texture index Tw def
-static const TwEnumVal particle_texture_def[] = {
-	{0, "Flare"},
-	{1, "Particle"},
-	{2, "Smoke"},
-	{3, "Divine"},
-	{4, "UV Debug"},
+// particle texture index
+static const char* particle_texture_def[] = {
+	"Flare",
+	"Particle",
+	"Smoke",
+	"Divine",
+	"UV Debug",
 };
 
 // particle texture index -> paths LUT
@@ -69,6 +74,7 @@ static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
 	out->texture = gTextures[0];
 	out->start_scale = 1.0f; out->end_scale = 0.01f;
+	vec3_dup(out->emit_cone_axis, Axis_Right);
 };
 
 static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
@@ -87,6 +93,7 @@ static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
 	out->texture = gTextures[1];
 	out->start_scale = 0.1f;
 	out->end_scale = 0.5f;
+	vec3_dup(out->emit_cone_axis, Axis_Up);
 };
 
 static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
@@ -105,6 +112,7 @@ static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
 	out->texture = gTextures[2];
 	out->start_scale = 2.0f;
 	out->end_scale = 4.5f;
+	vec3_dup(out->emit_cone_axis, Axis_Up);
 };
 
 static int initialize_particle_textures() {
@@ -116,18 +124,13 @@ static int initialize_particle_textures() {
 	return 0;
 }
 
-static void get_particle_texture(void* value, void* user) {
+static int get_particle_texture_index() {
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gTexturePaths); i++) {
 		if (gEmitterDesc.texture == gTextures[i]) {
-			*((int*)value) = i;
-			return;
+			return i;
 		}
 	}
-	*((int*)value) = 0;
-}
-
-static void set_particle_texture(const void* value,void* user) {
-	gEmitterDesc.texture = gTextures[*((int*)value)];
+	return 0;
 }
 
 static void init_main_light() {
@@ -162,67 +165,12 @@ static void burst() {
 	particle_emitter_burst(&gEmitter, burst_count);
 }
 
-static void set_preset(void *clientData) {
-	void(*preset_func)(ParticleEmitterDesc*) = clientData;
-	preset_func(&gEmitterDesc);
-	refresh_emitter( NULL );
-}
-
 static int initialize() {
 	glewExperimental = 1;
 	glewInit();
 
-	// Initialize AntTweakBar
-	if (!TwInit(TW_OPENGL_CORE, NULL))
-		return 1;
-
-	TwWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-
-    TwBar *bar;
-	bar = TwNewBar("Controls");
-
-	TwAddSeparator(bar, "Renderer", "");
-	TwAddVarRW(bar, "Cam Rotate", TW_TYPE_BOOL32, &rotate_cam, "");
-	TwAddVarRW(bar, "Render Mode", TwDefineEnum("", render_mode_def
-		, STATIC_ELEMENT_COUNT(render_mode_def)), &gDeferred.render_mode, "");
-	TwAddVarRW(bar, "Show Box", TW_TYPE_BOOL32, &gScene.show_box, "");
-	TwAddVarRW(bar, "Ambient Color", TW_TYPE_COLOR3F, &gScene.ambient_color, "");
-	TwAddVarRW(bar, "Ambient Intensity", TW_TYPE_FLOAT, &gScene.ambient_intensity, "step='0.01' min=0 max=1");
-	TwAddVarRW(bar, "Light Position", TW_TYPE_DIR3F, &gScene.main_light.position, "");
-	TwAddVarRW(bar, "Light Color", TW_TYPE_COLOR3F, &gScene.main_light.color, "");
-	TwAddVarRW(bar, "Light Intensity", TW_TYPE_FLOAT, &gScene.main_light.intensity, "step='0.01' min=0 max=1");
-	TwAddSeparator(bar, "Emitter", "");
-	TwAddButton(bar, "Refresh", (TwButtonCallback)&refresh_emitter, NULL, "");
-	TwAddVarRW(bar, "Spawn Rate", TW_TYPE_FLOAT, &gEmitterDesc.spawn_rate, "");
-	TwAddVarRW(bar, "Shading Mode", TwDefineEnum("", particle_shading_mode_def
-		, STATIC_ELEMENT_COUNT(particle_shading_mode_def)), &gEmitterDesc.shading_mode, "");
-	TwAddVarCB(bar, "Texture", TwDefineEnum("", particle_texture_def
-		, STATIC_ELEMENT_COUNT(particle_texture_def)), (TwSetVarCallback)&set_particle_texture, (TwGetVarCallback)&get_particle_texture, NULL, "");
-	TwAddVarRW(bar, "Start Scale", TW_TYPE_FLOAT, &gEmitterDesc.start_scale, "step='0.25' min=.01 max=10");
-	TwAddVarRW(bar, "End Scale", TW_TYPE_FLOAT, &gEmitterDesc.end_scale, "step='0.25' min=.01 max=10");
-	TwAddVarRW(bar, "Start Color", TW_TYPE_COLOR3F, &gEmitterDesc.start_color, "");
-	TwAddVarRW(bar, "End Color", TW_TYPE_COLOR3F, &gEmitterDesc.end_color, "");
-	TwAddVarRW(bar, "Start Alpha", TW_TYPE_FLOAT, &gEmitterDesc.start_color[3], "step='0.01' min=0 max=1");
-	TwAddVarRW(bar, "End Alpha", TW_TYPE_FLOAT, &gEmitterDesc.end_color[3], "step='0.01' min=0 max=1");
-	TwAddVarRW(bar, "Orientation Mode", TwDefineEnum("", particle_orient_mode_def
-		, STATIC_ELEMENT_COUNT(particle_orient_mode_def)), &gEmitterDesc.orient_mode, "");
-	TwAddVarRW( bar, "Depth Sort", TW_TYPE_BOOL32, &gEmitterDesc.depth_sort_alpha_blend, "" );
-	TwAddVarRW( bar, "Soft", TW_TYPE_BOOL32, &gEmitterDesc.soft, "");
-	TwAddVarRW(bar, "Life Time", TW_TYPE_FLOAT, &gEmitterDesc.life_time, "step='0.25' min=0 max=10");
-	TwAddVarRW(bar, "Life Time Variance", TW_TYPE_FLOAT, &gEmitterDesc.life_time_variance, "step='0.25' min=0 max=10");
-	TwAddVarRW(bar, "Speed", TW_TYPE_FLOAT, &gEmitterDesc.speed, "step='1' min=0 max=10");
-	TwAddVarRW(bar, "Speed Variance", TW_TYPE_FLOAT, &gEmitterDesc.speed_variance, "step='1' min=0 max=10");
-	TwAddVarRW(bar, "Max", TW_TYPE_INT32, &gEmitter.max, "step='1' min=1 max=2048");
-	TwAddVarRW(bar, "Local Scale", TW_TYPE_FLOAT, &gEmitter.scale, "step='0.05' min=.01 max=5");
-	TwAddVarRW(bar, "Local Rotate", TW_TYPE_QUAT4F, &gEmitter.rot, "");
-	TwAddVarRW(bar, "Local Translation", TW_TYPE_DIR3F, &gEmitter.pos, "");
-	TwAddVarRW(bar, "Mute", TW_TYPE_BOOL32, &gEmitter.muted, "");
-	TwAddButton(bar, "Burst", (TwButtonCallback)burst, NULL, "");
-	TwAddVarRW(bar, "Bust Count", TW_TYPE_INT32, &burst_count, "step='20' min=0 max=1000");
-	TwAddSeparator(bar, "Presets", "");
-	TwAddButton(bar, "Flare", (TwButtonCallback)&set_preset, &emitter_desc_preset_flare, "");
-	TwAddButton(bar, "Particle", (TwButtonCallback)&set_preset, &emitter_desc_preset_particle, "");
-	TwAddButton(bar, "Smoke", (TwButtonCallback)&set_preset, &emitter_desc_preset_smoke, "");
+	// Initialize Imgui
+	ImGui_ImplSdlGL3_Init(gSDLWindow);
 
 	srand((unsigned)time(0));
 
@@ -264,6 +212,10 @@ static void update_scene(float dt) {
 	// calculate view-projection matrix
 	mat4x4_perspective(gScene.camera.proj, 80.0f * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
 	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
+
+	vec3 cone_axis;
+	vec3_dup(cone_axis, gEmitterDesc.emit_cone_axis);
+	vec3_norm(gEmitterDesc.emit_cone_axis, cone_axis);
 }
 
 static int frame() {
@@ -287,8 +239,77 @@ static int frame() {
 	deferred_render(&gDeferred, &gScene);
 	forward_render(&gForward, &gScene);
 
-	// render gui
-	TwDraw();
+	ImGui::SetNextWindowSize( ImVec2( 200, 100 ), ImGuiSetCond_FirstUseEver );
+	ImGui::Begin( "Controls", 0);
+
+	if ( ImGui::CollapsingHeader( "Renderer", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
+
+		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_def, STATIC_ELEMENT_COUNT( render_mode_def ) );
+		ImGui::Checkbox( "Show Box", ( bool* )&gScene.show_box );
+		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
+		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
+
+		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
+		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
+		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
+	}
+	if ( ImGui::CollapsingHeader( "Emitter", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+		if ( ImGui::Button("Refresh") ) {
+			refresh_emitter(NULL);
+		}
+		ImGui::SliderFloat( "Spawn Rate", &gEmitterDesc.spawn_rate, 0, 500.0f );
+		ImGui::SliderInt( "Max Particles", &gEmitterDesc.max, 1, 2048 );
+
+		ImGui::Combo( "Shading Mode", ( int* )&gEmitterDesc.shading_mode, particle_shading_mode_def, STATIC_ELEMENT_COUNT( particle_shading_mode_def ) );
+		
+		if ( gEmitterDesc.shading_mode == PARTICLE_SHADING_TEXTURED ) {
+			int texture_idx = get_particle_texture_index();
+			if ( ImGui::Combo( "Texture", ( int* )&texture_idx, particle_texture_def, STATIC_ELEMENT_COUNT( particle_texture_def ) ) ) {
+				gEmitterDesc.texture = gTextures[ texture_idx ];
+			}
+		}
+		ImGui::SliderFloat( "Start Scale", &gEmitterDesc.start_scale, .01, 10.0f );
+		ImGui::SliderFloat( "End Scale", &gEmitterDesc.end_scale, .01, 10.0f );
+		ImGui::ColorEdit4( "Start Color", gEmitterDesc.start_color );
+		ImGui::ColorEdit4( "End Color", gEmitterDesc.end_color );
+
+		ImGui::Combo( "Orientation Mode", ( int* )&gEmitterDesc.orient_mode, particle_orient_mode_def, STATIC_ELEMENT_COUNT( particle_orient_mode_def ) );
+		ImGui::Checkbox( "Depth Sort", ( bool* )&gEmitterDesc.depth_sort_alpha_blend );
+		ImGui::Checkbox( "Soft", ( bool* )&gEmitterDesc.soft );
+		ImGui::Checkbox( "Gravity", ( bool* )&gEmitterDesc.simulate_gravity );
+		ImGui::Checkbox( "Mute", ( bool* )&gEmitter.muted );
+		//TwAddVarRW( bar, "Cone Axis", TW_TYPE_DIR3F, &gEmitterDesc.emit_cone_axis, "" );
+		ImGui::SliderFloat( "Life Time", &gEmitterDesc.life_time, 0.0f, 10.0f );
+		ImGui::SliderFloat( "Life Time Variance", &gEmitterDesc.life_time_variance, 0.0f, 10.0f );
+		ImGui::SliderFloat( "Speed", &gEmitterDesc.speed, 0.0f, 10.0f );
+		ImGui::SliderFloat( "Speed Variance", &gEmitterDesc.speed_variance, 0.0f, 10.0f );
+
+		ImGui::SliderFloat( "Local Scale", &gEmitter.scale, 0.0f, 10.0f );
+		//TwAddVarRW( bar, "Local Rotate", TW_TYPE_QUAT4F, &gEmitter.rot, "" );
+		ImGui::InputFloat3( "Local Translation", gEmitter.pos );
+		if ( ImGui::Button( "Burst" ) ) {
+			burst();
+		}
+		ImGui::SliderInt( "Burst Count", &burst_count, 0, 1000 );
+
+		if ( ImGui::CollapsingHeader( "Presets", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+			if ( ImGui::Button( "Flare" ) ) {
+				emitter_desc_preset_flare( &gEmitterDesc );
+				refresh_emitter( NULL );
+			}
+			if ( ImGui::Button( "Particle" ) ) {
+				emitter_desc_preset_particle( &gEmitterDesc );
+				refresh_emitter( NULL );
+			}
+			if ( ImGui::Button( "Smoke" ) ) {
+				emitter_desc_preset_smoke( &gEmitterDesc );
+				refresh_emitter( NULL );
+			}
+		}
+	}
+	ImGui::End();
+	ImGui::Render();
 
 	GL_CHECK_ERROR();
 	return 0;
@@ -308,13 +329,12 @@ int main(int argc, char* argv[]) {
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
-	SDL_Window* sdlWindow;
-    if(!(sdlWindow = SDL_CreateWindow("Particles", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+    if(!(gSDLWindow = SDL_CreateWindow("Particles", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
 			, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
         return 1;
     }
 
-	SDL_GLContext glcontext = SDL_GL_CreateContext(sdlWindow);
+	SDL_GLContext glcontext = SDL_GL_CreateContext(gSDLWindow);
 	if(initialize()) {
 		printf("Failed to initialize. Exiting.\n");
 		return 1;
@@ -324,32 +344,37 @@ int main(int argc, char* argv[]) {
 	int quit = 0;
 	int mouse_grabbed = 0;
 	while (!quit) {
+		ImGui_ImplSdlGL3_NewFrame(gSDLWindow);
+		bool imguiCaptureMouse = ImGui::GetIO().WantCaptureMouse;
+
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-
-			if (TwEventSDL(&event, SDL_MAJOR_VERSION, SDL_MINOR_VERSION)) {
+			if (ImGui_ImplSdlGL3_ProcessEvent(&event)) {
 				continue;
-			}
-			else if (event.type == SDL_MOUSEBUTTONDOWN) {
-				if (event.button.button == SDL_BUTTON_LEFT) {
-					// hide mouse, report deltas at screen edge
-					//SDL_SetRelativeMouseMode(SDL_TRUE);
-					mouse_grabbed = 1;
+			} 
+
+			if (!imguiCaptureMouse) {
+				if (event.type == SDL_MOUSEBUTTONDOWN) {
+					if (event.button.button == SDL_BUTTON_LEFT) {
+						// hide mouse, report deltas at screen edge
+						//SDL_SetRelativeMouseMode(SDL_TRUE);
+						mouse_grabbed = 1;
+					}
+				}
+				else if (event.type == SDL_MOUSEBUTTONUP) {
+					if (event.button.button == SDL_BUTTON_LEFT) {
+						//SDL_SetRelativeMouseMode(SDL_FALSE);
+						mouse_grabbed = 0;
+					} 
+				}
+				else if (event.type == SDL_MOUSEMOTION) {
+					if (event.motion.state & SDL_BUTTON_LMASK) {
+						gScene.camera.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
+						gScene.camera.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
+					}
 				}
 			}
-			else if (event.type == SDL_MOUSEBUTTONUP) {
-				if (event.button.button == SDL_BUTTON_LEFT) {
-					//SDL_SetRelativeMouseMode(SDL_FALSE);
-					mouse_grabbed = 0;
-				}
-			}
-			else if (event.type == SDL_MOUSEMOTION) {
-				if (event.motion.state & SDL_BUTTON_LMASK) {
-					gScene.camera.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
-					gScene.camera.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
-				}
-			}
-			else if (event.type == SDL_QUIT) {
+			if (event.type == SDL_QUIT) {
 				quit = 1;
 				break;
 			}
@@ -362,12 +387,13 @@ int main(int argc, char* argv[]) {
 		}
 
 		// swap
-		SDL_GL_SwapWindow( sdlWindow );
+		SDL_GL_SwapWindow(gSDLWindow);
 	}
 
 	// Clean up
+	ImGui_ImplSdlGL3_Shutdown();
 	SDL_GL_DeleteContext(glcontext);
-	SDL_DestroyWindow( sdlWindow );
+	SDL_DestroyWindow(gSDLWindow);
 	SDL_Quit();
 	return 0;
 }

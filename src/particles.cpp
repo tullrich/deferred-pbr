@@ -1,14 +1,29 @@
 #include "particles.h"
 
+#define PARTICLE_GRAVITY -9.81f
+
 static void random_direction(vec3 out) {
-	float theta = utility_random_range(0.0f, 2.0f * (float)M_PI);
-	float phi = acosf( 1.0f - 2.0f * utility_random_real01() );
-	out[0] = cosf( theta )*sinf( phi );
-	out[1] = sinf( theta )*sinf( phi );
-	out[2] = -cosf( phi );
+	float theta = (float)M_PI * utility_random_real11();
+	float phi = acosf(utility_random_real11());
+	out[0] = cosf(theta)*sinf(phi);
+	out[1] = sinf(theta)*sinf(phi);
+	out[2] = -cosf(phi);
 }
 
-void particle_update(Particle* part, float dt) {
+static void random_conical_direction(vec3 out, const vec3 axis) {
+	float phi = atan2f(axis[0], -axis[2] );
+	float theta = atan2f(axis[1], axis[0] );
+	out[0] = cosf(theta) * sinf(phi);
+	out[1] = sinf(theta) * sinf(phi);
+	out[2] = -cosf(phi);
+
+}
+
+void particle_update(const ParticleEmitterDesc* def, Particle* part, float dt) {
+	if (def->simulate_gravity) {
+		part->velocity[1] += PARTICLE_GRAVITY * dt;
+	}
+
 	vec3 deltaPos;
 	vec3_scale(deltaPos, part->velocity, dt);
 	vec3_add(part->pos, part->pos, deltaPos);
@@ -28,7 +43,7 @@ void particle_update(Particle* part, float dt) {
 int particle_emitter_initialize(ParticleEmitter *emitter, const ParticleEmitterDesc* def) {
 	memset(emitter, 0, sizeof(ParticleEmitter));
 	emitter->desc = def;
-	if ((emitter->particles = calloc(def->max, sizeof(Particle))) == NULL) {
+	if ((emitter->particles = (Particle*)calloc(def->max, sizeof(Particle))) == NULL) {
 		return 1; // error: unable to allocate memory
 	}
 	emitter->max = def->max;
@@ -101,7 +116,7 @@ void particle_emitter_update(ParticleEmitter* emitter, float dt) {
 	// advance particle state
 	for (int i = 0; i < emitter->count; i++) {
 		Particle* part = &emitter->particles[i];
-		particle_update(part, dt);
+		particle_update(desc, part, dt);
 	}
 
 	// destroy particles
@@ -141,7 +156,7 @@ static void quicksort(SortRecord* recs, int low, int high) {
 void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position) {
 	// allocate sort records the first time we sort
 	if (!emitter->sort_records) {
-		if (emitter->max <= 0 || (emitter->sort_records = calloc(emitter->max, sizeof(SortRecord))) == NULL) {
+		if (emitter->max <= 0 || (emitter->sort_records = (SortRecord*)calloc(emitter->max, sizeof(SortRecord))) == NULL) {
 			return; // unable to allocate sort records
 		}
 	}

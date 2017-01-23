@@ -18,7 +18,8 @@ static void draw_quad(const ParticleShader* shader,const vec3 translation, const
 }
 
 static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const ParticleEmitter* emitter, const Scene *s) {
-	vec3 cam_forward, cam_up;
+	vec4 cam_forward, cam_up;
+	cam_forward[3] = cam_up[3] = 0.0f;
 	scene_camera_forward(s, cam_forward);
 	scene_camera_up(s, cam_up);
 
@@ -29,7 +30,6 @@ static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const P
 	mat4x4_mul_vec4(model_cam_forward, invModel, cam_forward);
 	vec4_negate_in_place(model_cam_forward);
 	mat4x4_mul_vec4(model_cam_up, invModel, cam_up);
-	//vec4_negate_in_place(model_cam_up);
 
 	mat4x4 lookAt;
 	vec3 zero;

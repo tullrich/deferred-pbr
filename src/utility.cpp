@@ -44,7 +44,7 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 	}
 
 	size_t len;
-	if (utility_buffer_file(filename, (char**)&sources[i], &len)) {
+	if (utility_buffer_file(filename, (unsigned char**)&sources[i], &len)) {
 		printf( "Unable to open shader file %s.\n", filename );
 		return 0;
 	}

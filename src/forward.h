@@ -4,8 +4,6 @@
 #include "gbuffer.h"
 #include "scene.h"
 
-struct GBuffer;
-
 typedef struct
 {
 	GLuint program;

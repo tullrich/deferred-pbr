@@ -8,25 +8,34 @@ project( Deferred )
 find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
-find_package( AntTweakBar REQUIRED )
 
 add_subdirectory( thirdparty/stb )
 
 add_executable( Deferred
-	src/main.c
+	src/main.cpp
 	src/common.h
 	src/utility.h
-	src/utility.c
+	src/utility.cpp
 	src/gbuffer.h
-	src/gbuffer.c
+	src/gbuffer.cpp
 	src/deferred.h
-	src/deferred.c
+	src/deferred.cpp
 	src/forward.h
-	src/forward.c
+	src/forward.cpp
 	src/particles.h
-	src/particles.c
+	src/particles.cpp
 	src/scene.h
-	src/scene.c
+	src/scene.cpp
+
+	src/imgui/imconfig.h
+	src/imgui/imgui.h
+	src/imgui/imgui_internal.h
+	src/imgui/imgui_demo.cpp
+	src/imgui/imgui_draw.cpp
+	src/imgui/imgui.cpp
+	src/imgui/stb_textedit.h
+	src/imgui/imgui_impl_sdl_gl3.h
+	src/imgui/imgui_impl_sdl_gl3.cpp
 )
 
 if ( NOT MSVC )
@@ -42,7 +51,6 @@ include_directories(
 	${SDL2_INCLUDE_DIR}
 	${OPENGL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIR}
-	${ANT_TWEAK_BAR_INCLUDE_PATH}
 	${STB_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
@@ -52,6 +60,5 @@ target_link_libraries(Deferred
 	${SDL2MAIN_LIBRARY}
 	${OPENGL_LIBRARIES}
 	${GLEW_LIBRARIES}
-	${ANT_TWEAK_BAR_LIBRARY}
 	${STB_LIBRARIES}
 )
