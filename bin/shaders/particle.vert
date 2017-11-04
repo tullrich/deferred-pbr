@@ -1,3 +1,5 @@
+#version 130
+
 in vec3 vert;
 in vec3 translation;
 in vec3 rotation;

@@ -1,3 +1,5 @@
+#version 130
+
 in vec3 position;
 in vec2 texcoord;
 

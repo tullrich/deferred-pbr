@@ -1,3 +1,5 @@
+ #version 130
+
 in vec3 position;
 in vec3 normal;
 in vec3 tangent;
