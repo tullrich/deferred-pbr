@@ -1,5 +1,9 @@
 #include "utility.h"
 
+#ifdef _WIN32
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 void utility_report_gl_err(const char * file, const char * func, int line) {
 	GLenum e;
 	while ((e = glGetError()) != GL_NO_ERROR) {
@@ -10,7 +14,7 @@ void utility_report_gl_err(const char * file, const char * func, int line) {
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size) {
 	FILE *fd;
 	int ret = 1;
-	if (!fopen_s(&fd, filename, "rb")) {
+	if (!(fd = fopen(filename, "rb"))) {
 		if (!fseek(fd, 0, SEEK_END)) {
 			size_t fsize = ftell(fd);
 			rewind(fd);
