@@ -11,6 +11,10 @@ find_package( GLEW REQUIRED )
 
 add_subdirectory( thirdparty/stb )
 
+if ( NOT MSVC )
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/")
+endif()
+
 add_executable( Deferred
 	src/main.cpp
 	src/common.h
@@ -39,7 +43,6 @@ add_executable( Deferred
 )
 
 if ( NOT MSVC )
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 	target_compile_options( Deferred PUBLIC -g )
 	target_link_libraries( Deferred "-lm" )
 endif()
