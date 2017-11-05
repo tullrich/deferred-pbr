@@ -222,4 +222,6 @@ void deferred_render(Deferred *d, Scene *s)
 	} else {
 		render_debug(d, s);
 	}
+
+	GL_CHECK_ERROR();
 }

@@ -14,7 +14,7 @@ void utility_report_gl_err(const char * file, const char * func, int line) {
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size) {
 	FILE *fd;
 	int ret = 1;
-	if (!(fd = fopen(filename, "rb"))) {
+	if (fd = fopen(filename, "rb")) {
 		if (!fseek(fd, 0, SEEK_END)) {
 			size_t fsize = ftell(fd);
 			rewind(fd);
@@ -47,17 +47,32 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 		i++;
 	}
 
-	size_t len;
-	if (utility_buffer_file(filename, (unsigned char**)&sources[i], &len)) {
+	size_t file_len;
+	char* file_contents;
+	if (utility_buffer_file(filename, (unsigned char**)&file_contents, &file_len)) {
 		printf( "Unable to open shader file %s.\n", filename );
 		return 0;
 	}
-	lengths[i] = (GLint)len;
+
+	// Find the version pragma
+	size_t skip_len = 0;
+	if (!strncmp(file_contents, "#version",8)) {
+		for (size_t j = 0; j < file_len; j++) {
+			if (file_contents[j] == '\n') {
+				skip_len = j+1;
+				break;
+			}
+		}
+		sources[0] = file_contents;
+		lengths[0] = skip_len;
+	}
+	sources[i] = file_contents + skip_len;
+	lengths[i] = (GLint)(file_len - skip_len);
 
 	GLuint shader = glCreateShader(shader_type);
 	glShaderSource(shader, i+1, sources, lengths);
 	glCompileShader(shader);
-	free((char*)sources[i]);
+	free(file_contents);
 
 	GLint compiled_result;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled_result);
