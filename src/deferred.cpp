@@ -190,31 +190,6 @@ static void render_shading(Deferred* d, Scene *s)
 	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
 }
 
-static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)
-{
-	float const e = 1.f / tanf(y_fov / 2.f);
-
-	m[0][0] = e / aspect;
-	m[0][1] = 0.f;
-	m[0][2] = 0.f;
-	m[0][3] = 0.f;
-
-	m[1][0] = 0.f;
-	m[1][1] = e;
-	m[1][2] = 0.f;
-	m[1][3] = 0.f;
-
-	m[2][0] = 0.f;
-	m[2][1] = 0.f;
-	m[2][2] = -1.f;
-	m[2][3] = -1.f;
-
-	m[3][0] = 0.f;
-	m[3][1] = 0.f;
-	m[3][2] = -2.0f * n;
-	m[3][3] = 0.f;
-}
-
 static void render_skybox(Deferred *d, Scene *s)
 {
 	glUseProgram(d->skybox_shader.program);
