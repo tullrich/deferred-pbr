@@ -17,6 +17,7 @@ static ParticleEmitter 		gEmitter;
 
 static int burst_count = 150;
 static int rotate_cam = 0;
+static int skybox_idx = 0;
 
 // box render modes
 
@@ -59,8 +60,17 @@ static const char* gTexturePaths[] = {
 	"images/uv_map.png",
 };
 
+
+static const char* skybox_def[] = {
+	"Saint Peters Basilica",
+	"San Francisco",
+	"UV Debug",
+};
+
+static Skybox gSkyboxes[STATIC_ELEMENT_COUNT(skybox_def)];
+
 // SanFrancisco skybox textures (must match CubeMapFaces enum)
-static const char* skyboxTexturePaths[] = {
+static const char* skybox_SanFrancisco[] = {
 	"images/SanFrancisco4/posz.jpg",
 	"images/SanFrancisco4/negz.jpg",
 	"images/SanFrancisco4/posy.jpg",
@@ -70,13 +80,22 @@ static const char* skyboxTexturePaths[] = {
 };
 
 // SaintPetersBasilica skybox textures (must match CubeMapFaces enum)
-static const char* skyboxTexturePaths2[] = {
+static const char* skybox_SaintPetersBasilica[] = {
 	"images/SaintPetersBasilica/posz.jpg",
 	"images/SaintPetersBasilica/negz.jpg",
 	"images/SaintPetersBasilica/posy.jpg",
 	"images/SaintPetersBasilica/negy.jpg",
 	"images/SaintPetersBasilica/posx.jpg",
 	"images/SaintPetersBasilica/negx.jpg",
+};
+
+static const char* skybox_UV_Debug[] = {
+	"images/uv_map.png",
+	"images/uv_map.png",
+	"images/uv_map.png",
+	"images/uv_map.png",
+	"images/uv_map.png",
+	"images/uv_map.png",
 };
 
 static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
@@ -153,6 +172,18 @@ static int get_particle_texture_index() {
 	return 0;
 }
 
+static int initialize_skybox_textures() {
+	if(!(gSkyboxes[0].env_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica)))
+		return 1;
+
+	if(!(gSkyboxes[1].env_cubemap = utility_load_cubemap(skybox_SanFrancisco)))
+		return 1;
+
+	if(!(gSkyboxes[2].env_cubemap = utility_load_cubemap(skybox_UV_Debug)))
+		return 1;
+	return 0;
+}
+
 static void init_main_light() {
 	gScene.ambient_color[0] = 0.15f;
 	gScene.ambient_color[1] = 0.60f;
@@ -193,7 +224,7 @@ static int init_scene() {
 	gScene.camera.boomLen = 15.0f;
 
 	// Init skybox
-	gScene.skybox.env_cubemap = utility_load_cubemap(skyboxTexturePaths2);
+	gScene.skybox = gSkyboxes[skybox_idx];
 
 	// Init main directional light
 	init_main_light();
@@ -222,6 +253,12 @@ static int initialize() {
 		return err;
 	}
 	printf("deferred initialized\n");
+
+	if (err = initialize_skybox_textures()) {
+		printf("skyboxes init failed\n");
+		return err;
+	}
+	printf("skyboxes initialized\n");
 
 	if (err = forward_initialize(&gForward)) {
 		printf("forward rendering init failed\n");
@@ -296,9 +333,11 @@ static int frame() {
 	ImGui::Begin( "Controls", 0);
 
 	if ( ImGui::CollapsingHeader( "Renderer", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_def, STATIC_ELEMENT_COUNT( render_mode_def ) );
+	}
+	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
 
-		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_def, STATIC_ELEMENT_COUNT( render_mode_def ) );
 		ImGui::Checkbox( "Show Box", ( bool* )&gScene.show_box );
 		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
 		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
@@ -306,6 +345,10 @@ static int frame() {
 		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
 		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
 		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
+
+		if(ImGui::Combo( "Skybox", ( int* )&skybox_idx, skybox_def, STATIC_ELEMENT_COUNT( skybox_def ) )) {
+			gScene.skybox = gSkyboxes[skybox_idx];
+		}
 	}
 	if ( ImGui::CollapsingHeader( "Emitter", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		if ( ImGui::Button("Refresh") ) {
