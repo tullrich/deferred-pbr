@@ -1,6 +1,6 @@
 #version 130
 
-in vec3 position;
+in vec2 position;
 
 uniform vec3 CameraPos;
 uniform mat4 InvViewProj;
@@ -11,6 +11,6 @@ void main()
 {
 	vec4 nearPoint = InvViewProj*vec4(position.xy, 1, 1);
 	nearPoint /= nearPoint.w;
-	TexDir = position;//nearPoint.xyz-CameraPos;
-	gl_Position = InvViewProj * vec4(position, 1);
+	TexDir = normalize(nearPoint.xyz-CameraPos);
+	gl_Position = vec4(position.xy, 1, 1);
 }
