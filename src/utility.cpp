@@ -194,47 +194,6 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 	glEnd();
 }
 
-
-void utility_draw_cube2(GLint pos_loc, float min, float max) {
-	glBegin(GL_QUADS);
-		// back face
-		glVertexAttrib3f(pos_loc, min, min, min);
-		glVertexAttrib3f(pos_loc, min, max, min);
-		glVertexAttrib3f(pos_loc, max, max, min);
-		glVertexAttrib3f(pos_loc, max, min, min);
-
-		// front face
-		glVertexAttrib3f(pos_loc, max, max, max);
-		glVertexAttrib3f(pos_loc, min, max, max);
-		glVertexAttrib3f(pos_loc, min, min, max);
-		glVertexAttrib3f(pos_loc, max, min, max);
-
-		// left face
-		glVertexAttrib3f(pos_loc, min, max, max);
-		glVertexAttrib3f(pos_loc, min, max, min);
-		glVertexAttrib3f(pos_loc, min, min, min);
-		glVertexAttrib3f(pos_loc, min, min, max);
-
-		// right face
-		glVertexAttrib3f(pos_loc, max, max, max);
-		glVertexAttrib3f(pos_loc, max, min, max);
-		glVertexAttrib3f(pos_loc, max, min, min);
-		glVertexAttrib3f(pos_loc, max, max, min);
-
-		// bottom face
-		glVertexAttrib3f(pos_loc, max, min, max);
-		glVertexAttrib3f(pos_loc, min, min, max);
-		glVertexAttrib3f(pos_loc, min, min, min);
-		glVertexAttrib3f(pos_loc, max, min, min);
-
-		// top face
-		glVertexAttrib3f(pos_loc, max, max, max);
-		glVertexAttrib3f(pos_loc, max, max, min);
-		glVertexAttrib3f(pos_loc, min, max, min);
-		glVertexAttrib3f(pos_loc, min, max, max);
-	glEnd();
-}
-
 void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 	glBegin(GL_QUADS);
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
@@ -304,11 +263,6 @@ GLuint utility_load_cubemap(const char** filepaths) {
 	glGenTextures(1, &texture_id);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);
 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
 	int width, height;
 	int components;
 	unsigned char* data;
@@ -330,6 +284,12 @@ GLuint utility_load_cubemap(const char** filepaths) {
 		glTexImage2D(gl_cubemap_targets[i], 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		stbi_image_free(data);
 	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 	printf("Loaded Cubemap '%s': Width: %i, Height %i, Components %i\n", filepaths[0], width, height, components);
 	return texture_id;

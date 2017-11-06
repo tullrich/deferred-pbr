@@ -10,7 +10,6 @@ GLuint utility_create_program(const char *vert_filename, const char *frag_filena
 GLuint utility_create_program_defines(const char *vert_filename, const char *frag_filename, const char** defines, int defines_count);
 
 void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc, float min, float max);
-void utility_draw_cube2(GLint pos_loc, float min, float max);
 void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc);
 void utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b);
 
