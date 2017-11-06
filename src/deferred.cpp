@@ -52,6 +52,8 @@ int deferred_initialize(Deferred* d)
 	d->lighting_shader.gbuffer_diffuse_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Diffuse");
 	d->lighting_shader.gbuffer_specular_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Specular");
 	d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth");
+	d->lighting_shader.env_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvCubemap");
+	d->lighting_shader.inv_view_loc = glGetUniformLocation(d->lighting_shader.program, "InvView");
 
 	if(gbuffer_initialize(&d->g_buffer)) {
 		printf("Unable to create g-buffer.\n");
@@ -68,13 +70,13 @@ int deferred_initialize(Deferred* d)
 	d->debug_shader.gbuffer_render_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Render");
 	d->debug_shader.gbuffer_depth_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Depth");
 
-	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
+	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
+	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
 		d->cube_diffuse_map = utility_load_texture_unknown();
 	}
 
-	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
+	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
+	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
 		d->cube_normal_map = utility_load_texture_unknown();
 	}
 
@@ -126,7 +128,6 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4 model;
 	mat4x4_identity(model);
 	mat4x4_scale_aniso(model, model, 5.0f, 5.0f, 5.0f);
-	mat4x4_translate_in_place(model, -0.5f, -0.5f, -0.5f); // model matrix is just translation here
 
 	// bind model-view matrix
 	mat4x4 mv;
@@ -144,12 +145,15 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_mul(mvp, s->camera.viewProj, model);
 	glUniformMatrix4fv(d->cube_shader.view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
+	// GLUquadric *quad;
+	// quad = gluNewQuadric();
+	// gluSphere(quad,1,100,20);
 	utility_draw_cube(
 		d->cube_shader.texcoord_loc,
 		d->cube_shader.normal_loc,
 		d->cube_shader.tangent_loc,
 		d->cube_shader.pos_loc,
-		0, 1 );
+		-0.5f, 0.5f );
 }
 
 static void render_shading(Deferred* d, Scene *s)
@@ -163,12 +167,19 @@ static void render_shading(Deferred* d, Scene *s)
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
 
-	for(int i = 0; i < GBUFFER_ATTACHMENTS_COUNT; i++)
+	// bind gbuffer
+	int i;
+	for(i = 0; i < GBUFFER_ATTACHMENTS_COUNT; i++)
 	{
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, d->g_buffer.attachments[i]);
 		glUniform1i(d->lighting_shader.gbuffer_locs[i], i);
 	}
+
+	// bind env map
+	glActiveTexture(GL_TEXTURE0+i);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap);
+	glUniform1i(d->lighting_shader.env_map_loc, i);
 
 	// light setup
 	vec4 view_light_pos_in;
@@ -186,6 +197,13 @@ static void render_shading(Deferred* d, Scene *s)
 	glUniform3fv(d->lighting_shader.light_pos_loc, 1, (const GLfloat*)view_light_pos);
 	glUniform3fv(d->lighting_shader.light_color_loc, 1, (const GLfloat*)s->main_light.color);
 	glUniform1f(d->lighting_shader.light_intensity_loc, s->main_light.intensity);
+
+	// View rotation only
+	mat4x4 view_rot, inv_view_rot;
+	mat4x4_dup(view_rot, s->camera.view);
+	vec3_zero(view_rot[3]);
+	mat4x4_invert(inv_view_rot, view_rot);
+	glUniformMatrix4fv(d->lighting_shader.inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view_rot);
 
 	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
 }

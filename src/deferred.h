@@ -57,6 +57,7 @@ typedef struct
 		};
 		GLint gbuffer_locs[GBUFFER_ATTACHMENTS_COUNT];
 	};
+	GLint env_map_loc;
 
 	// shader vars
 	GLint ambient_term_loc;
@@ -64,6 +65,7 @@ typedef struct
 	GLint light_color_loc;
 	GLint light_intensity_loc;
 	GLint eye_pos_loc;
+	GLint inv_view_loc;
 
 } LightingShader;
 

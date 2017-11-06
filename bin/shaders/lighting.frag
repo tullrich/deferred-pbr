@@ -7,12 +7,13 @@ uniform sampler2D GBuffer_Normal;
 uniform sampler2D GBuffer_Diffuse;
 uniform sampler2D GBuffer_Specular;
 uniform sampler2D GBuffer_Depth;
+uniform samplerCube EnvCubemap;
 
 uniform vec3 	AmbientTerm;
-
 uniform vec3 	MainLightPosition;
 uniform vec3 	MainLightColor;
 uniform float 	MainLightIntensity;
+uniform mat4x4  InvView;
 
 out vec4 outColor;
 
@@ -36,7 +37,13 @@ void main()
 	float specularTerm =  pow(max(dot(normal,halfVector),0.0), 300);
 
 	vec3 exitance =  specularTerm * E_l * specular.xyz + diffuse_term + diffuse.xyz * AmbientTerm * diffuse.w;
+
+	// rim light
 	exitance += vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
+
+	// env mapping
+	vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
+	exitance = texture(EnvCubemap, reflectDir.xyz).xyz;
 
 	outColor = vec4(exitance, 1.0);
 	gl_FragDepth = depth;
