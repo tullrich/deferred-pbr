@@ -69,6 +69,16 @@ static const char* skyboxTexturePaths[] = {
 	"images/SanFrancisco4/negx.jpg",
 };
 
+// SaintPetersBasilica skybox textures (must match CubeMapFaces enum)
+static const char* skyboxTexturePaths2[] = {
+	"images/SaintPetersBasilica/posz.jpg",
+	"images/SaintPetersBasilica/negz.jpg",
+	"images/SaintPetersBasilica/posy.jpg",
+	"images/SaintPetersBasilica/negy.jpg",
+	"images/SaintPetersBasilica/posx.jpg",
+	"images/SaintPetersBasilica/negx.jpg",
+};
+
 static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
@@ -183,7 +193,7 @@ static int init_scene() {
 	gScene.camera.boomLen = 15.0f;
 
 	// Init skybox
-	gScene.skybox.env_cubemap = utility_load_cubemap(skyboxTexturePaths);
+	gScene.skybox.env_cubemap = utility_load_cubemap(skyboxTexturePaths2);
 
 	// Init main directional light
 	init_main_light();
