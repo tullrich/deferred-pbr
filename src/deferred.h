@@ -10,6 +10,20 @@ typedef struct
 
 	// shader vars
 	GLint pos_loc;
+	GLint texcoord_loc;
+
+	GLint env_map_loc;
+
+	GLint inv_vp_loc;
+	GLint camera_pos_loc;
+} SkyboxShader;
+
+typedef struct
+{
+	GLuint program;
+
+	// shader vars
+	GLint pos_loc;
 	GLint normal_loc;
 	GLint tangent_loc;
 	GLint texcoord_loc;
@@ -69,6 +83,7 @@ typedef struct
 typedef struct
 {
 	RenderMode render_mode;
+	SkyboxShader skybox_shader;
 	CubeShader cube_shader;
 	LightingShader lighting_shader;
 	DebugShader debug_shader;

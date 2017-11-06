@@ -5,6 +5,17 @@ int deferred_initialize(Deferred* d)
 	memset(d, 0, sizeof(Deferred));
 	d->render_mode = RENDER_MODE_SHADED;
 
+	// Initialzie the skybox shader
+	if(!(d->skybox_shader.program = utility_create_program("shaders/skybox.vert", "shaders/skybox.frag"))) {
+		printf("Unable to load shader\n");
+		return 1;
+	}
+	d->skybox_shader.pos_loc = glGetAttribLocation(d->skybox_shader.program, "position");
+	d->skybox_shader.texcoord_loc = glGetAttribLocation(d->skybox_shader.program, "texcoord");
+	d->skybox_shader.env_map_loc = glGetUniformLocation(d->skybox_shader.program, "SkyboxCube");
+	d->skybox_shader.inv_vp_loc = glGetUniformLocation(d->skybox_shader.program, "InvViewProj");
+	d->skybox_shader.camera_pos_loc = glGetUniformLocation(d->skybox_shader.program, "CameraPos");
+
 	// Initialize box shader
 	if(!(d->cube_shader.program = utility_create_program("shaders/box.vert", "shaders/box.frag"))) {
 		printf("Unable to load shader\n");
@@ -138,7 +149,8 @@ static void render_geometry(Deferred* d, Scene *s)
 		d->cube_shader.texcoord_loc,
 		d->cube_shader.normal_loc,
 		d->cube_shader.tangent_loc,
-		d->cube_shader.pos_loc);
+		d->cube_shader.pos_loc,
+		0, 1 );
 }
 
 static void render_shading(Deferred* d, Scene *s)
@@ -151,7 +163,6 @@ static void render_shading(Deferred* d, Scene *s)
 	glEnable(GL_BLEND);
 	glBlendEquation(GL_FUNC_ADD);
 	glBlendFunc(GL_ONE, GL_ONE);
-
 
 	for(int i = 0; i < GBUFFER_ATTACHMENTS_COUNT; i++)
 	{
@@ -178,6 +189,65 @@ static void render_shading(Deferred* d, Scene *s)
 	glUniform1f(d->lighting_shader.light_intensity_loc, s->main_light.intensity);
 
 	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
+}
+
+static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)
+{
+	float const e = 1.f / tanf(y_fov / 2.f);
+
+	m[0][0] = e / aspect;
+	m[0][1] = 0.f;
+	m[0][2] = 0.f;
+	m[0][3] = 0.f;
+
+	m[1][0] = 0.f;
+	m[1][1] = e;
+	m[1][2] = 0.f;
+	m[1][3] = 0.f;
+
+	m[2][0] = 0.f;
+	m[2][1] = 0.f;
+	m[2][2] = -1.f;
+	m[2][3] = -1.f;
+
+	m[3][0] = 0.f;
+	m[3][1] = 0.f;
+	m[3][2] = -2.0f * n;
+	m[3][3] = 0.f;
+}
+
+static void render_skybox(Deferred *d, Scene *s)
+{
+	glUseProgram(d->skybox_shader.program);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT);
+
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);
+
+	// Bind environment map
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap);
+	glUniform1i(d->skybox_shader.env_map_loc, 0);
+
+	mat4x4 view_rot, inf_proj, vp;
+	//mat4x4_invert(inv_vp, s->camera.viewProj);
+	mat4x4_identity(view_rot);
+	mat4x4_rotate_X(view_rot, view_rot, 2.5f * s->camera.rot[0]);
+	mat4x4_rotate_Y(view_rot, view_rot, 2.5f * -s->camera.rot[1]);
+	mat4x4_inf_perspective(inf_proj, 80.0f * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
+	mat4x4_mul(vp, inf_proj, view_rot);
+
+	glUniformMatrix4fv(d->skybox_shader.inv_vp_loc, 1, GL_FALSE, (const GLfloat*)vp);
+	glUniform3fv(d->skybox_shader.camera_pos_loc, 1, (const GLfloat*)s->camera.pos);
+
+	utility_draw_cube2(
+		d->skybox_shader.pos_loc,
+		-100.0f, 100.0f );
+	//utility_draw_fullscreen_quad(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
+
+	glEnable(GL_CULL_FACE);
 }
 
 static void render_debug(Deferred *d, Scene *s)
@@ -219,6 +289,7 @@ void deferred_render(Deferred *d, Scene *s)
 
 	if (d->render_mode == RENDER_MODE_SHADED) {
 		render_shading(d, s);
+		render_skybox(d, s);
 	} else {
 		render_debug(d, s);
 	}

@@ -59,6 +59,16 @@ static const char* gTexturePaths[] = {
 	"images/uv_map.png",
 };
 
+// SanFrancisco skybox textures (must match CubeMapFaces enum)
+static const char* skyboxTexturePaths[] = {
+	"images/SanFrancisco4/posz.jpg",
+	"images/SanFrancisco4/negz.jpg",
+	"images/SanFrancisco4/posy.jpg",
+	"images/SanFrancisco4/negy.jpg",
+	"images/SanFrancisco4/posx.jpg",
+	"images/SanFrancisco4/negx.jpg",
+};
+
 static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
@@ -165,6 +175,28 @@ static void burst() {
 	particle_emitter_burst(&gEmitter, burst_count);
 }
 
+static int init_scene() {
+	memset(&gScene, 0, sizeof(Scene));
+	gScene.show_box = true;
+
+	// Init camera
+	gScene.camera.boomLen = 15.0f;
+
+	// Init skybox
+	gScene.skybox.env_cubemap = utility_load_cubemap(skyboxTexturePaths);
+
+	// Init main directional light
+	init_main_light();
+
+	// Init particle system
+	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
+	emitter_desc_preset_flare(&gEmitterDesc);
+	refresh_emitter( NULL );
+	gEmitter.muted = true; // start muted
+
+	return 0;
+}
+
 static int initialize() {
 	glewExperimental = 1;
 	glewInit();
@@ -174,24 +206,35 @@ static int initialize() {
 
 	srand((unsigned)time(0));
 
-	if(deferred_initialize(&gDeferred))
-		return 1;
+	int err = 0;
+	if (err = deferred_initialize(&gDeferred)) {
+		printf("deferred rendering init failed\n");
+		return err;
+	}
+	printf("deferred initialized\n");
 
-	if(forward_initialize(&gForward))
-		return 1;
+	if (err = forward_initialize(&gForward)) {
+		printf("forward rendering init failed\n");
+		return err;
+	}
+	printf("forward initialized\n");
+
 	gForward.g_buffer = &gDeferred.g_buffer;
 
-	initialize_particle_textures();
+	if (err = initialize_particle_textures()) {
+		printf("particle rendering init failed\n");
+		return err;
+	}
+	printf("particle rendering initialized\n");
 
-	memset(&gScene, 0, sizeof(Scene));
-	gScene.camera.boomLen = 15.0f;
-	init_main_light();
-
-	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
-	emitter_desc_preset_flare(&gEmitterDesc);
-	refresh_emitter( NULL );
+	if (err = init_scene()) {
+		printf("scene init failed\n");
+		return err;
+	}
 
 	GL_CHECK_ERROR();
+	printf("scene initialized\n");
+
 	return 0;
 }
 
@@ -262,7 +305,7 @@ static int frame() {
 		ImGui::SliderInt( "Max Particles", &gEmitterDesc.max, 1, 2048 );
 
 		ImGui::Combo( "Shading Mode", ( int* )&gEmitterDesc.shading_mode, particle_shading_mode_def, STATIC_ELEMENT_COUNT( particle_shading_mode_def ) );
-		
+
 		if ( gEmitterDesc.shading_mode == PARTICLE_SHADING_TEXTURED ) {
 			int texture_idx = get_particle_texture_index();
 			if ( ImGui::Combo( "Texture", ( int* )&texture_idx, particle_texture_def, STATIC_ELEMENT_COUNT( particle_texture_def ) ) ) {
@@ -351,7 +394,7 @@ int main(int argc, char* argv[]) {
 		while (SDL_PollEvent(&event)) {
 			if (ImGui_ImplSdlGL3_ProcessEvent(&event)) {
 				continue;
-			} 
+			}
 
 			if (!imguiCaptureMouse) {
 				if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -365,7 +408,7 @@ int main(int argc, char* argv[]) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						//SDL_SetRelativeMouseMode(SDL_FALSE);
 						mouse_grabbed = 0;
-					} 
+					}
 				}
 				else if (event.type == SDL_MOUSEMOTION) {
 					if (event.motion.state & SDL_BUTTON_LMASK) {

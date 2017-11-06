@@ -35,8 +35,17 @@ typedef struct
 
 typedef struct
 {
+	// skybox cubemap
+	GLuint env_cubemap;
+} Skybox;
+
+typedef struct
+{
 	// main camera values
 	Camera camera;
+
+	// Scene skybox
+	Skybox skybox;
 
 	// global lighting environment
 	vec3 ambient_color;

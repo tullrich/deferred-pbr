@@ -142,58 +142,98 @@ GLuint utility_load_texture_unknown() {
 	return texture_id;
 }
 
-void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, GLint pos_loc) {
+void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, GLint pos_loc, float min, float max) {
 	glBegin(GL_QUADS);
 		// back face
 		glVertexAttrib3f(tangent_log, -1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 0, -1);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 0, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 0, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 1, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 1, 0, 0);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, max, min);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, min);
 
 		// front face
 		glVertexAttrib3f(tangent_log, 1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 0, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 1, 1, 1);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 0, 1, 1);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 0, 0, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 1, 0, 1);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, min, max, max);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, min, min, max);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, max, min, max);
 
 		// left face
 		glVertexAttrib3f(tangent_log, 0, 0, 1);
 		glVertexAttrib3f(normal_loc, -1, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 0, 1, 1);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 0, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 0, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 0, 0, 1);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, max, max);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, max);
 
 		// right face
 		glVertexAttrib3f(tangent_log, 0, 0, -1);
 		glVertexAttrib3f(normal_loc, 1, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 1, 1, 1);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 1, 0, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 1, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 1, 1, 0);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, max);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, max, min, min);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, min);
 
 		// bottom face
 		glVertexAttrib3f(tangent_log, -1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, -1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 1, 0, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 0, 0, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 0, 0, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 1, 0, 0);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, max);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, max);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, min, min);
 
 		// top face
 		glVertexAttrib3f(tangent_log, 1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, 1, 1, 1);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, 1, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, 0, 1, 0);
-		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, 0, 1, 1);
+		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, min);
+		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, min, max, max);
 	glEnd();
 }
 
+
+void utility_draw_cube2(GLint pos_loc, float min, float max) {
+	glBegin(GL_QUADS);
+		// back face
+		glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib3f(pos_loc, max, max, min);
+		glVertexAttrib3f(pos_loc, max, min, min);
+
+		// front face
+		glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib3f(pos_loc, min, max, max);
+		glVertexAttrib3f(pos_loc, min, min, max);
+		glVertexAttrib3f(pos_loc, max, min, max);
+
+		// left face
+		glVertexAttrib3f(pos_loc, min, max, max);
+		glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib3f(pos_loc, min, min, max);
+
+		// right face
+		glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib3f(pos_loc, max, min, max);
+		glVertexAttrib3f(pos_loc, max, min, min);
+		glVertexAttrib3f(pos_loc, max, max, min);
+
+		// bottom face
+		glVertexAttrib3f(pos_loc, max, min, max);
+		glVertexAttrib3f(pos_loc, min, min, max);
+		glVertexAttrib3f(pos_loc, min, min, min);
+		glVertexAttrib3f(pos_loc, max, min, min);
+
+		// top face
+		glVertexAttrib3f(pos_loc, max, max, max);
+		glVertexAttrib3f(pos_loc, max, max, min);
+		glVertexAttrib3f(pos_loc, min, max, min);
+		glVertexAttrib3f(pos_loc, min, max, max);
+	glEnd();
+}
 
 void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 	glBegin(GL_QUADS);
@@ -203,6 +243,25 @@ void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
 	glEnd();
 }
+
+static GLint components_to_gl_format(int components) {
+	switch( components ) {
+		case 1: return GL_ALPHA;
+		case 3: return GL_RGB;
+		case 4: return GL_RGBA;
+		default: return 0;
+	}
+}
+
+// Keep in sync with CubeMapFaces enum
+static GLenum gl_cubemap_targets[] = {
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+};
 
 GLuint utility_load_image(GLenum target, const char *filepath) {
 	int width, height;
@@ -216,24 +275,19 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 		return 0;
 	}
 
-	switch( components ) {
-		case 1: format = GL_ALPHA; break;
-		case 3: format = GL_RGB; break;
-		case 4: format = GL_RGBA; break;
-		default: {
-			printf("Unsupported image format '%s', with %i channels.\n", filepath, components);
-			stbi_image_free(data);
-			return 0;
-		}
+	if ((format = components_to_gl_format(components)) == 0) {
+		printf("Unsupported image format '%s', with %i channels.\n", filepath, components);
+		stbi_image_free(data);
+		return 0;
 	}
 
 	glGenTextures(1, &texture_id);
 	glBindTexture(target, texture_id);
 
-    glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	glTexImage2D(target, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 	stbi_image_free(data);
@@ -242,6 +296,42 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 
 	printf("Loaded Image '%s': Width: %i, Height %i, Components %i\n", filepath, width, height, components);
 
+	return texture_id;
+}
+
+GLuint utility_load_cubemap(const char** filepaths) {
+	GLuint texture_id;
+	glGenTextures(1, &texture_id);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int width, height;
+	int components;
+	unsigned char* data;
+	GLint format;
+	for (int i = 0; i < 6; i++) {
+		if(!(data = stbi_load(filepaths[i], &width, &height, &components, 0))) {
+			glDeleteTextures(1, &texture_id);
+			printf("Error loading stb image '%s' with error: %s\n", filepaths[i], stbi_failure_reason());
+			return 0;
+		}
+
+		if ((format = components_to_gl_format(components)) == 0) {
+			printf("Unsupported image format '%s', with %i channels.\n", filepaths[i], components);
+			glDeleteTextures(1, &texture_id);
+			stbi_image_free(data);
+			return 0;
+		}
+
+		glTexImage2D(gl_cubemap_targets[i], 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		stbi_image_free(data);
+	}
+
+	printf("Loaded Cubemap '%s': Width: %i, Height %i, Components %i\n", filepaths[0], width, height, components);
 	return texture_id;
 }
 
