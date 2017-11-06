@@ -15,7 +15,6 @@ typedef struct
 	GLint env_map_loc;
 
 	GLint inv_vp_loc;
-	GLint camera_pos_loc;
 } SkyboxShader;
 
 typedef struct

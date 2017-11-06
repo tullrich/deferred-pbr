@@ -14,7 +14,6 @@ int deferred_initialize(Deferred* d)
 	d->skybox_shader.texcoord_loc = glGetAttribLocation(d->skybox_shader.program, "texcoord");
 	d->skybox_shader.env_map_loc = glGetUniformLocation(d->skybox_shader.program, "SkyboxCube");
 	d->skybox_shader.inv_vp_loc = glGetUniformLocation(d->skybox_shader.program, "InvViewProj");
-	d->skybox_shader.camera_pos_loc = glGetUniformLocation(d->skybox_shader.program, "CameraPos");
 
 	// Initialize box shader
 	if(!(d->cube_shader.program = utility_create_program("shaders/box.vert", "shaders/box.frag"))) {
@@ -230,11 +229,13 @@ static void render_skybox(Deferred *d, Scene *s)
 	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap);
 	glUniform1i(d->skybox_shader.env_map_loc, 0);
 
-	mat4x4 inv_vp;
-	mat4x4_invert(inv_vp, s->camera.viewProj);
+	mat4x4 view_rot, vp, inv_vp;
+	mat4x4_dup(view_rot, s->camera.view);
+	vec3_zero(view_rot[3]);
+	mat4x4_mul(vp, s->camera.proj, view_rot);
+	mat4x4_invert(inv_vp, vp);
 
 	glUniformMatrix4fv(d->skybox_shader.inv_vp_loc, 1, GL_FALSE, (const GLfloat*)inv_vp);
-	glUniform3fv(d->skybox_shader.camera_pos_loc, 1, (const GLfloat*)s->camera.pos);
 
 	utility_draw_fullscreen_quad(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
 }
