@@ -34,3 +34,19 @@ int utility_random_bool();
 float utility_random_real01(); //[0, 1]
 float utility_random_real11(); //[-1, 1]
 float utility_random_range(float min, float max); // [min, max]
+
+typedef struct
+{
+	float *vertices;
+	float *normals;
+	float *tangents;
+	float *texcoords;
+	unsigned short *indices;
+
+	unsigned int vertex_count;
+	unsigned int index_count;
+} SphereMesh;
+
+void utility_sphere_tessellate(SphereMesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
+void utility_sphere_draw(const SphereMesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
+void utility_sphere_free(SphereMesh *out_mesh);

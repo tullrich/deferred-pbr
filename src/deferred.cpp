@@ -70,13 +70,13 @@ int deferred_initialize(Deferred* d)
 	d->debug_shader.gbuffer_render_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Render");
 	d->debug_shader.gbuffer_depth_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Depth");
 
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
-	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
+	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
+	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
 		d->cube_diffuse_map = utility_load_texture_unknown();
 	}
 
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
-	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
+	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
+	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
 		d->cube_normal_map = utility_load_texture_unknown();
 	}
 
@@ -87,6 +87,8 @@ int deferred_initialize(Deferred* d)
 	if(!(d->cube_ao_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - AO Map.png"))) {
 		d->cube_ao_map = utility_load_texture_unknown();
 	}
+
+	utility_sphere_tessellate(&d->sphere, 1.0f, 100, 100);
 	return 0;
 }
 
@@ -145,15 +147,17 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_mul(mvp, s->camera.viewProj, model);
 	glUniformMatrix4fv(d->cube_shader.view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
-	// GLUquadric *quad;
-	// quad = gluNewQuadric();
-	// gluSphere(quad,1,100,20);
-	utility_draw_cube(
+	utility_sphere_draw(&d->sphere,
 		d->cube_shader.texcoord_loc,
 		d->cube_shader.normal_loc,
 		d->cube_shader.tangent_loc,
-		d->cube_shader.pos_loc,
-		-0.5f, 0.5f );
+		d->cube_shader.pos_loc );
+	// utility_draw_cube(
+	// 	d->cube_shader.texcoord_loc,
+	// 	d->cube_shader.normal_loc,
+	// 	d->cube_shader.tangent_loc,
+	// 	d->cube_shader.pos_loc,
+	// 	-0.5f, 0.5f );
 }
 
 static void render_shading(Deferred* d, Scene *s)

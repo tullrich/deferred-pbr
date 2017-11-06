@@ -142,10 +142,10 @@ GLuint utility_load_texture_unknown() {
 	return texture_id;
 }
 
-void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, GLint pos_loc, float min, float max) {
+void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc, float min, float max) {
 	glBegin(GL_QUADS);
 		// back face
-		glVertexAttrib3f(tangent_log, -1, 0, 0);
+		glVertexAttrib3f(tangent_loc, -1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 0, -1);
 		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, min);
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, max, min);
@@ -153,7 +153,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, min);
 
 		// front face
-		glVertexAttrib3f(tangent_log, 1, 0, 0);
+		glVertexAttrib3f(tangent_loc, 1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 0, 1);
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, max);
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, min, max, max);
@@ -161,7 +161,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, max, min, max);
 
 		// left face
-		glVertexAttrib3f(tangent_log, 0, 0, 1);
+		glVertexAttrib3f(tangent_loc, 0, 0, 1);
 		glVertexAttrib3f(normal_loc, -1, 0, 0);
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, max, max);
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, min, max, min);
@@ -169,7 +169,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, max);
 
 		// right face
-		glVertexAttrib3f(tangent_log, 0, 0, -1);
+		glVertexAttrib3f(tangent_loc, 0, 0, -1);
 		glVertexAttrib3f(normal_loc, 1, 0, 0);
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, max, max);
 		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, max);
@@ -177,7 +177,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, min);
 
 		// bottom face
-		glVertexAttrib3f(tangent_log, -1, 0, 0);
+		glVertexAttrib3f(tangent_loc, -1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, -1, 0);
 		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, max);
 		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, min, min, max);
@@ -185,7 +185,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_log, 
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, min, min);
 
 		// top face
-		glVertexAttrib3f(tangent_log, 1, 0, 0);
+		glVertexAttrib3f(tangent_loc, 1, 0, 0);
 		glVertexAttrib3f(normal_loc, 0, 1, 0);
 		glVertexAttrib2f(texcoord_loc, 1, 1); glVertexAttrib3f(pos_loc, max, max, max);
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, max, max, min);
@@ -323,4 +323,96 @@ float utility_random_real11() {
 
 float utility_random_range(float min, float max) {
 	return min + rand() / (float)RAND_MAX * (max - min);
+}
+
+// Adapted from https://stackoverflow.com/questions/7946770/calculating-a-sphere-in-opengl
+void utility_sphere_tessellate(SphereMesh* out_mesh, float radius, unsigned int rings, unsigned int sectors)
+{
+    const float R = 1./(float)(rings-1);
+    const float S = 1./(float)(sectors-1);
+
+	float* v = (float*)malloc(rings * sectors * 3 * sizeof(float));
+	float* n = (float*)malloc(rings * sectors * 3 * sizeof(float));
+	float* ta = (float*)malloc(rings * sectors * 3 * sizeof(float));
+	float* t = (float*)malloc(rings * sectors * 2 * sizeof(float));
+	unsigned short* indices = (unsigned short*)malloc((rings-1) * (sectors-1) * 4 * sizeof(unsigned short));
+
+	out_mesh->vertices = v;
+	out_mesh->normals = n;
+	out_mesh->tangents = ta;
+	out_mesh->texcoords = t;
+	out_mesh->indices = indices;
+	out_mesh->vertex_count = rings * sectors;
+	out_mesh->index_count = (rings-1) * (sectors-1) * 4;
+
+	int r, s;
+    for(r = 0; r < rings; r++) {
+		for(s = 0; s < sectors; s++) {
+            const float y = sin( -M_PI_2 + M_PI * r * R );
+            const float x = cos(2*M_PI * s * S) * sin( M_PI * r * R );
+            const float z = sin(2*M_PI * s * S) * sin( M_PI * r * R );
+			*t++ = s*S;
+			*t++ = r*R;
+			*v++ = x * radius;
+            *v++ = y * radius;
+            *v++ = z * radius;
+            *n++ = x;
+            *n++ = y;
+			*n++ = z;
+
+			ta[0] = -z; ta[1] = 0; ta[2] = x;
+			if (vec3_len(ta) != 0.0f) {
+				vec3_norm(ta, ta);
+			} else {
+				ta[0] = 0; ta[1] = 0; ta[2] = 1;
+			}
+			ta += 3;
+		}
+	}
+
+    for(r = 0; r < rings-1; r++) {
+		for(s = 0; s < sectors-1; s++) {
+			*indices++ = (r+1) * sectors + s;
+			*indices++ = (r+1) * sectors + (s+1);
+			*indices++ = r * sectors + (s+1);
+			*indices++ = r * sectors + s;
+		}
+    }
+}
+
+void utility_sphere_draw(const SphereMesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc) {
+	if (pos_loc >= 0) {
+		glEnableVertexAttribArray(pos_loc);
+		glVertexAttribPointer(pos_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->vertices);
+	}
+	if (normal_loc >= 0) {
+		glEnableVertexAttribArray(normal_loc);
+		glVertexAttribPointer(normal_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->normals);
+	}
+	if (tangent_loc >= 0) {
+		glEnableVertexAttribArray(tangent_loc);
+		glVertexAttribPointer(tangent_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->tangents);
+	}
+	if (texcoord_loc >= 0) {
+		glEnableVertexAttribArray(texcoord_loc);
+		glVertexAttribPointer(texcoord_loc, 2, GL_FLOAT, GL_FALSE, 0, mesh->texcoords);
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	glDrawElements(GL_QUADS, mesh->index_count, GL_UNSIGNED_SHORT, mesh->indices);
+
+	glDisableVertexAttribArray(pos_loc);
+	glDisableVertexAttribArray(normal_loc);
+	glDisableVertexAttribArray(tangent_loc);
+	glDisableVertexAttribArray(texcoord_loc);
+}
+
+void utility_sphere_free(SphereMesh *out_mesh) {
+	free(out_mesh->vertices);
+	free(out_mesh->normals);
+	free(out_mesh->tangents);
+	free(out_mesh->texcoords);
+	free(out_mesh->indices);
+	memset(out_mesh, 0, sizeof(SphereMesh));
 }
