@@ -30,6 +30,13 @@ static const char* render_mode_def[] = {
 	"Depth",
 };
 
+
+static const char* geometry_mode_def[] = {
+	"Box",
+	"Sphere",
+	"None",
+};
+
 // particle shading modes
 static const char* particle_shading_mode_def[] = {
 	"Flat",
@@ -218,7 +225,6 @@ static void burst() {
 
 static int init_scene() {
 	memset(&gScene, 0, sizeof(Scene));
-	gScene.show_box = true;
 
 	// Init camera
 	gScene.camera.boomLen = 15.0f;
@@ -338,7 +344,7 @@ static int frame() {
 	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
 
-		ImGui::Checkbox( "Show Box", ( bool* )&gScene.show_box );
+		ImGui::Combo( "Geometry", ( int* )&gScene.geo_mode, geometry_mode_def, STATIC_ELEMENT_COUNT( geometry_mode_def ) );
 		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
 		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
 

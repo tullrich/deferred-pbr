@@ -101,7 +101,7 @@ static void render_geometry(Deferred* d, Scene *s)
 	glDisable(GL_BLEND);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (!s->show_box)
+	if (s->geo_mode == GeometryMode::NONE)
 		return;
 
 	glUseProgram(d->cube_shader.program);
@@ -147,17 +147,24 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_mul(mvp, s->camera.viewProj, model);
 	glUniformMatrix4fv(d->cube_shader.view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
-	utility_sphere_draw(&d->sphere,
-		d->cube_shader.texcoord_loc,
-		d->cube_shader.normal_loc,
-		d->cube_shader.tangent_loc,
-		d->cube_shader.pos_loc );
-	// utility_draw_cube(
-	// 	d->cube_shader.texcoord_loc,
-	// 	d->cube_shader.normal_loc,
-	// 	d->cube_shader.tangent_loc,
-	// 	d->cube_shader.pos_loc,
-	// 	-0.5f, 0.5f );
+	switch (s->geo_mode) {
+		case GeometryMode::SPHERE:
+			utility_sphere_draw(&d->sphere,
+				d->cube_shader.texcoord_loc,
+				d->cube_shader.normal_loc,
+				d->cube_shader.tangent_loc,
+				d->cube_shader.pos_loc );
+			break;
+		case GeometryMode::BOX: // intentional fallthrough
+		default:
+			utility_draw_cube(
+				d->cube_shader.texcoord_loc,
+				d->cube_shader.normal_loc,
+				d->cube_shader.tangent_loc,
+				d->cube_shader.pos_loc,
+				-0.5f, 0.5f );
+			break;
+	}
 }
 
 static void render_shading(Deferred* d, Scene *s)

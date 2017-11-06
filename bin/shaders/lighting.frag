@@ -39,7 +39,7 @@ void main()
 	vec3 exitance =  specularTerm * E_l * specular.xyz + diffuse_term + diffuse.xyz * AmbientTerm * diffuse.w;
 
 	// rim light
-	exitance += vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
+	exitance = vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
 
 	// env mapping
 	vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);

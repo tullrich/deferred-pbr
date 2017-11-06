@@ -39,6 +39,13 @@ typedef struct
 	GLuint env_cubemap;
 } Skybox;
 
+typedef enum
+{
+	BOX,
+	SPHERE,
+	NONE
+} GeometryMode;
+
 typedef struct
 {
 	// main camera values
@@ -51,8 +58,8 @@ typedef struct
 	vec3 ambient_color;
 	float ambient_intensity;
 
-	// if set the box will not be drawn (hack)
-	int show_box;
+	// The selected geometry to render
+	GeometryMode geo_mode;
 
 	// main light
 	PointLight main_light;
