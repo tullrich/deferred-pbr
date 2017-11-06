@@ -436,6 +436,9 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
+	// Enable vsync
+	SDL_GL_SetSwapInterval(1);
+
 	// The window is open: enter program loop (see SDL_PollEvent)
 	int quit = 0;
 	int mouse_grabbed = 0;
