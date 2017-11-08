@@ -46,6 +46,16 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 		printf("Unable to load shader [%s. %s]\n", vert, frag);
 		return 1;
 	}
+	glBindAttribLocation( shader->program, 0, "vert" );
+	glBindAttribLocation( shader->program, 1, "translation" );
+	glBindAttribLocation( shader->program, 2, "rotation" );
+	glBindAttribLocation( shader->program, 3, "scale" );
+	glBindAttribLocation( shader->program, 4, "texcoord" );
+	glBindAttribLocation( shader->program, 5, "color" );
+	if ( utility_link_program(shader->program)) {
+		printf( "Unable to load shader\n" );
+		return 1;
+	}
 	shader->vert_loc = glGetAttribLocation(shader->program, "vert");
 	shader->trans_loc = glGetAttribLocation(shader->program, "translation");
 	shader->rot_loc = glGetAttribLocation(shader->program, "rotation");
