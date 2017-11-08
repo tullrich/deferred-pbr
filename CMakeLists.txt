@@ -45,6 +45,8 @@ add_executable( Deferred
 if ( NOT MSVC )
 	target_compile_options( Deferred PUBLIC -g )
 	target_link_libraries( Deferred "-lm" )
+else()
+	target_compile_definitions( Deferred PUBLIC -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 target_compile_definitions( Deferred PUBLIC -DTW_STATIC -DTW_NO_LIB_PRAGMA)

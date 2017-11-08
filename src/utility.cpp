@@ -1,7 +1,7 @@
 #include "utility.h"
 
 #ifdef _WIN32
-#define _CRT_SECURE_NO_DEPRECATE
+#define M_PI_2 (M_PI/2.0)
 #endif
 
 void utility_report_gl_err(const char * file, const char * func, int line) {
@@ -64,7 +64,7 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 			}
 		}
 		sources[0] = file_contents;
-		lengths[0] = skip_len;
+		lengths[0] = (GLint)skip_len;
 	}
 	sources[i] = file_contents + skip_len;
 	lengths[i] = (GLint)(file_len - skip_len);
@@ -88,6 +88,21 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 	return shader;
 }
 
+GLuint utility_link_program(GLuint program) {
+	glLinkProgram(program);
+
+	GLint program_linked;
+	glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
+	if (program_linked != GL_TRUE) {
+		GLsizei log_length = 0;
+		GLchar message[1024];
+		glGetProgramInfoLog(program, 1024, &log_length, message);
+		printf("Shader Link Error: %s\n", message);
+		return 1;
+	}
+	return 0;
+}
+
 GLuint utility_create_program(const char *vert_filename, const char *frag_filename) {
 	return utility_create_program_defines(vert_filename , frag_filename, NULL, 0);
 }
@@ -107,15 +122,7 @@ GLuint utility_create_program_defines(const char *vert_filename, const char *fra
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vert_shader);
 	glAttachShader(program, frag_shader);
-	glLinkProgram(program);
-
-	GLint program_linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
-	if (program_linked != GL_TRUE) {
-		GLsizei log_length = 0;
-		GLchar message[1024];
-		glGetProgramInfoLog(program, 1024, &log_length, message);
-		printf("Shader Link Error: %s\n", message);
+	if (utility_link_program(program)) {
 		glDeleteProgram(program);
 		program = 0;
 	}
@@ -151,6 +158,7 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, 
 		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib3f(pos_loc, min, max, min);
 		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib3f(pos_loc, max, max, min);
 		glVertexAttrib2f(texcoord_loc, 0, 1); glVertexAttrib3f(pos_loc, max, min, min);
+
 
 		// front face
 		glVertexAttrib3f(tangent_loc, 1, 0, 0);
@@ -196,10 +204,19 @@ void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, 
 
 void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 	glBegin(GL_QUADS);
-		glVertexAttrib2f(texcoord_loc, 1, 0); glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
-		glVertexAttrib2f(texcoord_loc, 1, 1.0f); glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
-		glVertexAttrib2f(texcoord_loc, 0, 1.0f); glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
-		glVertexAttrib2f(texcoord_loc, 0, 0); glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
+		glVertexAttrib2f(texcoord_loc, 1.0f, 0.0f); glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
+		glVertexAttrib2f(texcoord_loc, 1.0f, 1.0f); glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
+		glVertexAttrib2f(texcoord_loc, 0.0f, 1.0f); glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
+		glVertexAttrib2f(texcoord_loc, 0.0f, 0.0f); glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
+	glEnd();
+}
+
+void utility_draw_fullscreen_quad2( GLint texcoord_loc, GLint pos_loc ) {
+	glBegin( GL_QUADS );
+		glVertexAttrib2f( pos_loc, 1.0f, -1.0f );
+		glVertexAttrib2f( pos_loc, 1.0f, 1.0f );
+		glVertexAttrib2f( pos_loc, -1.0f, 1.0f );
+		glVertexAttrib2f( pos_loc, -1.0f, -1.0f );
 	glEnd();
 }
 
@@ -328,8 +345,8 @@ float utility_random_range(float min, float max) {
 // Adapted from https://stackoverflow.com/questions/7946770/calculating-a-sphere-in-opengl
 void utility_sphere_tessellate(SphereMesh* out_mesh, float radius, unsigned int rings, unsigned int sectors)
 {
-    const float R = 1./(float)(rings-1);
-    const float S = 1./(float)(sectors-1);
+    const float R = 1.f/(float)(rings-1);
+    const float S = 1.f/(float)(sectors-1);
 
 	float* v = (float*)malloc(rings * sectors * 3 * sizeof(float));
 	float* n = (float*)malloc(rings * sectors * 3 * sizeof(float));
@@ -345,12 +362,12 @@ void utility_sphere_tessellate(SphereMesh* out_mesh, float radius, unsigned int 
 	out_mesh->vertex_count = rings * sectors;
 	out_mesh->index_count = (rings-1) * (sectors-1) * 4;
 
-	int r, s;
+	unsigned int r, s;
     for(r = 0; r < rings; r++) {
 		for(s = 0; s < sectors; s++) {
-            const float y = sin( -M_PI_2 + M_PI * r * R );
-            const float x = cos(2*M_PI * s * S) * sin( M_PI * r * R );
-            const float z = sin(2*M_PI * s * S) * sin( M_PI * r * R );
+			const float y = (float)(sin( -M_PI_2 + M_PI * r * R ));
+            const float x = (float)(cos(2*M_PI * s * S) * sin( M_PI * r * R ));
+            const float z = (float)(sin(2*M_PI * s * S) * sin( M_PI * r * R ));
 			*t++ = s*S;
 			*t++ = r*R;
 			*v++ = x * radius;

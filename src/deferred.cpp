@@ -10,6 +10,12 @@ int deferred_initialize(Deferred* d)
 		printf("Unable to load shader\n");
 		return 1;
 	}
+	glBindAttribLocation( d->skybox_shader.program, 0, "position" );
+	glBindAttribLocation( d->skybox_shader.program, 0, "texcoord" );
+	if ( utility_link_program( d->skybox_shader.program ) ) {
+		printf( "Unable to load shader\n" );
+		return 1;
+	}
 	d->skybox_shader.pos_loc = glGetAttribLocation(d->skybox_shader.program, "position");
 	d->skybox_shader.texcoord_loc = glGetAttribLocation(d->skybox_shader.program, "texcoord");
 	d->skybox_shader.env_map_loc = glGetUniformLocation(d->skybox_shader.program, "SkyboxCube");
@@ -18,6 +24,18 @@ int deferred_initialize(Deferred* d)
 	// Initialize box shader
 	if(!(d->cube_shader.program = utility_create_program("shaders/box.vert", "shaders/box.frag"))) {
 		printf("Unable to load shader\n");
+		return 1;
+	}
+	glBindFragDataLocation(d->cube_shader.program, 0, "PositionOut");
+	glBindFragDataLocation(d->cube_shader.program, 1, "DiffuseOut");
+	glBindFragDataLocation(d->cube_shader.program, 2, "NormalOut");
+	glBindFragDataLocation(d->cube_shader.program, 3, "SpecularOut");
+	glBindAttribLocation(d->cube_shader.program, 0, "position");
+	glBindAttribLocation( d->cube_shader.program, 1, "normal" );
+	glBindAttribLocation( d->cube_shader.program, 2, "tangent" );
+	glBindAttribLocation( d->cube_shader.program, 3, "texcoord" );
+	if (utility_link_program(d->cube_shader.program)) {
+		printf( "Unable to load shader\n" );
 		return 1;
 	}
 
@@ -80,7 +98,7 @@ int deferred_initialize(Deferred* d)
 	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png"))) {
 	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png"))) {
 	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
-	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.png"))) {
+	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
 		d->cube_normal_map = utility_load_texture_unknown();
 	}
 
@@ -246,7 +264,7 @@ static void render_skybox(Deferred *d, Scene *s)
 
 	glUniformMatrix4fv(d->skybox_shader.inv_vp_loc, 1, GL_FALSE, (const GLfloat*)inv_vp);
 
-	utility_draw_fullscreen_quad(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
+	utility_draw_fullscreen_quad2(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
 }
 
 static void render_debug(Deferred *d, Scene *s)

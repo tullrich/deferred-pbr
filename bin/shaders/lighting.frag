@@ -45,7 +45,7 @@ void main()
 
 	// env mapping
 	vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
-	exitance = texture(EnvCubemap, reflectDir.xyz).xyz;
+	exitance += texture(EnvCubemap, reflectDir.xyz).xyz;
 
 	//float ratio = 1.0 /1.3333;
 	//vec4 refractedDir = InvView * vec4(refract(-eyeDir, normal, ratio), 0);
