@@ -21,29 +21,35 @@ void main()
 {
 	vec3 position = texture(GBuffer_Position, Texcoord).xyz;
 	vec4 diffuse = texture(GBuffer_Diffuse, Texcoord);
-	vec3 normal = texture(GBuffer_Normal, Texcoord).xyz;
+	vec3 normal = normalize(texture(GBuffer_Normal, Texcoord).xyz);
 	vec4 specular = texture(GBuffer_Specular, Texcoord);
 	float depth = texture(GBuffer_Depth, Texcoord).x;
 
 	vec3 lightDir = normalize(MainLightPosition-position);
 
 	// irradiance
+	vec3 ambient_term = diffuse.xyz * AmbientTerm * diffuse.w;
+
 	vec3 E_l = MainLightColor * MainLightIntensity;
-	vec3 E_theta = E_l * max(dot(lightDir, normal), 0);
-	vec3 diffuse_term = diffuse.xyz * E_theta;
+	float E_theta = max(dot(lightDir, normal), 0);
+	vec3 diffuse_term = diffuse.xyz * E_l * E_theta;
 
 	vec3 eyeDir = normalize(-position);
 	vec3 halfVector = normalize(lightDir + eyeDir);
-	float specularTerm =  pow(max(dot(normal,halfVector),0.0), 300);
+	vec3 specular_term = specular.xyz * E_l * pow(max(dot(normal,halfVector),0.0), 300);
 
-	vec3 exitance =  specularTerm * E_l * specular.xyz + diffuse_term + diffuse.xyz * AmbientTerm * diffuse.w;
+	vec3 exitance = specular_term + diffuse_term + ambient_term;
 
 	// rim light
-	exitance = vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
+	//exitance = vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
 
 	// env mapping
 	vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
 	exitance = texture(EnvCubemap, reflectDir.xyz).xyz;
+
+	//float ratio = 1.0 /1.3333;
+	//vec4 refractedDir = InvView * vec4(refract(-eyeDir, normal, ratio), 0);
+	//exitance = texture(EnvCubemap, refractedDir.xyz).xyz;
 
 	outColor = vec4(exitance, 1.0);
 	gl_FragDepth = depth;
