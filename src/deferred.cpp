@@ -70,17 +70,22 @@ int deferred_initialize(Deferred* d)
 	d->debug_shader.gbuffer_render_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Render");
 	d->debug_shader.gbuffer_depth_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Depth");
 
-	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
+	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png"))) {
+	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png"))) {
+	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
+	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
 		d->cube_diffuse_map = utility_load_texture_unknown();
 	}
 
-	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
+	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png"))) {
+	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png"))) {
+	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
+	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.png"))) {
 		d->cube_normal_map = utility_load_texture_unknown();
 	}
 
-	if(!(d->cube_specular_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Specular Map.png"))) {
+	//if(!(d->cube_specular_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Specular Map.png"))) {
+	if(!(d->cube_specular_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png"))) {
 		d->cube_specular_map = utility_load_texture_unknown();
 	}
 

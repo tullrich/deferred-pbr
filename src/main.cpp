@@ -193,7 +193,7 @@ static int initialize_skybox_textures() {
 
 static void init_main_light() {
 	gScene.ambient_color[0] = 0.15f;
-	gScene.ambient_color[1] = 0.60f;
+	gScene.ambient_color[1] = 0.15f;
 	gScene.ambient_color[2] = 0.15f;
 	gScene.ambient_intensity = 0.45f;
 
@@ -202,8 +202,8 @@ static void init_main_light() {
 	gScene.main_light.position[2] = 5.0f;
 
 	gScene.main_light.color[0] = 1.0f;
-	gScene.main_light.color[1] = 0.15f;
-	gScene.main_light.color[2] = 0.25f;
+	gScene.main_light.color[1] = 1.0f;
+	gScene.main_light.color[2] = 1.0f;
 
 	gScene.main_light.intensity = 1.0f;
 }
