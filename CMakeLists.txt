@@ -43,6 +43,8 @@ add_executable( Deferred
 	src/imgui/stb_textedit.h
 	src/imgui/imgui_impl_sdl_gl3.h
 	src/imgui/imgui_impl_sdl_gl3.cpp
+
+	src/tinyobj_loader_c/tinyobj_loader_c.c
 )
 
 if ( NOT MSVC )
