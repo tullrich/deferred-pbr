@@ -8,6 +8,7 @@ project( Deferred )
 find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
+find_package( FreeImage REQUIRED )
 
 add_subdirectory( thirdparty/stb )
 
@@ -57,6 +58,7 @@ include_directories(
 	${OPENGL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
+	${FREEIMAGE_INCLUDE_PATH}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
@@ -66,4 +68,5 @@ target_link_libraries(Deferred
 	${OPENGL_LIBRARIES}
 	${GLEW_LIBRARIES}
 	${STB_LIBRARIES}
+	${FREEIMAGE_LIBRARIES}
 )
