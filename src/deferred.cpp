@@ -212,7 +212,7 @@ static void render_shading(Deferred* d, Scene *s)
 
 	// bind env map
 	glActiveTexture(GL_TEXTURE0+i);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap);
 	glUniform1i(d->lighting_shader.env_map_loc, i);
 
 	// light setup

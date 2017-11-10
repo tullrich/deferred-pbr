@@ -230,7 +230,7 @@ static GLint components_to_gl_format(int components) {
 }
 
 // Keep in sync with CubeMapFaces enum
-static GLenum gl_cubemap_targets[] = {
+static const GLenum gl_cubemap_targets[] = {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
 	GL_TEXTURE_CUBE_MAP_POSITIVE_Y,

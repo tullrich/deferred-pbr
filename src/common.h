@@ -9,6 +9,7 @@
 #include <GL/glew.h>
 
 #include "stb_image.h"
+#include "FreeImage.h"
 
 #include "linmath.h"
 
@@ -74,6 +75,10 @@ static inline void mat4x4_printf(mat4x4 m) {
 	printf("  %f, %f, %f, %f\n", m[1][0], m[1][1], m[1][2], m[1][3]);
 	printf("  %f, %f, %f, %f\n", m[2][0], m[2][1], m[2][2], m[2][3]);
 	printf("  %f, %f, %f, %f ]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
+}
+static inline void mat4x4_zero(mat4x4 m) {
+	for (int i=0; i<4; i++)
+		vec4_zero(m[i]);
 }
 static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
 	float r31 = m[2][0];

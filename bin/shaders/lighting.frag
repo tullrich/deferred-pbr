@@ -27,8 +27,11 @@ void main()
 
 	vec3 lightDir = normalize(MainLightPosition-position);
 
+	vec4 worldNormal = InvView * vec4(normal, 0);
+ 	vec3 EnvAmbient = texture(EnvCubemap, worldNormal.xyz).xyz;
+
 	// irradiance
-	vec3 ambient_term = diffuse.xyz * AmbientTerm * diffuse.w;
+	vec3 ambient_term = diffuse.xyz * EnvAmbient * AmbientTerm;// * diffuse.w;
 
 	vec3 E_l = MainLightColor * MainLightIntensity;
 	float E_theta = max(dot(lightDir, normal), 0);
@@ -44,8 +47,9 @@ void main()
 	//exitance = vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
 
 	// env mapping
-	vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
-	exitance += texture(EnvCubemap, reflectDir.xyz).xyz;
+	//vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
+	//exitance = texture(EnvCubemap, reflectDir.xyz).xyz;
+
 
 	//float ratio = 1.0 /1.3333;
 	//vec4 refractedDir = InvView * vec4(refract(-eyeDir, normal, ratio), 0);

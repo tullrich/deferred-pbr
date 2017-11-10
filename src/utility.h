@@ -21,8 +21,8 @@ typedef enum
 	CUBEMAP_BACK,
 	CUBEMAP_TOP,
 	CUBEMAP_BOTTOM,
-	CUBEMAP_RIGHT,
-	CUBEMAP_LEFT
+	CUBEMAP_LEFT,
+	CUBEMAP_RIGHT
 } CubeMapFaces;
 
 GLuint utility_load_texture_unknown();

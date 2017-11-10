@@ -31,6 +31,8 @@ add_executable( Deferred
 	src/particles.cpp
 	src/scene.h
 	src/scene.cpp
+	src/ibl.h
+	src/ibl.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h

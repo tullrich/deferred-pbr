@@ -37,6 +37,9 @@ typedef struct
 {
 	// skybox cubemap
 	GLuint env_cubemap;
+
+	// irradiance map (pre-convolved env_cubemap)
+	GLuint irr_cubemap;
 } Skybox;
 
 typedef enum

@@ -3,6 +3,7 @@
 #include "scene.h"
 #include "deferred.h"
 #include "forward.h"
+#include "ibl.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl_gl3.h"
@@ -86,6 +87,24 @@ static const char* skybox_SanFrancisco[] = {
 	"images/SanFrancisco4/negx.jpg",
 };
 
+static const char* skybox_SanFrancisco_low[] ={
+	"images/SanFrancisco4_low/posz.jpg",
+	"images/SanFrancisco4_low/negz.jpg",
+	"images/SanFrancisco4_low/posy.jpg",
+	"images/SanFrancisco4_low/negy.jpg",
+	"images/SanFrancisco4_low/posx.jpg",
+	"images/SanFrancisco4_low/negx.jpg",
+};
+
+static const char* skybox_SanFrancisco_irr[] ={
+	"images/SanFrancisco4_low/posz_irradiance.png",
+	"images/SanFrancisco4_low/negz_irradiance.png",
+	"images/SanFrancisco4_low/posy_irradiance.png",
+	"images/SanFrancisco4_low/negy_irradiance.png",
+	"images/SanFrancisco4_low/posx_irradiance.png",
+	"images/SanFrancisco4_low/negx_irradiance.png",
+};
+
 // SaintPetersBasilica skybox textures (must match CubeMapFaces enum)
 static const char* skybox_SaintPetersBasilica[] = {
 	"images/SaintPetersBasilica/posz.jpg",
@@ -94,6 +113,24 @@ static const char* skybox_SaintPetersBasilica[] = {
 	"images/SaintPetersBasilica/negy.jpg",
 	"images/SaintPetersBasilica/posx.jpg",
 	"images/SaintPetersBasilica/negx.jpg",
+};
+
+static const char* skybox_SaintPetersBasilica_low[] ={
+	"images/SaintPetersBasilica_low/posz.jpg",
+	"images/SaintPetersBasilica_low/negz.jpg",
+	"images/SaintPetersBasilica_low/posy.jpg",
+	"images/SaintPetersBasilica_low/negy.jpg",
+	"images/SaintPetersBasilica_low/posx.jpg",
+	"images/SaintPetersBasilica_low/negx.jpg",
+}; 
+
+static const char* skybox_SaintPetersBasilica_irr[] ={
+	"images/SaintPetersBasilica_low/posz_irradiance.png",
+	"images/SaintPetersBasilica_low/negz_irradiance.png",
+	"images/SaintPetersBasilica_low/posy_irradiance.png",
+	"images/SaintPetersBasilica_low/negy_irradiance.png",
+	"images/SaintPetersBasilica_low/posx_irradiance.png",
+	"images/SaintPetersBasilica_low/negx_irradiance.png",
 };
 
 static const char* skybox_UV_Debug[] = {
@@ -180,14 +217,21 @@ static int get_particle_texture_index() {
 }
 
 static int initialize_skybox_textures() {
+	ibl_compute_irradiance_map(skybox_SanFrancisco_low);
+
 	if(!(gSkyboxes[0].env_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica)))
+		return 1;
+	if (!(gSkyboxes[0].irr_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica_irr)))
 		return 1;
 
 	if(!(gSkyboxes[1].env_cubemap = utility_load_cubemap(skybox_SanFrancisco)))
 		return 1;
+	if (!(gSkyboxes[1].irr_cubemap = utility_load_cubemap(skybox_SanFrancisco_irr)))
+		return 1;
 
 	if(!(gSkyboxes[2].env_cubemap = utility_load_cubemap(skybox_UV_Debug)))
 		return 1;
+	gSkyboxes[2].irr_cubemap = gSkyboxes[2].env_cubemap;
 	return 0;
 }
 
@@ -371,8 +415,8 @@ static int frame() {
 				gEmitterDesc.texture = gTextures[ texture_idx ];
 			}
 		}
-		ImGui::SliderFloat( "Start Scale", &gEmitterDesc.start_scale, .01, 10.0f );
-		ImGui::SliderFloat( "End Scale", &gEmitterDesc.end_scale, .01, 10.0f );
+		ImGui::SliderFloat( "Start Scale", &gEmitterDesc.start_scale, .01f, 10.0f );
+		ImGui::SliderFloat( "End Scale", &gEmitterDesc.end_scale, .01f, 10.0f );
 		ImGui::ColorEdit4( "Start Color", gEmitterDesc.start_color );
 		ImGui::ColorEdit4( "End Color", gEmitterDesc.end_color );
 
@@ -418,6 +462,7 @@ static int frame() {
 }
 
 int main(int argc, char* argv[]) {
+
 	SDL_Init(SDL_INIT_VIDEO);              // Initialize SDL
 
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
