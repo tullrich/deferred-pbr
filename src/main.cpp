@@ -535,35 +535,44 @@ int main(int argc, char* argv[]) {
 
 	// The window is open: enter program loop (see SDL_PollEvent)
 	int quit = 0;
-	int mouse_grabbed = 0;
 	while (!quit) {
 		ImGui_ImplSdlGL3_NewFrame(gSDLWindow);
 		bool imguiCaptureMouse = ImGui::GetIO().WantCaptureMouse;
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-			if (ImGui_ImplSdlGL3_ProcessEvent(&event)) {
-				continue;
-			}
 
-			if (!imguiCaptureMouse) {
+			if (imguiCaptureMouse) {
+				if (ImGui_ImplSdlGL3_ProcessEvent(&event)) {
+					continue;
+				}
+			}
+			else {
 				if (event.type == SDL_MOUSEBUTTONDOWN) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						// hide mouse, report deltas at screen edge
 						//SDL_SetRelativeMouseMode(SDL_TRUE);
-						mouse_grabbed = 1;
+						SDL_SetWindowGrab(gSDLWindow, SDL_TRUE);
 					}
 				}
 				else if (event.type == SDL_MOUSEBUTTONUP) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						//SDL_SetRelativeMouseMode(SDL_FALSE);
-						mouse_grabbed = 0;
+						SDL_SetWindowGrab(gSDLWindow, SDL_FALSE);
 					}
 				}
 				else if (event.type == SDL_MOUSEMOTION) {
 					if (event.motion.state & SDL_BUTTON_LMASK) {
 						gScene.camera.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
 						gScene.camera.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
+					}
+				}
+				else if (event.type == SDL_MOUSEWHEEL) {
+					if (event.wheel.y == 1)  {// scroll up
+						gScene.camera.boomLen -= 0.5f;
+					}
+					else if (event.wheel.y == -1) {
+						gScene.camera.boomLen +=  0.5f;
 					}
 				}
 			}
