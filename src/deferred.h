@@ -27,7 +27,7 @@ typedef struct
 	GLint tangent_loc;
 	GLint texcoord_loc;
 
-	GLint diffuse_map_loc;
+	GLint albedo_map_loc;
 	GLint normal_map_loc;
 	GLint specular_map_loc;
 	GLint ao_map_loc;
@@ -35,6 +35,8 @@ typedef struct
 	GLint modelview_loc;
 	GLint invTModelview_loc;
 	GLint view_loc;
+	GLint albedo_base_loc;
+	GLint specular_base_loc;
 } CubeShader;
 
 typedef struct
@@ -87,17 +89,19 @@ typedef struct
 	SkyboxShader skybox_shader;
 	CubeShader cube_shader;
 	LightingShader lighting_shader;
-	DebugShader debug_shader;
+	DebugShader debug_shader[2];
 	GBuffer g_buffer;
 
 	// texture handles
-	GLuint cube_diffuse_map;
+	vec3 albedo_base;
+	vec3 specular_base;
+	GLuint cube_albedo_map;
 	GLuint cube_normal_map;
 	GLuint cube_specular_map;
 	GLuint cube_ao_map;
 
 	// meshes
-	SphereMesh sphere;
+	Mesh sphere;
 } Deferred;
 
 int deferred_initialize(Deferred* d);

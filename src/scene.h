@@ -23,6 +23,9 @@ typedef struct
 	// camera boom length
 	float boomLen;
 
+	// camera field of view
+	float fovy;
+
 	// view matrix
 	mat4x4 view;
 
@@ -46,6 +49,7 @@ typedef enum
 {
 	BOX,
 	SPHERE,
+	MESH,
 	NONE
 } GeometryMode;
 
@@ -63,6 +67,9 @@ typedef struct
 
 	// The selected geometry to render
 	GeometryMode geo_mode;
+
+	// The selected mesh to render when geo_mode == MESH
+	Mesh mesh;
 
 	// main light
 	PointLight main_light;

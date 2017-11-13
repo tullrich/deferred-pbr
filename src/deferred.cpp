@@ -1,5 +1,17 @@
 #include "deferred.h"
 
+static int load_debug_shader(DebugShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
+	if (!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/passthrough.frag", defines, defines_count))) {
+		return 1;
+	}
+	shader->pos_loc = glGetAttribLocation(shader->program, "position");
+	shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord");
+	shader->gbuffer_render_loc = glGetUniformLocation(shader->program, "GBuffer_Render");
+	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
+	return 0;
+}
+
+
 int deferred_initialize(Deferred* d)
 {
 	memset(d, 0, sizeof(Deferred));
@@ -22,12 +34,20 @@ int deferred_initialize(Deferred* d)
 	d->skybox_shader.inv_vp_loc = glGetUniformLocation(d->skybox_shader.program, "InvViewProj");
 
 	// Initialize box shader
-	if(!(d->cube_shader.program = utility_create_program("shaders/box.vert", "shaders/box.frag"))) {
+	const char* box_shader_defines[] ={
+		"#define MESH_VERTEX_UV1\n",
+		"#define USE_NORMAL_MAP\n",
+		"#define USE_ALBEDO_MAP\n",
+		"#define USE_SPECULAR_MAP\n",
+		"#define USE_AO_MAP\n",
+	};
+	if(!(d->cube_shader.program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
+																 box_shader_defines, STATIC_ELEMENT_COUNT(box_shader_defines)))) {
 		printf("Unable to load shader\n");
 		return 1;
 	}
 	glBindFragDataLocation(d->cube_shader.program, 0, "PositionOut");
-	glBindFragDataLocation(d->cube_shader.program, 1, "DiffuseOut");
+	glBindFragDataLocation(d->cube_shader.program, 1, "AlbedoOut");
 	glBindFragDataLocation(d->cube_shader.program, 2, "NormalOut");
 	glBindFragDataLocation(d->cube_shader.program, 3, "SpecularOut");
 	glBindAttribLocation(d->cube_shader.program, 0, "position");
@@ -46,7 +66,10 @@ int deferred_initialize(Deferred* d)
 	d->cube_shader.modelview_loc = glGetUniformLocation(d->cube_shader.program, "ModelView");
 	d->cube_shader.invTModelview_loc = glGetUniformLocation(d->cube_shader.program, "invTModelView");
 	d->cube_shader.view_loc = glGetUniformLocation(d->cube_shader.program, "ModelViewProj");
-	d->cube_shader.diffuse_map_loc = glGetUniformLocation(d->cube_shader.program, "DiffuseMap");
+	d->cube_shader.albedo_base_loc = glGetUniformLocation(d->cube_shader.program, "AlbedoBase");
+	d->cube_shader.specular_base_loc = glGetUniformLocation(d->cube_shader.program, "SpecularBase");
+	d->cube_shader.ao_map_loc = glGetUniformLocation(d->cube_shader.program, "AOMap");
+	d->cube_shader.albedo_map_loc = glGetUniformLocation(d->cube_shader.program, "AlbedoOut");
 	d->cube_shader.normal_map_loc = glGetUniformLocation(d->cube_shader.program, "NormalMap");
 	d->cube_shader.specular_map_loc = glGetUniformLocation(d->cube_shader.program, "SpecularMap");
 	d->cube_shader.ao_map_loc = glGetUniformLocation(d->cube_shader.program, "AOMap");
@@ -79,20 +102,22 @@ int deferred_initialize(Deferred* d)
 	}
 
 	// Initialize passthrough
-	if(!(d->debug_shader.program = utility_create_program("shaders/passthrough.vert", "shaders/passthrough.frag"))) {
-		printf("Unable to load shader\n");
+	const char* debug_ndc_defines[] ={
+		"#define DEBUG_RENDER_NORMALIZE\n"
+	};
+	if(load_debug_shader(&d->debug_shader[0], "shaders/passthrough.vert", "shaders/passthrough.frag", NULL, 0) ||
+	   load_debug_shader(&d->debug_shader[1], "shaders/passthrough.vert", "shaders/passthrough.frag", 
+						  debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines))) {
+		printf("Unable to load debug shader\n");
 		return 1;
 	}
-	d->debug_shader.pos_loc = glGetAttribLocation(d->debug_shader.program, "position");
-	d->debug_shader.texcoord_loc = glGetAttribLocation(d->debug_shader.program, "texcoord");
-	d->debug_shader.gbuffer_render_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Render");
-	d->debug_shader.gbuffer_depth_loc = glGetUniformLocation(d->debug_shader.program, "GBuffer_Depth");
 
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png"))) {
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png"))) {
-	//if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
-	if(!(d->cube_diffuse_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
-		d->cube_diffuse_map = utility_load_texture_unknown();
+	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png"))) {
+	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png"))) {
+	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
+	if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
+	//if (!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/uv_map.png"))) {
+		d->cube_albedo_map = utility_load_texture_unknown();
 	}
 
 	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png"))) {
@@ -111,7 +136,10 @@ int deferred_initialize(Deferred* d)
 		d->cube_ao_map = utility_load_texture_unknown();
 	}
 
-	utility_sphere_tessellate(&d->sphere, 1.0f, 100, 100);
+	vec3_swizzle(d->albedo_base, 1.0f);
+	vec3_swizzle(d->specular_base, 0.0f);
+
+	utility_mesh_sphere_tessellate(&d->sphere, 1.0f, 100, 100);
 	return 0;
 }
 
@@ -129,17 +157,23 @@ static void render_geometry(Deferred* d, Scene *s)
 
 	glUseProgram(d->cube_shader.program);
 
-	// bind diffuse map
+	// bind albedo base color
+	glUniform3fv(d->cube_shader.albedo_base_loc, 1, d->albedo_base);
+
+	// bind specular base color
+	glUniform3fv(d->cube_shader.specular_base_loc, 1, d->specular_base);
+
+	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, d->cube_diffuse_map);
-	glUniform1i(d->cube_shader.diffuse_map_loc, 0);
+	glBindTexture(GL_TEXTURE_2D, d->cube_albedo_map);
+	glUniform1i(d->cube_shader.albedo_map_loc, 0);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, d->cube_normal_map);
 	glUniform1i(d->cube_shader.normal_map_loc, 1);
 
-	// bind normal map
+	// bind specular map
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, d->cube_specular_map);
 	glUniform1i(d->cube_shader.specular_map_loc, 2);
@@ -172,20 +206,26 @@ static void render_geometry(Deferred* d, Scene *s)
 
 	switch (s->geo_mode) {
 		case GeometryMode::SPHERE:
-			utility_sphere_draw(&d->sphere,
-				d->cube_shader.texcoord_loc,
-				d->cube_shader.normal_loc,
-				d->cube_shader.tangent_loc,
-				d->cube_shader.pos_loc );
+			utility_mesh_draw(&d->sphere, GL_QUADS,
+							  d->cube_shader.texcoord_loc,
+							  d->cube_shader.normal_loc,
+							  d->cube_shader.tangent_loc,
+							  d->cube_shader.pos_loc );
+			break;
+		case GeometryMode::MESH:
+			utility_mesh_draw(&s->mesh, GL_TRIANGLES,
+							  d->cube_shader.texcoord_loc,
+							  d->cube_shader.normal_loc,
+							  d->cube_shader.tangent_loc,
+							  d->cube_shader.pos_loc);
 			break;
 		case GeometryMode::BOX: // intentional fallthrough
 		default:
-			utility_draw_cube(
-				d->cube_shader.texcoord_loc,
-				d->cube_shader.normal_loc,
-				d->cube_shader.tangent_loc,
-				d->cube_shader.pos_loc,
-				-0.5f, 0.5f );
+			utility_draw_cube(d->cube_shader.texcoord_loc,
+							  d->cube_shader.normal_loc,
+							  d->cube_shader.tangent_loc,
+							  d->cube_shader.pos_loc,
+							  -0.5f, 0.5f );
 			break;
 	}
 }
@@ -269,29 +309,29 @@ static void render_skybox(Deferred *d, Scene *s)
 
 static void render_debug(Deferred *d, Scene *s)
 {
-	glUseProgram(d->debug_shader.program);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT);
-	glDisable(GL_BLEND);
-
+	int program_idx = 0;;
 	GLuint render_buffer = 0;
 	switch(d->render_mode) {
 		case RENDER_MODE_POSITION: 	render_buffer = d->g_buffer.position_render_buffer; break;
 		case RENDER_MODE_DIFFUSE: 	render_buffer = d->g_buffer.diffuse_render_buffer; break;
-		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; break;
+		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; program_idx = 1; break;
 		case RENDER_MODE_SPECULAR: 	render_buffer = d->g_buffer.specular_render_buffer; break;
 		case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; break;
 	}
 
-	// bind diffuse map
+	glUseProgram(d->debug_shader[program_idx].program);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	glDisable(GL_BLEND);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, render_buffer);
-	glUniform1i(d->debug_shader.gbuffer_render_loc, 0);
+	glUniform1i(d->debug_shader[program_idx].gbuffer_render_loc, 0);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, d->g_buffer.depth_render_buffer);
-	glUniform1i(d->debug_shader.gbuffer_depth_loc, 1);
+	glUniform1i(d->debug_shader[program_idx].gbuffer_depth_loc, 1);
 
-	utility_draw_fullscreen_quad(d->debug_shader.texcoord_loc, d->debug_shader.pos_loc);
+	utility_draw_fullscreen_quad(d->debug_shader[program_idx].texcoord_loc, d->debug_shader[program_idx].pos_loc);
 }
 
 void deferred_render(Deferred *d, Scene *s)

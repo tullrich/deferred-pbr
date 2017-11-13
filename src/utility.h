@@ -43,12 +43,13 @@ typedef struct
 	float *normals;
 	float *tangents;
 	float *texcoords;
-	unsigned short *indices;
+	unsigned int *indices;
 
 	unsigned int vertex_count;
 	unsigned int index_count;
-} SphereMesh;
+} Mesh;
 
-void utility_sphere_tessellate(SphereMesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
-void utility_sphere_draw(const SphereMesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
-void utility_sphere_free(SphereMesh *out_mesh);
+void utility_mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
+void utility_mesh_draw(const Mesh *mesh, GLenum mode, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
+void utility_mesh_free(Mesh *out_mesh);
+int utility_mesh_load(Mesh *out_mesh, const char *filepath);

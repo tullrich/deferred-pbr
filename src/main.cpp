@@ -19,13 +19,14 @@ static ParticleEmitter 		gEmitter;
 static int burst_count = 150;
 static int rotate_cam = 0;
 static int skybox_idx = 0;
+static int mesh = 0;
 
 // box render modes
 
 static const char* render_mode_def[] = {
 	"Shaded",
 	"Position",
-	"Diffuse",
+	"Albedo",
 	"Normal",
 	"Specular",
 	"Depth",
@@ -35,6 +36,9 @@ static const char* render_mode_def[] = {
 static const char* geometry_mode_def[] = {
 	"Box",
 	"Sphere",
+	"Buddha",
+	"Dragon",
+	"Bunny",
 	"None",
 };
 
@@ -57,15 +61,6 @@ static const char* particle_texture_def[] = {
 	"Smoke",
 	"Divine",
 	"UV Debug",
-};
-
-// particle texture index -> paths LUT
-static const char* gTexturePaths[] = {
-	"images/particles/flare.png",
-	"images/particles/particle.png",
-	"images/particles/smoke.png",
-	"images/particles/divine.png",
-	"images/uv_map.png",
 };
 
 
@@ -142,7 +137,24 @@ static const char* skybox_UV_Debug[] = {
 	"images/uv_map.png",
 };
 
+
+// particle texture index -> paths LUT
+static const char* gTexturePaths[] ={
+	"images/particles/flare.png",
+	"images/particles/particle.png",
+	"images/particles/smoke.png",
+	"images/particles/divine.png",
+	"images/uv_map.png",
+};
+
 static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
+
+static const char* gMeshPaths[] ={
+	"meshes/buddha/buddha.obj",
+	"meshes/dragon/dragon.obj",
+	"meshes/bunny/bunny.obj"
+};
+static Mesh gMeshes[STATIC_ELEMENT_COUNT(gMeshPaths)];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	memset(out, 0, sizeof(ParticleEmitterDesc));
@@ -216,8 +228,17 @@ static int get_particle_texture_index() {
 	return 0;
 }
 
+static int initialize_meshes() {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
+		if (utility_mesh_load(&gMeshes[i], gMeshPaths[i])) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int initialize_skybox_textures() {
-	ibl_compute_irradiance_map(skybox_SanFrancisco_low);
+	//ibl_compute_irradiance_map(skybox_SanFrancisco_low);
 
 	if(!(gSkyboxes[0].env_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica)))
 		return 1;
@@ -272,6 +293,7 @@ static int init_scene() {
 
 	// Init camera
 	gScene.camera.boomLen = 15.0f;
+	gScene.camera.fovy = 90.0f;
 
 	// Init skybox
 	gScene.skybox = gSkyboxes[skybox_idx];
@@ -324,6 +346,12 @@ static int initialize() {
 	}
 	printf("particle rendering initialized\n");
 
+	if (err = initialize_meshes()) {
+		printf("mesh loading failed\n");
+		return err;
+	}
+	printf("meshes loaded\n");
+
 	if (err = init_scene()) {
 		printf("scene init failed\n");
 		return err;
@@ -350,7 +378,7 @@ static void update_scene(float dt) {
 	vec3_negate_in_place(gScene.camera.view[3]);
 
 	// calculate view-projection matrix
-	mat4x4_perspective(gScene.camera.proj, 80.0f * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
+	mat4x4_perspective(gScene.camera.proj, gScene.camera.fovy * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
 	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
 
 	vec3 cone_axis;
@@ -387,8 +415,19 @@ static int frame() {
 	}
 	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
+		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 50.0f);
+		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 
-		ImGui::Combo( "Geometry", ( int* )&gScene.geo_mode, geometry_mode_def, STATIC_ELEMENT_COUNT( geometry_mode_def ) );
+		if (ImGui::Combo( "Geometry", ( int* )&mesh, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
+			if (mesh <= 1) {
+				gScene.geo_mode = (GeometryMode)mesh;
+			} else if (mesh < 5) {
+				gScene.geo_mode = MESH;
+				gScene.mesh = gMeshes[mesh - 2];
+			} else {
+				gScene.geo_mode = NONE;
+			}
+		}
 		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
 		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
 
@@ -399,6 +438,10 @@ static int frame() {
 		if(ImGui::Combo( "Skybox", ( int* )&skybox_idx, skybox_def, STATIC_ELEMENT_COUNT( skybox_def ) )) {
 			gScene.skybox = gSkyboxes[skybox_idx];
 		}
+	}
+	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::ColorEdit3("Albedo Base", gDeferred.albedo_base);
+		ImGui::ColorEdit3("Specular Base", gDeferred.specular_base);
 	}
 	if ( ImGui::CollapsingHeader( "Emitter", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		if ( ImGui::Button("Refresh") ) {

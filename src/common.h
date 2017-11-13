@@ -4,15 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 
 #include "SDL.h"
 #include <GL/glew.h>
 
 #include "stb_image.h"
 #include "FreeImage.h"
+#include "tinyobj_loader_c/tinyobj_loader_c.h"
 
 #include "linmath.h"
 
+static inline void vec2_dup(vec2 r, vec2 const v) {
+	for (int i=0; i<2; ++i)
+		r[i] = v[i];
+}
 static inline void vec3_dup(vec3 r, vec3 const v) {
 	for(int i=0; i<3; ++i)
 		r[i] = v[i];
