@@ -24,6 +24,10 @@
 #ifndef TINOBJ_LOADER_C_H_
 #define TINOBJ_LOADER_C_H_
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 /* @todo { Remoe stdlib dependency. size_t? } */
 #include <stdlib.h>
 
@@ -105,6 +109,10 @@ extern void tinyobj_attrib_free(tinyobj_attrib_t *attrib);
 extern void tinyobj_shapes_free(tinyobj_shape_t *shapes, size_t num_shapes);
 extern void tinyobj_materials_free(tinyobj_material_t *materials,
                                    size_t num_materials);
+
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef TINYOBJ_LOADER_C_IMPLEMENTATION
 #include <stdio.h>
@@ -476,7 +484,7 @@ static void initMaterial(tinyobj_material_t *material) {
 
 // Implementation of string to int hashtable
 
-#define HASH_TABLE_ERROR 1 
+#define HASH_TABLE_ERROR 1
 #define HASH_TABLE_SUCCESS 0
 
 #define HASH_TABLE_DEFAULT_SIZE 10
@@ -546,7 +554,7 @@ static int hash_table_insert_value(unsigned long hash, long value, hash_table_t*
     if (i >= hash_table->capacity)
       return HASH_TABLE_ERROR;
     last_entry = hash_table->entries + index;
-    index = (start_index + (i * i)) % hash_table->capacity; 
+    index = (start_index + (i * i)) % hash_table->capacity;
   }
 
   hash_table_entry_t* entry = hash_table->entries + index;
@@ -623,7 +631,7 @@ static void hash_table_set(const char* name, size_t val, hash_table_t* hash_tabl
   hash_table_entry_t* entry = hash_table_find(hash, hash_table);
   if (entry)
   {
-    entry->value = val;
+    entry->value = (long)val;
     return;
   }
 
@@ -633,7 +641,7 @@ static void hash_table_set(const char* name, size_t val, hash_table_t* hash_tabl
   {
     hash_table_maybe_grow(hash_table->n + 1, hash_table);
   }
-  while (hash_table_insert(hash, val, hash_table) != HASH_TABLE_SUCCESS);
+  while (hash_table_insert(hash, (long)val, hash_table) != HASH_TABLE_SUCCESS);
 }
 
 static long hash_table_get(const char* name, hash_table_t* hash_table)
@@ -909,7 +917,7 @@ int tinyobj_parse_mtl_file(tinyobj_material_t **materials_out,
                            size_t *num_materials_out,
                            const char *filename) {
   return tinyobj_parse_and_index_mtl_file(materials_out, num_materials_out, filename, NULL);
-} 
+}
 
 
 typedef enum {
@@ -1203,7 +1211,7 @@ int tinyobj_parse_obj(tinyobj_attrib_t *attrib, tinyobj_shape_t **shapes,
     }
   }
 
-  commands = (Command *)malloc(sizeof(Command) * num_lines); 
+  commands = (Command *)malloc(sizeof(Command) * num_lines);
 
   hash_table_t material_table;
   create_hash_table(HASH_TABLE_DEFAULT_SIZE, &material_table);
@@ -1298,7 +1306,7 @@ int tinyobj_parse_obj(tinyobj_attrib_t *attrib, tinyobj_shape_t **shapes,
         }
         */
         if (commands[i].material_name &&
-           commands[i].material_name_len >0) 
+           commands[i].material_name_len >0)
         {
           // Create a null terminated string
           char* material_name_null_term = (char*) malloc(commands[i].material_name_len + 1);
@@ -1451,7 +1459,7 @@ int tinyobj_parse_obj(tinyobj_attrib_t *attrib, tinyobj_shape_t **shapes,
   }
 
   destroy_hash_table(&material_table);
-  
+
   (*materials_out) = materials;
   (*num_materials_out) = num_materials;
 
