@@ -12,6 +12,7 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 	float* t = (float*)malloc(rings * sectors * 2 * sizeof(float));
 	unsigned int* indices = (unsigned int*)malloc((rings-1) * (sectors-1) * 4 * sizeof(unsigned int));
 
+	memset(out_mesh, 0, sizeof(Mesh));
 	out_mesh->vertices = v;
 	out_mesh->normals = n;
 	out_mesh->tangents = ta;
@@ -20,6 +21,7 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 	out_mesh->vertex_count = rings * sectors;
 	out_mesh->index_count = (rings-1) * (sectors-1) * 4;
 	out_mesh->mode = GL_QUADS;
+	vec3_swizzle(out_mesh->bounds.extents, 0.5f);
 
 	unsigned int r, s;
     for(r = 0; r < rings; r++) {
@@ -259,6 +261,25 @@ static void compute_mesh_normals(tinyobj_attrib_t *out_attrib) {
 	out_attrib->normals = normals;
 }
 
+static Bounds compute_mesh_bounds(const Mesh* mesh) {
+	const float *vertices = mesh->vertices;
+	const unsigned int vertex_count = mesh->vertex_count;
+
+	vec3 min = {0.0f}, max = {0.0f};
+	if (vertex_count) {
+		vec3_dup(min, vertices);
+		vec3_dup(max, vertices);
+		for (unsigned int i = 0; i < vertex_count; i++) {
+			const float *vert = &vertices[i*3];
+			for (int j = 0; j < 3; j++) {
+				if (min[j] > vert[j]) min[j] = vert[j];
+				if (max[j] < vert[j]) max[j] = vert[j];
+			}
+		}
+	}
+	return bounds_from_min_max(min, max);;
+}
+
 static float* compute_mesh_tangents(const tinyobj_attrib_t *attrib) {
 	assert(attrib->num_texcoords > 0 && attrib->num_normals > 0);
 	const tinyobj_vertex_index_t *indices = attrib->faces;
@@ -318,6 +339,9 @@ int mesh_load_obj(Mesh *out_mesh, const char *filepath) {
 	if (attrib.num_normals > 0 && attrib.num_texcoords > 0) {
 		out_mesh->tangents = compute_mesh_tangents(&attrib);
 	}
+
+	// Compute bounds from vertex positions
+	out_mesh->bounds = compute_mesh_bounds(out_mesh);
 
 	// Free tinyobj data
 	tinyobj_shapes_free(shapes, num_shapes);

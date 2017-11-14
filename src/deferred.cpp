@@ -159,6 +159,7 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4 model;
 	mat4x4_identity(model);
 	mat4x4_scale_aniso(model, model, 5.0f, 5.0f, 5.0f);
+	mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
 
 	// bind model-view matrix
 	mat4x4 mv;

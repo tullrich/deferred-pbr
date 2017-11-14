@@ -624,11 +624,11 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				else if (event.type == SDL_MOUSEWHEEL) {
-					if (event.wheel.y == 1)  {// scroll up
-						gScene.camera.boomLen -= 0.5f;
+					if (event.wheel.y == 1)  {
+						gScene.camera.boomLen -= 2.f;
 					}
 					else if (event.wheel.y == -1) {
-						gScene.camera.boomLen +=  0.5f;
+						gScene.camera.boomLen +=  2.f;
 					}
 				}
 			}
