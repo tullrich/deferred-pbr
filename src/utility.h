@@ -36,20 +36,3 @@ int utility_random_bool();
 float utility_random_real01(); //[0, 1]
 float utility_random_real11(); //[-1, 1]
 float utility_random_range(float min, float max); // [min, max]
-
-typedef struct
-{
-	float *vertices;
-	float *normals;
-	float *tangents;
-	float *texcoords;
-	unsigned int *indices;
-
-	unsigned int vertex_count;
-	unsigned int index_count;
-} Mesh;
-
-void utility_mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
-void utility_mesh_draw(const Mesh *mesh, GLenum mode, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
-void utility_mesh_free(Mesh *out_mesh);
-int utility_mesh_load(Mesh *out_mesh, const char *filepath);

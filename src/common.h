@@ -163,6 +163,10 @@ const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 
+#ifdef _WIN32
+#define M_PI_2 (M_PI/2.0)
+#endif
+
 typedef enum
 {
 	RENDER_MODE_SHADED,

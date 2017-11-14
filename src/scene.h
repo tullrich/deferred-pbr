@@ -2,6 +2,7 @@
 #include "common.h"
 
 #include "particles.h"
+#include "mesh.h"
 
 #define SCENE_EMITTERS_MAX 256
 
@@ -48,10 +49,19 @@ typedef struct
 typedef enum
 {
 	BOX,
-	SPHERE,
 	MESH,
 	NONE
 } GeometryMode;
+
+typedef struct
+{
+	vec3 albedo_base;
+	vec3 specular_base;
+	GLuint cube_albedo_map;
+	GLuint cube_normal_map;
+	GLuint cube_specular_map;
+	GLuint cube_ao_map;
+} Material;
 
 typedef struct
 {

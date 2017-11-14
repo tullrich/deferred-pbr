@@ -99,9 +99,6 @@ typedef struct
 	GLuint cube_normal_map;
 	GLuint cube_specular_map;
 	GLuint cube_ao_map;
-
-	// meshes
-	Mesh sphere;
 } Deferred;
 
 int deferred_initialize(Deferred* d);

@@ -117,7 +117,7 @@ static const char* skybox_SaintPetersBasilica_low[] ={
 	"images/SaintPetersBasilica_low/negy.jpg",
 	"images/SaintPetersBasilica_low/posx.jpg",
 	"images/SaintPetersBasilica_low/negx.jpg",
-}; 
+};
 
 static const char* skybox_SaintPetersBasilica_irr[] ={
 	"images/SaintPetersBasilica_low/posz_irradiance.png",
@@ -154,7 +154,7 @@ static const char* gMeshPaths[] ={
 	"meshes/dragon/dragon.obj",
 	"meshes/bunny/bunny.obj"
 };
-static Mesh gMeshes[STATIC_ELEMENT_COUNT(gMeshPaths)];
+static Mesh gMeshes[1+STATIC_ELEMENT_COUNT(gMeshPaths)];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	memset(out, 0, sizeof(ParticleEmitterDesc));
@@ -229,8 +229,9 @@ static int get_particle_texture_index() {
 }
 
 static int initialize_meshes() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
-		if (utility_mesh_load(&gMeshes[i], gMeshPaths[i])) {
+	mesh_sphere_tessellate(&gMeshes[0], 1.0f, 100, 100);
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshPaths); i++) {
+		if (mesh_load_obj(&gMeshes[i+1], gMeshPaths[i])) {
 			return 1;
 		}
 	}
@@ -419,11 +420,11 @@ static int frame() {
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 
 		if (ImGui::Combo( "Geometry", ( int* )&mesh, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
-			if (mesh <= 1) {
-				gScene.geo_mode = (GeometryMode)mesh;
+			if (mesh == 1) {
+				gScene.geo_mode = (GeometryMode)BOX;
 			} else if (mesh < 5) {
 				gScene.geo_mode = MESH;
-				gScene.mesh = gMeshes[mesh - 2];
+				gScene.mesh = gMeshes[mesh - 1];
 			} else {
 				gScene.geo_mode = NONE;
 			}

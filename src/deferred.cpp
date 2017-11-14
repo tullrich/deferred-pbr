@@ -106,7 +106,7 @@ int deferred_initialize(Deferred* d)
 		"#define DEBUG_RENDER_NORMALIZE\n"
 	};
 	if(load_debug_shader(&d->debug_shader[0], "shaders/passthrough.vert", "shaders/passthrough.frag", NULL, 0) ||
-	   load_debug_shader(&d->debug_shader[1], "shaders/passthrough.vert", "shaders/passthrough.frag", 
+	   load_debug_shader(&d->debug_shader[1], "shaders/passthrough.vert", "shaders/passthrough.frag",
 						  debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines))) {
 		printf("Unable to load debug shader\n");
 		return 1;
@@ -139,7 +139,6 @@ int deferred_initialize(Deferred* d)
 	vec3_swizzle(d->albedo_base, 1.0f);
 	vec3_swizzle(d->specular_base, 0.0f);
 
-	utility_mesh_sphere_tessellate(&d->sphere, 1.0f, 100, 100);
 	return 0;
 }
 
@@ -204,16 +203,9 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_mul(mvp, s->camera.viewProj, model);
 	glUniformMatrix4fv(d->cube_shader.view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
-	switch (s->geo_mode) {
-		case GeometryMode::SPHERE:
-			utility_mesh_draw(&d->sphere, GL_QUADS,
-							  d->cube_shader.texcoord_loc,
-							  d->cube_shader.normal_loc,
-							  d->cube_shader.tangent_loc,
-							  d->cube_shader.pos_loc );
-			break;
+	switch (s->geo_mode) {;
 		case GeometryMode::MESH:
-			utility_mesh_draw(&s->mesh, GL_TRIANGLES,
+			mesh_draw(&s->mesh,
 							  d->cube_shader.texcoord_loc,
 							  d->cube_shader.normal_loc,
 							  d->cube_shader.tangent_loc,

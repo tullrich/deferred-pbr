@@ -33,6 +33,8 @@ add_executable( Deferred
 	src/scene.cpp
 	src/ibl.h
 	src/ibl.cpp
+	src/mesh.h
+	src/mesh.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h
