@@ -112,33 +112,6 @@ int deferred_initialize(Deferred* d)
 		return 1;
 	}
 
-	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png"))) {
-	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png"))) {
-	//if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png"))) {
-	if(!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg"))) {
-	//if (!(d->cube_albedo_map = utility_load_image(GL_TEXTURE_2D, "images/uv_map.png"))) {
-		d->cube_albedo_map = utility_load_texture_unknown();
-	}
-
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png"))) {
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png"))) {
-	//if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png"))) {
-	if(!(d->cube_normal_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg"))) {
-		d->cube_normal_map = utility_load_texture_unknown();
-	}
-
-	//if(!(d->cube_specular_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Specular Map.png"))) {
-	if(!(d->cube_specular_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png"))) {
-		d->cube_specular_map = utility_load_texture_unknown();
-	}
-
-	if(!(d->cube_ao_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - AO Map.png"))) {
-		d->cube_ao_map = utility_load_texture_unknown();
-	}
-
-	vec3_swizzle(d->albedo_base, 1.0f);
-	vec3_swizzle(d->specular_base, 0.0f);
-
 	return 0;
 }
 
@@ -157,29 +130,29 @@ static void render_geometry(Deferred* d, Scene *s)
 	glUseProgram(d->cube_shader.program);
 
 	// bind albedo base color
-	glUniform3fv(d->cube_shader.albedo_base_loc, 1, d->albedo_base);
+	glUniform3fv(d->cube_shader.albedo_base_loc, 1, s->material.albedo_base);
 
 	// bind specular base color
-	glUniform3fv(d->cube_shader.specular_base_loc, 1, d->specular_base);
+	glUniform3fv(d->cube_shader.specular_base_loc, 1, s->material.specular_base);
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, d->cube_albedo_map);
+	glBindTexture(GL_TEXTURE_2D, s->material.albedo_map);
 	glUniform1i(d->cube_shader.albedo_map_loc, 0);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, d->cube_normal_map);
+	glBindTexture(GL_TEXTURE_2D, s->material.normal_map);
 	glUniform1i(d->cube_shader.normal_map_loc, 1);
 
 	// bind specular map
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, d->cube_specular_map);
+	glBindTexture(GL_TEXTURE_2D, s->material.specular_map);
 	glUniform1i(d->cube_shader.specular_map_loc, 2);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, d->cube_ao_map);
+	glBindTexture(GL_TEXTURE_2D, s->material.ao_map);
 	glUniform1i(d->cube_shader.ao_map_loc, 3);
 
 	// calc model matrix

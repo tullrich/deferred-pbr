@@ -57,10 +57,11 @@ typedef struct
 {
 	vec3 albedo_base;
 	vec3 specular_base;
-	GLuint cube_albedo_map;
-	GLuint cube_normal_map;
-	GLuint cube_specular_map;
-	GLuint cube_ao_map;
+	GLuint albedo_map;
+	GLuint normal_map;
+	GLuint specular_map;
+	GLuint emissive_map;
+	GLuint ao_map;
 } Material;
 
 typedef struct
@@ -80,6 +81,9 @@ typedef struct
 
 	// The selected mesh to render when geo_mode == MESH
 	Mesh mesh;
+
+	// The material to render
+	Material material;
 
 	// main light
 	PointLight main_light;

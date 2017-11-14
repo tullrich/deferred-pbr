@@ -91,14 +91,6 @@ typedef struct
 	LightingShader lighting_shader;
 	DebugShader debug_shader[2];
 	GBuffer g_buffer;
-
-	// texture handles
-	vec3 albedo_base;
-	vec3 specular_base;
-	GLuint cube_albedo_map;
-	GLuint cube_normal_map;
-	GLuint cube_specular_map;
-	GLuint cube_ao_map;
 } Deferred;
 
 int deferred_initialize(Deferred* d);

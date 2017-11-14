@@ -19,7 +19,8 @@ static ParticleEmitter 		gEmitter;
 static int burst_count = 150;
 static int rotate_cam = 0;
 static int skybox_idx = 0;
-static int mesh = 0;
+static int material_idx = 0;
+static int mesh_idx = 0;
 
 // box render modes
 
@@ -139,7 +140,7 @@ static const char* skybox_UV_Debug[] = {
 
 
 // particle texture index -> paths LUT
-static const char* gTexturePaths[] ={
+static const char* gParticleTexturePaths[] ={
 	"images/particles/flare.png",
 	"images/particles/particle.png",
 	"images/particles/smoke.png",
@@ -147,7 +148,7 @@ static const char* gTexturePaths[] ={
 	"images/uv_map.png",
 };
 
-static GLuint gTextures[STATIC_ELEMENT_COUNT(gTexturePaths)];
+static GLuint gParticleTextures[STATIC_ELEMENT_COUNT(gParticleTexturePaths)];
 
 static const char* gMeshPaths[] ={
 	"meshes/buddha/buddha.obj",
@@ -155,6 +156,8 @@ static const char* gMeshPaths[] ={
 	"meshes/bunny/bunny.obj"
 };
 static Mesh gMeshes[1+STATIC_ELEMENT_COUNT(gMeshPaths)];
+
+static Material gMaterials[4];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	memset(out, 0, sizeof(ParticleEmitterDesc));
@@ -167,7 +170,7 @@ static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	out->speed = 8.0f; out->speed_variance = 5.0f;
 	out->life_time = 2.5f; out->life_time_variance = 0.5f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gTextures[0];
+	out->texture = gParticleTextures[0];
 	out->start_scale = 1.0f; out->end_scale = 0.01f;
 	vec3_dup(out->emit_cone_axis, Axis_Right);
 };
@@ -185,7 +188,7 @@ static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
 	out->life_time = 2.5f;
 	out->life_time_variance = 0.5f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gTextures[1];
+	out->texture = gParticleTextures[1];
 	out->start_scale = 0.1f;
 	out->end_scale = 0.5f;
 	vec3_dup(out->emit_cone_axis, Axis_Up);
@@ -204,15 +207,15 @@ static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
 	out->life_time = 3.0f;
 	out->life_time_variance = 0.0f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gTextures[2];
+	out->texture = gParticleTextures[2];
 	out->start_scale = 2.0f;
 	out->end_scale = 4.5f;
 	vec3_dup(out->emit_cone_axis, Axis_Up);
 };
 
 static int initialize_particle_textures() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gTexturePaths); i++) {
-		if ((gTextures[i] = utility_load_image(GL_TEXTURE_2D, gTexturePaths[i])) < 0) {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTexturePaths); i++) {
+		if ((gParticleTextures[i] = utility_load_image(GL_TEXTURE_2D, gParticleTexturePaths[i])) < 0) {
 			return 1;
 		}
 	}
@@ -220,8 +223,8 @@ static int initialize_particle_textures() {
 }
 
 static int get_particle_texture_index() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gTexturePaths); i++) {
-		if (gEmitterDesc.texture == gTextures[i]) {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTexturePaths); i++) {
+		if (gEmitterDesc.texture == gParticleTextures[i]) {
 			return i;
 		}
 	}
@@ -235,6 +238,42 @@ static int initialize_meshes() {
 			return 1;
 		}
 	}
+	return 0;
+}
+
+static int initialize_materials() {
+	if (!(gMaterials[0].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg")))
+		gMaterials[0].albedo_map = utility_load_texture_unknown();
+	if (!(gMaterials[0].normal_map= utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg")))
+		gMaterials[0].normal_map = utility_load_texture_unknown();
+	if (!(gMaterials[0].specular_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png")))
+		gMaterials[0].specular_map = utility_load_texture_unknown();
+	vec3_swizzle(gMaterials[0].albedo_base, 1.0f);
+	vec3_swizzle(gMaterials[0].specular_base, 1.0f);
+
+	if (!(gMaterials[1].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png")))
+		gMaterials[1].albedo_map = utility_load_texture_unknown();
+	if (!(gMaterials[1].normal_map= utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png")))
+		gMaterials[1].normal_map = utility_load_texture_unknown();
+	if (!(gMaterials[1].ao_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - AO Map.png")))
+		gMaterials[1].ao_map = utility_load_texture_unknown();
+	vec3_swizzle(gMaterials[1].albedo_base, 1.0f);
+	vec3_swizzle(gMaterials[1].specular_base, 1.0f);
+
+	if (!(gMaterials[2].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png")))
+		gMaterials[2].albedo_map = utility_load_texture_unknown();
+	if (!(gMaterials[2].normal_map= utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png")))
+		gMaterials[2].normal_map = utility_load_texture_unknown();
+	vec3_swizzle(gMaterials[2].albedo_base, 1.0f);
+	vec3_swizzle(gMaterials[2].specular_base, 1.0f);
+
+	if (!(gMaterials[3].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png")))
+		gMaterials[3].albedo_map = utility_load_texture_unknown();
+	if (!(gMaterials[3].normal_map= utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png")))
+		gMaterials[3].normal_map = utility_load_texture_unknown();
+	vec3_swizzle(gMaterials[3].albedo_base, 1.0f);
+	vec3_swizzle(gMaterials[3].specular_base, 1.0f);
+
 	return 0;
 }
 
@@ -258,10 +297,10 @@ static int initialize_skybox_textures() {
 }
 
 static void init_main_light() {
-	gScene.ambient_color[0] = 0.15f;
-	gScene.ambient_color[1] = 0.15f;
-	gScene.ambient_color[2] = 0.15f;
-	gScene.ambient_intensity = 0.45f;
+	gScene.ambient_color[0] = 1.f;
+	gScene.ambient_color[1] = 1.f;
+	gScene.ambient_color[2] = 1.f;
+	gScene.ambient_intensity = 1.f;
 
 	gScene.main_light.position[0] = 5.0f;
 	gScene.main_light.position[1] = 10.0f;
@@ -270,8 +309,7 @@ static void init_main_light() {
 	gScene.main_light.color[0] = 1.0f;
 	gScene.main_light.color[1] = 1.0f;
 	gScene.main_light.color[2] = 1.0f;
-
-	gScene.main_light.intensity = 1.0f;
+	gScene.main_light.intensity = 0.0f;
 }
 
 static void refresh_emitter( void *clientData ) {
@@ -292,21 +330,24 @@ static void burst() {
 static int init_scene() {
 	memset(&gScene, 0, sizeof(Scene));
 
-	// Init camera
+	// Setup camera
 	gScene.camera.boomLen = 15.0f;
 	gScene.camera.fovy = 90.0f;
 
-	// Init skybox
+	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx];
 
-	// Init main directional light
+	// Setup main directional light
 	init_main_light();
 
-	// Init particle system
+	// Setup particle system
 	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
 	emitter_desc_preset_flare(&gEmitterDesc);
 	refresh_emitter( NULL );
 	gEmitter.muted = true; // start muted
+
+	// Setup material
+	gScene.material = gMaterials[material_idx];
 
 	return 0;
 }
@@ -317,7 +358,6 @@ static int initialize() {
 
 	// Initialize Imgui
 	ImGui_ImplSdlGL3_Init(gSDLWindow);
-
 	srand((unsigned)time(0));
 
 	int err = 0;
@@ -337,9 +377,8 @@ static int initialize() {
 		printf("forward rendering init failed\n");
 		return err;
 	}
-	printf("forward initialized\n");
-
 	gForward.g_buffer = &gDeferred.g_buffer;
+	printf("forward initialized\n");
 
 	if (err = initialize_particle_textures()) {
 		printf("particle rendering init failed\n");
@@ -353,14 +392,19 @@ static int initialize() {
 	}
 	printf("meshes loaded\n");
 
+	if (err = initialize_materials()) {
+		printf("material loading failed\n");
+		return err;
+	}
+	printf("materials loaded\n");
+
 	if (err = init_scene()) {
 		printf("scene init failed\n");
 		return err;
 	}
-
-	GL_CHECK_ERROR();
 	printf("scene initialized\n");
 
+	GL_CHECK_ERROR();
 	return 0;
 }
 
@@ -416,15 +460,15 @@ static int frame() {
 	}
 	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
-		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 50.0f);
+		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 
-		if (ImGui::Combo( "Geometry", ( int* )&mesh, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
-			if (mesh == 1) {
+		if (ImGui::Combo( "Geometry", ( int* )&mesh_idx, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
+			if (mesh_idx == 0) {
 				gScene.geo_mode = (GeometryMode)BOX;
-			} else if (mesh < 5) {
+			} else if (mesh_idx < 5) {
 				gScene.geo_mode = MESH;
-				gScene.mesh = gMeshes[mesh - 1];
+				gScene.mesh = gMeshes[mesh_idx - 1];
 			} else {
 				gScene.geo_mode = NONE;
 			}
@@ -441,8 +485,22 @@ static int frame() {
 		}
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::ColorEdit3("Albedo Base", gDeferred.albedo_base);
-		ImGui::ColorEdit3("Specular Base", gDeferred.specular_base);
+		ImGui::ColorEdit3("Albedo Base", gScene.material.albedo_base);
+		ImGui::ColorEdit3("Specular Base", gScene.material.specular_base);
+		if (ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (ImGui::Button("Sci-Fi Cube")) {
+				gScene.material = gMaterials[0];
+			}
+			if (ImGui::Button("Medievil")) {
+				gScene.material = gMaterials[1];
+			}
+			if (ImGui::Button("Moorish Lattice")) {
+				gScene.material = gMaterials[2];
+			}
+			if (ImGui::Button("Terracotta")) {
+				gScene.material = gMaterials[3];
+			}
+		}
 	}
 	if ( ImGui::CollapsingHeader( "Emitter", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		if ( ImGui::Button("Refresh") ) {
@@ -456,7 +514,7 @@ static int frame() {
 		if ( gEmitterDesc.shading_mode == PARTICLE_SHADING_TEXTURED ) {
 			int texture_idx = get_particle_texture_index();
 			if ( ImGui::Combo( "Texture", ( int* )&texture_idx, particle_texture_def, STATIC_ELEMENT_COUNT( particle_texture_def ) ) ) {
-				gEmitterDesc.texture = gTextures[ texture_idx ];
+				gEmitterDesc.texture = gParticleTextures[texture_idx];
 			}
 		}
 		ImGui::SliderFloat( "Start Scale", &gEmitterDesc.start_scale, .01f, 10.0f );
@@ -551,14 +609,11 @@ int main(int argc, char* argv[]) {
 			else {
 				if (event.type == SDL_MOUSEBUTTONDOWN) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						// hide mouse, report deltas at screen edge
-						//SDL_SetRelativeMouseMode(SDL_TRUE);
 						SDL_SetWindowGrab(gSDLWindow, SDL_TRUE);
 					}
 				}
 				else if (event.type == SDL_MOUSEBUTTONUP) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						//SDL_SetRelativeMouseMode(SDL_FALSE);
 						SDL_SetWindowGrab(gSDLWindow, SDL_FALSE);
 					}
 				}
