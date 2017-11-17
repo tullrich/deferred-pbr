@@ -46,13 +46,6 @@ typedef struct
 	GLuint irr_cubemap;
 } Skybox;
 
-typedef enum
-{
-	BOX,
-	MESH,
-	NONE
-} GeometryMode;
-
 typedef struct
 {
 	vec3 albedo_base;
@@ -76,10 +69,7 @@ typedef struct
 	vec3 ambient_color;
 	float ambient_intensity;
 
-	// The selected geometry to render
-	GeometryMode geo_mode;
-
-	// The selected mesh to render when geo_mode == MESH
+	// The selected mesh to render
 	Mesh mesh;
 
 	// The material to render

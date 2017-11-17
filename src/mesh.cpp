@@ -1,8 +1,78 @@
 #include "mesh.h"
 
+static const float box_vertices[] = {
+	// back face
+	-0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
+	0.5f, 0.5f, -0.5f, 0.5f, -0.5f, -0.5f,
+
+	// front face
+	0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f,
+	-0.5f, -0.5f, 0.5f, 0.5f, -0.5f, 0.5f,
+
+	// right face
+	-0.5f, 0.5f, 0.5f, -0.5f, 0.5f, -0.5f,
+	-0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f,
+
+	// left face
+	0.5f, 0.5f, -0.5f, 0.5f, 0.5f, 0.5f,
+	0.5f, -0.5f, 0.5f, 0.5f, -0.5f, -0.5f,
+
+	// bottom face
+	-0.5f, -0.5f, -0.5f, 0.5f, -0.5f, -0.5f,
+	0.5f, -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,
+
+	// top face
+	-0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f,
+	0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f
+};
+
+static const float box_tangents[] = {
+	-1, 0, 0, 1, -1, 0, 0, 1, -1, 0, 0, 1, -1, 0, 0, 1,
+	1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1,
+	0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1,
+	0, 0, -1, 1, 0, 0, -1, 1, 0, 0, -1, 1, 0, 0, -1, 1,
+	1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1,
+	1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1,
+};
+
+static const float box_normals[] = {
+	0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
+	0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+	-1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+	1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
+	0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+	0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0
+};
+
+static const float box_texcoords[] = {
+	1, 0, 1, 1, 0, 1, 0, 0,
+	1, 1, 0, 1, 0, 0, 1, 0,
+	1, 1, 0, 1, 0, 0, 1, 0,
+	1, 1, 0, 1, 0, 0, 1, 0,
+	0, 0, 1, 0, 1, 1, 0, 1,
+	0, 0, 1, 0, 1, 1, 0, 1
+};
+
+void mesh_make_box(Mesh *out_mesh, float side_len) {
+	memset(out_mesh, 0, sizeof(Mesh));
+	out_mesh->mode = GL_QUADS;
+	out_mesh->vertex_count = 24;
+	out_mesh->index_count = 24;
+	vec3_swizzle(out_mesh->bounds.extents, 0.5f);
+	out_mesh->vertices = (float*)malloc(sizeof(box_vertices));
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(box_vertices); i++) {
+		out_mesh->vertices[i] = box_vertices[i]*side_len;
+	}
+	out_mesh->normals = (float*)malloc(sizeof(box_normals));
+	memcpy(out_mesh->normals, box_normals, sizeof(box_normals));
+	out_mesh->tangents = (float*)malloc(sizeof(box_tangents));
+	memcpy(out_mesh->tangents, box_tangents, sizeof(box_tangents));
+	out_mesh->texcoords = (float*)malloc(sizeof(box_texcoords));
+	memcpy(out_mesh->texcoords, box_texcoords, sizeof(box_texcoords));
+}
+
 // Adapted from https://stackoverflow.com/questions/7946770/calculating-a-sphere-in-opengl
-void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors)
-{
+void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors) {
     const float R = 1.f/(float)(rings-1);
     const float S = 1.f/(float)(sectors-1);
 

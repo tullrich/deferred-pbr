@@ -38,6 +38,7 @@ typedef struct
 	Bounds bounds;
 } Mesh;
 
+void mesh_make_box(Mesh *out_mesh, float side_len);
 void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
 void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
 void mesh_free(Mesh *out_mesh);

@@ -155,7 +155,7 @@ static const char* gMeshPaths[] ={
 	"meshes/dragon/dragon.obj",
 	"meshes/bunny/bunny.obj"
 };
-static Mesh gMeshes[1+STATIC_ELEMENT_COUNT(gMeshPaths)];
+static Mesh gMeshes[2+STATIC_ELEMENT_COUNT(gMeshPaths)];
 
 static Material gMaterials[4];
 
@@ -232,9 +232,10 @@ static int get_particle_texture_index() {
 }
 
 static int initialize_meshes() {
-	mesh_sphere_tessellate(&gMeshes[0], 1.0f, 100, 100);
+	mesh_make_box(&gMeshes[0], 1.0f);
+	mesh_sphere_tessellate(&gMeshes[1], 1.0f, 100, 100);
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshPaths); i++) {
-		if (mesh_load_obj(&gMeshes[i+1], gMeshPaths[i])) {
+		if (mesh_load_obj(&gMeshes[i+2], gMeshPaths[i])) {
 			return 1;
 		}
 	}
@@ -346,7 +347,10 @@ static int init_scene() {
 	refresh_emitter( NULL );
 	gEmitter.muted = true; // start muted
 
-	// Setup material
+	// Set start mesh to the cube
+	gScene.mesh = gMeshes[0];
+
+	// Setup start material
 	gScene.material = gMaterials[material_idx];
 
 	return 0;
@@ -464,13 +468,10 @@ static int frame() {
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 
 		if (ImGui::Combo( "Geometry", ( int* )&mesh_idx, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
-			if (mesh_idx == 0) {
-				gScene.geo_mode = (GeometryMode)BOX;
-			} else if (mesh_idx < 5) {
-				gScene.geo_mode = MESH;
-				gScene.mesh = gMeshes[mesh_idx - 1];
+			if (mesh_idx < STATIC_ELEMENT_COUNT(gMeshes)) {
+				gScene.mesh = gMeshes[mesh_idx];
 			} else {
-				gScene.geo_mode = NONE;
+				gScene.mesh.vertices = NULL;
 			}
 		}
 		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
@@ -578,7 +579,7 @@ int main(int argc, char* argv[]) {
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
-    if(!(gSDLWindow = SDL_CreateWindow("Particles", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+    if(!(gSDLWindow = SDL_CreateWindow("Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
 			, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
         return 1;
     }

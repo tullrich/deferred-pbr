@@ -135,14 +135,11 @@ static void render_geometry(Deferred* d, Scene *s)
 	glDisable(GL_BLEND);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (s->geo_mode == GeometryMode::NONE)
+	if (!s->mesh.vertices)
 		return;
 
-	const SurfaceShader* shader = &d->surf_shader[0];
-	if (s->geo_mode == GeometryMode::MESH &&
-		!s->mesh.texcoords) {
-		shader = &d->surf_shader[1];
-	}
+	int shader_idx = (s->mesh.texcoords) ? 0:1;
+	const SurfaceShader* shader = &d->surf_shader[shader_idx];
 	glUseProgram(shader->program);
 
 	// bind albedo base color
@@ -175,9 +172,7 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4 model;
 	mat4x4_identity(model);
 	mat4x4_scale_aniso(model, model, 5.0f, 5.0f, 5.0f);
-	if (s->geo_mode == GeometryMode::MESH) {
-		mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
-	}
+	mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
 
 	// bind model-view matrix
 	mat4x4 mv;
@@ -195,23 +190,11 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_mul(mvp, s->camera.viewProj, model);
 	glUniformMatrix4fv(shader->view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
-	switch (s->geo_mode) {;
-		case GeometryMode::MESH:
-			mesh_draw(&s->mesh,
-					  shader->texcoord_loc,
-					  shader->normal_loc,
-					  shader->tangent_loc,
-					  shader->pos_loc);
-			break;
-		case GeometryMode::BOX: // intentional fallthrough
-		default:
-			utility_draw_cube(shader->texcoord_loc,
-							  shader->normal_loc,
-							  shader->tangent_loc,
-							  shader->pos_loc,
-							  -0.5f, 0.5f );
-			break;
-	}
+	mesh_draw(&s->mesh,
+			  shader->texcoord_loc,
+			  shader->normal_loc,
+			  shader->tangent_loc,
+			  shader->pos_loc);
 }
 
 static void render_shading(Deferred* d, Scene *s)
