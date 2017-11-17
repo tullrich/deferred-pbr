@@ -1,5 +1,39 @@
 #include "deferred.h"
 
+static int load_surface_shader(SurfaceShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
+	if(!(shader->program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
+																 defines, defines_count))) {
+		return 1;
+	}
+	glBindFragDataLocation(shader->program, 0, "PositionOut");
+	glBindFragDataLocation(shader->program, 1, "AlbedoOut");
+	glBindFragDataLocation(shader->program, 2, "NormalOut");
+	glBindFragDataLocation(shader->program, 3, "SpecularOut");
+	glBindAttribLocation(shader->program, 0, "position");
+	glBindAttribLocation(shader->program, 1, "normal");
+	glBindAttribLocation(shader->program, 2, "tangent");
+	glBindAttribLocation(shader->program, 3, "texcoord");
+	if (utility_link_program(shader->program)) {
+		return 1;
+	}
+
+	shader->pos_loc = glGetAttribLocation(shader->program, "position");
+	shader->normal_loc = glGetAttribLocation(shader->program, "normal");
+	shader->tangent_loc = glGetAttribLocation(shader->program, "tangent");
+	shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord");
+	shader->modelview_loc = glGetUniformLocation(shader->program, "ModelView");
+	shader->invTModelview_loc = glGetUniformLocation(shader->program, "invTModelView");
+	shader->view_loc = glGetUniformLocation(shader->program, "ModelViewProj");
+	shader->albedo_base_loc = glGetUniformLocation(shader->program, "AlbedoBase");
+	shader->specular_base_loc = glGetUniformLocation(shader->program, "SpecularBase");
+	shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap");
+	shader->albedo_map_loc = glGetUniformLocation(shader->program, "AlbedoOut");
+	shader->normal_map_loc = glGetUniformLocation(shader->program, "NormalMap");
+	shader->specular_map_loc = glGetUniformLocation(shader->program, "SpecularMap");
+	shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap");
+	return 0;
+}
+
 static int load_debug_shader(DebugShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
 	if (!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/passthrough.frag", defines, defines_count))) {
 		return 1;
@@ -10,7 +44,6 @@ static int load_debug_shader(DebugShader* shader, const char* vert, const char* 
 	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
 	return 0;
 }
-
 
 int deferred_initialize(Deferred* d)
 {
@@ -34,45 +67,23 @@ int deferred_initialize(Deferred* d)
 	d->skybox_shader.inv_vp_loc = glGetUniformLocation(d->skybox_shader.program, "InvViewProj");
 
 	// Initialize box shader
-	const char* box_shader_defines[] ={
+	const char* uv_surf_shader_defines[] ={
 		"#define MESH_VERTEX_UV1\n",
 		"#define USE_NORMAL_MAP\n",
 		"#define USE_ALBEDO_MAP\n",
 		"#define USE_SPECULAR_MAP\n",
 		"#define USE_AO_MAP\n",
 	};
-	if(!(d->cube_shader.program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
-																 box_shader_defines, STATIC_ELEMENT_COUNT(box_shader_defines)))) {
+	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
+							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {
 		printf("Unable to load shader\n");
 		return 1;
 	}
-	glBindFragDataLocation(d->cube_shader.program, 0, "PositionOut");
-	glBindFragDataLocation(d->cube_shader.program, 1, "AlbedoOut");
-	glBindFragDataLocation(d->cube_shader.program, 2, "NormalOut");
-	glBindFragDataLocation(d->cube_shader.program, 3, "SpecularOut");
-	glBindAttribLocation(d->cube_shader.program, 0, "position");
-	glBindAttribLocation( d->cube_shader.program, 1, "normal" );
-	glBindAttribLocation( d->cube_shader.program, 2, "tangent" );
-	glBindAttribLocation( d->cube_shader.program, 3, "texcoord" );
-	if (utility_link_program(d->cube_shader.program)) {
-		printf( "Unable to load shader\n" );
+	if(load_surface_shader(&d->surf_shader[1], "shaders/mesh.vert", "shaders/mesh.frag",
+							NULL, 0)) {
+		printf("Unable to load shader\n");
 		return 1;
 	}
-
-	d->cube_shader.pos_loc = glGetAttribLocation(d->cube_shader.program, "position");
-	d->cube_shader.normal_loc = glGetAttribLocation(d->cube_shader.program, "normal");
-	d->cube_shader.tangent_loc = glGetAttribLocation(d->cube_shader.program, "tangent");
-	d->cube_shader.texcoord_loc = glGetAttribLocation(d->cube_shader.program, "texcoord");
-	d->cube_shader.modelview_loc = glGetUniformLocation(d->cube_shader.program, "ModelView");
-	d->cube_shader.invTModelview_loc = glGetUniformLocation(d->cube_shader.program, "invTModelView");
-	d->cube_shader.view_loc = glGetUniformLocation(d->cube_shader.program, "ModelViewProj");
-	d->cube_shader.albedo_base_loc = glGetUniformLocation(d->cube_shader.program, "AlbedoBase");
-	d->cube_shader.specular_base_loc = glGetUniformLocation(d->cube_shader.program, "SpecularBase");
-	d->cube_shader.ao_map_loc = glGetUniformLocation(d->cube_shader.program, "AOMap");
-	d->cube_shader.albedo_map_loc = glGetUniformLocation(d->cube_shader.program, "AlbedoOut");
-	d->cube_shader.normal_map_loc = glGetUniformLocation(d->cube_shader.program, "NormalMap");
-	d->cube_shader.specular_map_loc = glGetUniformLocation(d->cube_shader.program, "SpecularMap");
-	d->cube_shader.ao_map_loc = glGetUniformLocation(d->cube_shader.program, "AOMap");
 
 	// Initialize fullscreen quad shader
 	if(!(d->lighting_shader.program = utility_create_program("shaders/passthrough.vert", "shaders/lighting.frag"))) {
@@ -127,70 +138,77 @@ static void render_geometry(Deferred* d, Scene *s)
 	if (s->geo_mode == GeometryMode::NONE)
 		return;
 
-	glUseProgram(d->cube_shader.program);
+	const SurfaceShader* shader = &d->surf_shader[0];
+	if (s->geo_mode == GeometryMode::MESH &&
+		!s->mesh.texcoords) {
+		shader = &d->surf_shader[1];
+	}
+	glUseProgram(shader->program);
 
 	// bind albedo base color
-	glUniform3fv(d->cube_shader.albedo_base_loc, 1, s->material.albedo_base);
+	glUniform3fv(shader->albedo_base_loc, 1, s->material.albedo_base);
 
 	// bind specular base color
-	glUniform3fv(d->cube_shader.specular_base_loc, 1, s->material.specular_base);
+	glUniform3fv(shader->specular_base_loc, 1, s->material.specular_base);
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, s->material.albedo_map);
-	glUniform1i(d->cube_shader.albedo_map_loc, 0);
+	glUniform1i(shader->albedo_map_loc, 0);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, s->material.normal_map);
-	glUniform1i(d->cube_shader.normal_map_loc, 1);
+	glUniform1i(shader->normal_map_loc, 1);
 
 	// bind specular map
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, s->material.specular_map);
-	glUniform1i(d->cube_shader.specular_map_loc, 2);
+	glUniform1i(shader->specular_map_loc, 2);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, s->material.ao_map);
-	glUniform1i(d->cube_shader.ao_map_loc, 3);
+	glUniform1i(shader->ao_map_loc, 3);
 
 	// calc model matrix
 	mat4x4 model;
 	mat4x4_identity(model);
 	mat4x4_scale_aniso(model, model, 5.0f, 5.0f, 5.0f);
-	mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
+	if (s->geo_mode == GeometryMode::MESH) {
+		mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
+	}
 
 	// bind model-view matrix
 	mat4x4 mv;
 	mat4x4_mul(mv, s->camera.view, model);
-	glUniformMatrix4fv(d->cube_shader.modelview_loc, 1, GL_FALSE, (const GLfloat*)mv);
+	glUniformMatrix4fv(shader->modelview_loc, 1, GL_FALSE, (const GLfloat*)mv);
 
 	// bind inverse transpose model-view matrix
 	mat4x4 inv_mv, invT_mv;
 	mat4x4_invert(inv_mv, mv);
 	mat4x4_transpose(invT_mv, inv_mv);
-	glUniformMatrix4fv(d->cube_shader.invTModelview_loc, 1, GL_FALSE, (const GLfloat*)invT_mv);
+	glUniformMatrix4fv(shader->invTModelview_loc, 1, GL_FALSE, (const GLfloat*)invT_mv);
 
 	// bind model-view-projection matrix
 	mat4x4 mvp;
 	mat4x4_mul(mvp, s->camera.viewProj, model);
-	glUniformMatrix4fv(d->cube_shader.view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
+	glUniformMatrix4fv(shader->view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
 	switch (s->geo_mode) {;
 		case GeometryMode::MESH:
 			mesh_draw(&s->mesh,
-							  d->cube_shader.texcoord_loc,
-							  d->cube_shader.normal_loc,
-							  d->cube_shader.tangent_loc,
-							  d->cube_shader.pos_loc);
+					  shader->texcoord_loc,
+					  shader->normal_loc,
+					  shader->tangent_loc,
+					  shader->pos_loc);
 			break;
 		case GeometryMode::BOX: // intentional fallthrough
 		default:
-			utility_draw_cube(d->cube_shader.texcoord_loc,
-							  d->cube_shader.normal_loc,
-							  d->cube_shader.tangent_loc,
-							  d->cube_shader.pos_loc,
+			utility_draw_cube(shader->texcoord_loc,
+							  shader->normal_loc,
+							  shader->tangent_loc,
+							  shader->pos_loc,
 							  -0.5f, 0.5f );
 			break;
 	}

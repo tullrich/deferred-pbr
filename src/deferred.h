@@ -37,7 +37,7 @@ typedef struct
 	GLint view_loc;
 	GLint albedo_base_loc;
 	GLint specular_base_loc;
-} CubeShader;
+} SurfaceShader;
 
 typedef struct
 {
@@ -87,7 +87,7 @@ typedef struct
 {
 	RenderMode render_mode;
 	SkyboxShader skybox_shader;
-	CubeShader cube_shader;
+	SurfaceShader surf_shader[2];
 	LightingShader lighting_shader;
 	DebugShader debug_shader[2];
 	GBuffer g_buffer;
