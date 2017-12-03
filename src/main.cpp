@@ -353,6 +353,10 @@ static int init_scene() {
 	// Setup start material
 	gScene.material = gMaterials[material_idx];
 
+	// Setup model
+	gScene.geo_mode = BOX;
+	gScene.model_scale = 5.0f;
+
 	return 0;
 }
 
@@ -484,6 +488,9 @@ static int frame() {
 		if(ImGui::Combo( "Skybox", ( int* )&skybox_idx, skybox_def, STATIC_ELEMENT_COUNT( skybox_def ) )) {
 			gScene.skybox = gSkyboxes[skybox_idx];
 		}
+
+		ImGui::SliderFloat("Model Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
+		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::ColorEdit3("Albedo Base", gScene.material.albedo_base);

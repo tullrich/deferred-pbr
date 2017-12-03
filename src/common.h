@@ -162,6 +162,8 @@ const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
 #define Z_FAR 100.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
+#define RAD_TO_DEG(rad) (deg*180.0f/(float)M_PI)
+#define DEG_TO_RAD(deg) (deg*(float)M_PI/180.0f)
 
 #ifdef _WIN32
 #define M_PI_2 (M_PI/2.0)

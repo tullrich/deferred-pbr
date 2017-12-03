@@ -75,6 +75,12 @@ typedef struct
 	// The material to render
 	Material material;
 
+	// Model y rotation
+	vec3 model_rot;
+
+	// Model uniform scale
+	float model_scale;
+
 	// main light
 	PointLight main_light;
 

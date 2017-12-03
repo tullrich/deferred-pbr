@@ -68,11 +68,12 @@ int deferred_initialize(Deferred* d)
 
 	// Initialize box shader
 	const char* uv_surf_shader_defines[] ={
-		"#define MESH_VERTEX_UV1\n",
-		"#define USE_NORMAL_MAP\n",
-		"#define USE_ALBEDO_MAP\n",
-		"#define USE_SPECULAR_MAP\n",
-		"#define USE_AO_MAP\n",
+		""
+		//"#define MESH_VERTEX_UV1\n",
+		//"#define USE_NORMAL_MAP\n",
+		//"#define USE_ALBEDO_MAP\n",
+		//"#define USE_SPECULAR_MAP\n",
+		//"#define USE_AO_MAP\n",
 	};
 	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
 							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {
@@ -171,7 +172,10 @@ static void render_geometry(Deferred* d, Scene *s)
 	// calc model matrix
 	mat4x4 model;
 	mat4x4_identity(model);
-	mat4x4_scale_aniso(model, model, 5.0f, 5.0f, 5.0f);
+	mat4x4_rotate_X(model, model, DEG_TO_RAD(s->model_rot[0]));
+	mat4x4_rotate_Y(model, model, DEG_TO_RAD(s->model_rot[1]));
+	mat4x4_rotate_Z(model, model, DEG_TO_RAD(s->model_rot[2]));
+	mat4x4_scale_aniso(model, model, s->model_scale, s->model_scale, s->model_scale);
 	mat4x4_translate_in_place(model, -s->mesh.bounds.center[0], -s->mesh.bounds.center[1], -s->mesh.bounds.center[2]);
 
 	// bind model-view matrix
