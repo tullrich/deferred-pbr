@@ -46,6 +46,9 @@ add_executable( Deferred
 	src/imgui/imgui_impl_sdl_gl3.h
 	src/imgui/imgui_impl_sdl_gl3.cpp
 
+	src/imgui/ImGuizmo.h
+	src/imgui/ImGuizmo.cpp
+
 	src/tinyobj_loader_c/tinyobj_loader_c.c
 )
 

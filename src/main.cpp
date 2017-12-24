@@ -7,6 +7,7 @@
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl_gl3.h"
+#include "imgui/ImGuizmo.h"
 
 static SDL_Window*			gSDLWindow;
 static Scene 				gScene;
@@ -354,7 +355,6 @@ static int init_scene() {
 	gScene.material = gMaterials[material_idx];
 
 	// Setup model
-	gScene.geo_mode = BOX;
 	gScene.model_scale = 5.0f;
 
 	return 0;
@@ -564,7 +564,22 @@ static int frame() {
 			}
 		}
 	}
+	ImGuizmo::SetDrawlist();
 	ImGui::End();
+
+	mat4x4 light_mat;
+	mat4x4_identity(light_mat);
+	vec3_dup(light_mat[3], gScene.main_light.position);
+	ImGuizmo::Enable(true);
+	ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
+	ImGuizmo::Manipulate(
+		&gScene.camera.view[0][0],
+		&gScene.camera.proj[0][0],
+		ImGuizmo::TRANSLATE,
+		ImGuizmo::LOCAL,
+		&light_mat[0][0]);
+	vec3_dup(gScene.main_light.position, light_mat[3]);
+
 	ImGui::Render();
 
 	GL_CHECK_ERROR();
@@ -604,6 +619,7 @@ int main(int argc, char* argv[]) {
 	int quit = 0;
 	while (!quit) {
 		ImGui_ImplSdlGL3_NewFrame(gSDLWindow);
+		ImGuizmo::BeginFrame();
 		bool imguiCaptureMouse = ImGui::GetIO().WantCaptureMouse;
 
 		SDL_Event event;
@@ -646,7 +662,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if ( frame() )
+		if (frame())
 		{
 			quit = 1;
 			break;
