@@ -22,6 +22,7 @@ static int rotate_cam = 0;
 static int skybox_idx = 0;
 static int material_idx = 0;
 static int mesh_idx = 0;
+static int show_manipulator = 0;
 
 // box render modes
 
@@ -484,6 +485,7 @@ static int frame() {
 		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
 		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
 		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
+		ImGui::Checkbox("Show Manipulator", (bool*)&show_manipulator);
 
 		if(ImGui::Combo( "Skybox", ( int* )&skybox_idx, skybox_def, STATIC_ELEMENT_COUNT( skybox_def ) )) {
 			gScene.skybox = gSkyboxes[skybox_idx];
@@ -567,18 +569,21 @@ static int frame() {
 	ImGuizmo::SetDrawlist();
 	ImGui::End();
 
-	mat4x4 light_mat;
-	mat4x4_identity(light_mat);
-	vec3_dup(light_mat[3], gScene.main_light.position);
-	ImGuizmo::Enable(true);
-	ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
-	ImGuizmo::Manipulate(
-		&gScene.camera.view[0][0],
-		&gScene.camera.proj[0][0],
-		ImGuizmo::TRANSLATE,
-		ImGuizmo::LOCAL,
-		&light_mat[0][0]);
-	vec3_dup(gScene.main_light.position, light_mat[3]);
+	// Render light manipulator gizmo
+	if (show_manipulator) {
+		mat4x4 light_mat;
+		mat4x4_identity(light_mat);
+		vec3_dup(light_mat[3], gScene.main_light.position);
+		ImGuizmo::Enable(true);
+		ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
+		ImGuizmo::Manipulate(
+			&gScene.camera.view[0][0],
+			&gScene.camera.proj[0][0],
+			ImGuizmo::TRANSLATE,
+			ImGuizmo::LOCAL,
+			&light_mat[0][0]);
+		vec3_dup(gScene.main_light.position, light_mat[3]);
+	}
 
 	ImGui::Render();
 
