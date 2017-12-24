@@ -58,7 +58,7 @@ void mesh_make_box(Mesh *out_mesh, float side_len) {
 	out_mesh->mode = GL_QUADS;
 	out_mesh->vertex_count = 24;
 	out_mesh->index_count = 24;
-	vec3_swizzle(out_mesh->bounds.extents, 0.5f);
+	vec3_swizzle(out_mesh->bounds.extents, 0.5f*side_len);
 	out_mesh->vertices = (float*)malloc(sizeof(box_vertices));
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(box_vertices); i++) {
 		out_mesh->vertices[i] = box_vertices[i]*side_len;
@@ -91,7 +91,7 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 	out_mesh->vertex_count = rings * sectors;
 	out_mesh->index_count = (rings-1) * (sectors-1) * 4;
 	out_mesh->mode = GL_QUADS;
-	vec3_swizzle(out_mesh->bounds.extents, 0.5f);
+	vec3_swizzle(out_mesh->bounds.extents, radius);
 
 	unsigned int r, s;
     for(r = 0; r < rings; r++) {

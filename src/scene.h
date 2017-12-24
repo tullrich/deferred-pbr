@@ -75,7 +75,10 @@ typedef struct
 	// The material to render
 	Material material;
 
-	// Model y rotation
+	// Model translation
+	vec3 model_translation;
+
+	// Model euler angle rotation
 	vec3 model_rot;
 
 	// Model uniform scale

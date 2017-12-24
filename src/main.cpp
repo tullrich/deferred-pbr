@@ -491,6 +491,7 @@ static int frame() {
 			gScene.skybox = gSkyboxes[skybox_idx];
 		}
 
+		ImGui::SliderFloat3("Model Position", gScene.model_translation, 0.0f, 25.0f, "%.0f");
 		ImGui::SliderFloat("Model Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
 		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
 	}
@@ -544,7 +545,6 @@ static int frame() {
 		ImGui::SliderFloat( "Speed Variance", &gEmitterDesc.speed_variance, 0.0f, 10.0f );
 
 		ImGui::SliderFloat( "Local Scale", &gEmitter.scale, 0.0f, 10.0f );
-		//TwAddVarRW( bar, "Local Rotate", TW_TYPE_QUAT4F, &gEmitter.rot, "" );
 		ImGui::InputFloat3( "Local Translation", gEmitter.pos );
 		if ( ImGui::Button( "Burst" ) ) {
 			burst();
