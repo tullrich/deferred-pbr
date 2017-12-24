@@ -156,6 +156,9 @@ const static vec4 Zero = {0.0f, 0.0f, 0.0f, 0.0f};
 const static vec4 Axis_Forward = {0.0f, 0.0f, -1.0f, 0.0f};
 const static vec4 Axis_Up = {0.0f, 1.0f, 0.0f, 0.0f};
 const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
+const static vec4 Vec_Zero = {0.0f, 0.0f, 0.0f, 0.0f};
+const static vec4 Vec_One = {1.0f, 1.0f, 1.0f, 1.0f};
+const static quat Quat_Identity = {0.0f, 0.0f, 0.0f, 1.0f};
 
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 640

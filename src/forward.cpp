@@ -1,30 +1,30 @@
 #include "forward.h"
 
-static void draw_quad(const ParticleShader* shader,const vec3 translation, const vec3 rot, const vec3 scale, const vec4 color) {
+static void draw_quad(const ParticleShader* shader, const vec3 translation, const vec3 rot, const vec3 scale, const vec4 color) {
 	glBegin(GL_QUADS);
 		if (shader->trans_loc >= 0) glVertexAttrib3f(shader->trans_loc, translation[0], translation[1], translation[2]);
 		if (shader->rot_loc >= 0) glVertexAttrib3f(shader->rot_loc, rot[0], rot[1], rot[2]);
 		if (shader->scale_loc >= 0) glVertexAttrib3f(shader->scale_loc, scale[0], scale[1], scale[2]);
 		if (shader->color_loc >= 0) glVertexAttrib4f(shader->color_loc, color[0], color[1], color[2], color[3]);
 		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 0);
-		glVertexAttrib3f(shader->vert_loc, 1.0f, -1.0f, 0.0f);
+		glVertexAttrib3f(shader->vert_loc, 0.5f, -0.5f, 0.0f);
 		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 1.0f);
-		glVertexAttrib3f(shader->vert_loc, 1.0f, 1.0f, 0.0f);
+		glVertexAttrib3f(shader->vert_loc, 0.5f, 0.5f, 0.0f);
 		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 1.0f);
-		glVertexAttrib3f(shader->vert_loc, -1.0f, 1.0f, 0.0f);
+		glVertexAttrib3f(shader->vert_loc, -0.5f, 0.5f, 0.0f);
 		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 0);
-		glVertexAttrib3f(shader->vert_loc, -1.0f, -1.0f, 0.0f);
+		glVertexAttrib3f(shader->vert_loc, -0.5f, -0.5f, 0.0f);
 	glEnd();
 }
 
-static void calculate_emitter_billboard_euler(vec3 euler, mat4x4 model2, const ParticleEmitter* emitter, const Scene *s) {
+static void calculate_billboard_euler(vec3 euler, mat4x4 model, const Scene *s) {
 	vec4 cam_forward, cam_up;
 	cam_forward[3] = cam_up[3] = 0.0f;
 	scene_camera_forward(s, cam_forward);
 	scene_camera_up(s, cam_up);
 
 	mat4x4 invModel;
-	mat4x4_invert(invModel, model2);
+	mat4x4_invert(invModel, model);
 
 	vec4 model_cam_forward, model_cam_up;
 	mat4x4_mul_vec4(model_cam_forward, invModel, cam_forward);
@@ -46,13 +46,13 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 		printf("Unable to load shader [%s. %s]\n", vert, frag);
 		return 1;
 	}
-	glBindAttribLocation( shader->program, 0, "vert" );
-	glBindAttribLocation( shader->program, 1, "translation" );
-	glBindAttribLocation( shader->program, 2, "rotation" );
-	glBindAttribLocation( shader->program, 3, "scale" );
-	glBindAttribLocation( shader->program, 4, "texcoord" );
-	glBindAttribLocation( shader->program, 5, "color" );
-	if ( utility_link_program(shader->program)) {
+	glBindAttribLocation(shader->program, 0, "vert");
+	glBindAttribLocation(shader->program, 1, "translation");
+	glBindAttribLocation(shader->program, 2, "rotation");
+	glBindAttribLocation(shader->program, 3, "scale");
+	glBindAttribLocation(shader->program, 4, "texcoord");
+	glBindAttribLocation(shader->program, 5, "color");
+	if (utility_link_program(shader->program)) {
 		printf( "Unable to load shader\n" );
 		return 1;
 	}
@@ -66,6 +66,39 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 	shader->texture_loc = glGetUniformLocation(shader->program, "Texture");
 	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
 	return 0;
+}
+
+static void draw_billboard(Forward* f, GLuint texture, const vec3 position, const Scene *s) {
+		const ParticleShader* shader = &f->particle_shader_textured;
+
+		// bind shader
+		glUseProgram(shader->program);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha blend
+
+		mat4x4 model;
+		mat4x4_identity(model);
+		mat4x4_translate(model, position[0], position[1], position[2]);
+
+		// bind model-view-projection matrix
+		mat4x4 mvp;
+		mat4x4_mul(mvp, s->camera.viewProj, model);
+		glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp);
+
+		// bind texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glUniform1i(shader->texture_loc, 0);
+
+		// calculate billboard factor
+		vec3 rot;
+		calculate_billboard_euler(rot, model, s);
+
+		// submit
+		vec4 color; color[3] = 1.0f;
+		vec3_dup(color, s->main_light.color);
+		draw_quad(shader, Vec_Zero, rot, Vec_One, color);
 }
 
 int forward_initialize(Forward* f) {
@@ -155,7 +188,7 @@ void forward_render(Forward* f, Scene *s) {
 		// calc optional billboarding euler angles
 		vec3 euler;
 		if (desc->orient_mode == PARTICLE_ORIENT_SCREEN_ALIGNED) {
-			calculate_emitter_billboard_euler(euler, model, emitter, s);
+			calculate_billboard_euler(euler, model, s);
 		}
 
 		// draw particles
@@ -177,6 +210,10 @@ void forward_render(Forward* f, Scene *s) {
 			draw_quad(shader, part->pos, rot, part->scale, part->color);
 		}
 	}
+
+	// Draw main light icon
+	static GLuint light_icon = utility_load_image(GL_TEXTURE_2D, "icons/lightbulb.png");
+	draw_billboard(f, light_icon, s->main_light.position, s);
 
 	glDepthMask(GL_TRUE);
 
