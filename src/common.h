@@ -104,14 +104,15 @@ static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
 		euler[2] = atan2f(m[1][0]/cosTheta,m[0][0]/cosTheta);
 	 }
  }
- static inline void mat4x4_make_transform(mat4x4 r, vec3 const scale, quat const rotation, vec3 const translation) {
+ static inline void mat4x4_make_transform(mat4x4 r, const vec3 scale, const quat rotation, const vec3 translation) {
 	 mat4x4_identity(r);
 	 mat4x4_from_quat(r, rotation);
 	 mat4x4_scale_aniso(r, r, scale[0], scale[1], scale[2]);
 	 vec3_dup(r[3], translation);
 	 r[3][3] = 1.0f;
  }
- static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, quat const rotation, vec3 const translation) {
+
+ static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, const quat rotation, const vec3 translation) {
 	 vec3 scaleVec;
 	 vec3_swizzle(scaleVec, scale);
 	 mat4x4_make_transform(r, scaleVec, rotation, translation);

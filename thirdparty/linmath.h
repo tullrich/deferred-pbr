@@ -142,7 +142,7 @@ static inline void mat4x4_scale_aniso(mat4x4 M, mat4x4 a, float x, float y, floa
 		M[3][i] = a[3][i];
 	}
 }
-static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b)
+static inline void mat4x4_mul(mat4x4 M, const mat4x4 a, const mat4x4 b)
 {
 	mat4x4 temp;
 	int k, r, c;
@@ -153,7 +153,7 @@ static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b)
 	}
 	mat4x4_dup(M, temp);
 }
-static inline void mat4x4_mul_vec4(vec4 r, mat4x4 const M, vec4 const v)
+static inline void mat4x4_mul_vec4(vec4 r, const mat4x4 M, const vec4 v)
 {
 	int i, j;
 	for(j=0; j<4; ++j) {
