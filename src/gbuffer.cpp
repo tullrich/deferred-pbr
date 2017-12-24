@@ -37,9 +37,9 @@ static void initialize_positionbuffer(GBuffer *g_buffer)
 
 static void initialize_rendertexture(GBuffer *g_buffer)
 {
-	g_buffer->diffuse_render_buffer = generate_render_buffer();
+	g_buffer->albedo_render_buffer = generate_render_buffer();
 	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, g_buffer->diffuse_render_buffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, g_buffer->albedo_render_buffer, 0);
 	GL_CHECK_ERROR();
 }
 

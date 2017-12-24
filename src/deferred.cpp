@@ -102,7 +102,7 @@ int deferred_initialize(Deferred* d)
 
 	d->lighting_shader.gbuffer_position_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Position");
 	d->lighting_shader.gbuffer_normal_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Normal");
-	d->lighting_shader.gbuffer_diffuse_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Diffuse");
+	d->lighting_shader.gbuffer_albedo_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Albedo");
 	d->lighting_shader.gbuffer_specular_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Specular");
 	d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth");
 	d->lighting_shader.env_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvCubemap");
@@ -285,7 +285,7 @@ static void render_debug(Deferred *d, Scene *s)
 	GLuint render_buffer = 0;
 	switch(d->render_mode) {
 		case RENDER_MODE_POSITION: 	render_buffer = d->g_buffer.position_render_buffer; break;
-		case RENDER_MODE_DIFFUSE: 	render_buffer = d->g_buffer.diffuse_render_buffer; break;
+		case RENDER_MODE_ALBEDO: 	render_buffer = d->g_buffer.albedo_render_buffer; break;
 		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; program_idx = 1; break;
 		case RENDER_MODE_SPECULAR: 	render_buffer = d->g_buffer.specular_render_buffer; break;
 		case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; break;

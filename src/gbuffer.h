@@ -15,7 +15,7 @@ typedef struct
 		{
 			GLuint position_render_buffer;
 			GLuint normal_render_buffer;
-			GLuint diffuse_render_buffer;
+			GLuint albedo_render_buffer;
 			GLuint specular_render_buffer;
 			GLuint depth_render_buffer;
 		};

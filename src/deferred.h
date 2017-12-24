@@ -53,7 +53,7 @@ typedef struct
 		{
 			GLint gbuffer_position_loc;
 			GLint gbuffer_normal_loc;
-			GLint gbuffer_diffuse_loc;
+			GLint gbuffer_albedo_loc;
 			GLint gbuffer_specular_loc;
 			GLint gbuffer_depth_loc;
 		};

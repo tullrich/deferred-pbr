@@ -4,7 +4,7 @@ in vec2 Texcoord;
 
 uniform sampler2D GBuffer_Position;
 uniform sampler2D GBuffer_Normal;
-uniform sampler2D GBuffer_Diffuse;
+uniform sampler2D GBuffer_Albedo;
 uniform sampler2D GBuffer_Specular;
 uniform sampler2D GBuffer_Depth;
 uniform samplerCube EnvCubemap;
@@ -20,7 +20,7 @@ out vec4 outColor;
 void main()
 {
 	vec3 position = texture(GBuffer_Position, Texcoord).xyz;
-	vec4 diffuse = texture(GBuffer_Diffuse, Texcoord);
+	vec4 diffuse = texture(GBuffer_Albedo, Texcoord);
 	vec3 normal = normalize(texture(GBuffer_Normal, Texcoord).xyz);
 	vec4 specular = texture(GBuffer_Specular, Texcoord);
 	float depth = texture(GBuffer_Depth, Texcoord).x;
