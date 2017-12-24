@@ -19,6 +19,7 @@ endif()
 add_executable( Deferred
 	src/main.cpp
 	src/common.h
+	src/common.cpp
 	src/utility.h
 	src/utility.cpp
 	src/gbuffer.h

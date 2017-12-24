@@ -146,19 +146,19 @@ static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
  #define FORMAT_VEC3(v) v[0], v[1], v[2]
  #define FORMAT_VEC4(v) v[0], v[1], v[2], v[3]
 
-const static vec4 Black = {0.0f, 0.0f, 0.0f, 1.0f};
-const static vec4 White = {1.0f, 1.0f, 1.0f, 1.0f};
-const static vec4 Red = {1.0f, 0.0f, 0.0f, 1.0f};
-const static vec4 Green = {0.0f, 1.0f, 0.0f, 1.0f};
-const static vec4 Blue = {0.0f, 0.0f, 1.0f, 1.0f};
-const static vec4 Yellow = {1.0f, 1.0f, 0.0f, 1.0f};
-const static vec4 Zero = {0.0f, 0.0f, 0.0f, 0.0f};
-const static vec4 Axis_Forward = {0.0f, 0.0f, -1.0f, 0.0f};
-const static vec4 Axis_Up = {0.0f, 1.0f, 0.0f, 0.0f};
-const static vec4 Axis_Right = {1.0f, 0.0f, 0.0f, 0.0f};
-const static vec4 Vec_Zero = {0.0f, 0.0f, 0.0f, 0.0f};
-const static vec4 Vec_One = {1.0f, 1.0f, 1.0f, 1.0f};
-const static quat Quat_Identity = {0.0f, 0.0f, 0.0f, 1.0f};
+extern const vec4 Black;
+extern const vec4 White;
+extern const vec4 Red;
+extern const vec4 Green;
+extern const vec4 Blue;
+extern const vec4 Yellow;
+extern const vec4 Zero;
+extern const vec4 Axis_Forward;
+extern const vec4 Axis_Up;
+extern const vec4 Axis_Right;
+extern const vec4 Vec_Zero;
+extern const vec4 Vec_One;
+extern const quat Quat_Identity;
 
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 640
