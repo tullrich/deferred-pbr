@@ -68,7 +68,7 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 	return 0;
 }
 
-static void draw_billboard(Forward* f, GLuint texture, const vec3 position, const Scene *s) {
+static void draw_billboard(Forward* f, GLuint texture, const vec3 position, float scale, const Scene *s) {
 		const ParticleShader* shader = &f->particle_shader_textured;
 
 		// bind shader
@@ -79,7 +79,7 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, cons
 
 		mat4x4 model;
 		mat4x4_identity(model);
-		mat4x4_translate(model, position[0], position[1], position[2]);
+		vec3_dup(model[3], position);
 
 		// bind model-view-projection matrix
 		mat4x4 mvp;
@@ -98,7 +98,9 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, cons
 		// submit
 		vec4 color; color[3] = 1.0f;
 		vec3_dup(color, s->main_light.color);
-		draw_quad(shader, Vec_Zero, rot, Vec_One, color);
+		vec3 scale3;
+		vec3_swizzle(scale3, scale);
+		draw_quad(shader, Vec_Zero, rot, scale3, color);
 }
 
 int forward_initialize(Forward* f) {
@@ -213,7 +215,7 @@ void forward_render(Forward* f, Scene *s) {
 
 	// Draw main light icon
 	static GLuint light_icon = utility_load_image(GL_TEXTURE_2D, "icons/lightbulb.png");
-	draw_billboard(f, light_icon, s->main_light.position, s);
+	draw_billboard(f, light_icon, s->main_light.position, 2.0f, s);
 
 	glDepthMask(GL_TRUE);
 
