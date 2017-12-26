@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-#define GBUFFER_ATTACHMENTS_COUNT 5
+#define GBUFFER_ATTACHMENTS_COUNT 6
 
 typedef struct
 {
@@ -16,7 +16,8 @@ typedef struct
 			GLuint position_render_buffer;
 			GLuint normal_render_buffer;
 			GLuint albedo_render_buffer;
-			GLuint specular_render_buffer;
+			GLuint roughness_render_buffer;
+			GLuint metalness_render_buffer;
 			GLuint depth_render_buffer;
 		};
 		GLint attachments[GBUFFER_ATTACHMENTS_COUNT];

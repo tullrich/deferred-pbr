@@ -29,14 +29,16 @@ typedef struct
 
 	GLint albedo_map_loc;
 	GLint normal_map_loc;
-	GLint specular_map_loc;
+	GLint metalness_map_loc;
+	GLint roughness_map_loc;
 	GLint ao_map_loc;
 
 	GLint modelview_loc;
 	GLint invTModelview_loc;
 	GLint view_loc;
 	GLint albedo_base_loc;
-	GLint specular_base_loc;
+	GLint roughness_base_loc;
+	GLint metalness_base_loc;
 } SurfaceShader;
 
 typedef struct
@@ -54,7 +56,8 @@ typedef struct
 			GLint gbuffer_position_loc;
 			GLint gbuffer_normal_loc;
 			GLint gbuffer_albedo_loc;
-			GLint gbuffer_specular_loc;
+			GLint gbuffer_roughness_loc;
+			GLint gbuffer_metalness_loc;
 			GLint gbuffer_depth_loc;
 		};
 		GLint gbuffer_locs[GBUFFER_ATTACHMENTS_COUNT];

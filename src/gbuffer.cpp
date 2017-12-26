@@ -27,38 +27,13 @@ static void initialize_depthbuffer(GBuffer *g_buffer)
 	GL_CHECK_ERROR();
 }
 
-static void initialize_positionbuffer(GBuffer *g_buffer)
+static GLuint initialize_attachment(GLenum attachment_slot, GLenum format)
 {
-	g_buffer->position_render_buffer = generate_render_buffer();
-	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_buffer->position_render_buffer, 0);
+	GLuint attachment = generate_render_buffer();
+	glTexImage2D(GL_TEXTURE_2D, 0, format, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_slot, GL_TEXTURE_2D, attachment, 0);
 	GL_CHECK_ERROR();
-}
-
-static void initialize_rendertexture(GBuffer *g_buffer)
-{
-	g_buffer->albedo_render_buffer = generate_render_buffer();
-	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, g_buffer->albedo_render_buffer, 0);
-	GL_CHECK_ERROR();
-}
-
-static void initialize_normalbuffer(GBuffer *g_buffer)
-{
-	g_buffer->normal_render_buffer = generate_render_buffer();
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
-	GL_CHECK_ERROR();
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, g_buffer->normal_render_buffer, 0);
-	GL_CHECK_ERROR();
-}
-
-static void initialize_specularbuffer(GBuffer *g_buffer)
-{
-	g_buffer->specular_render_buffer = generate_render_buffer();
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, 0);
-	GL_CHECK_ERROR();
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, g_buffer->specular_render_buffer, 0);
-	GL_CHECK_ERROR();
+	return attachment;
 }
 
 int gbuffer_initialize(GBuffer *g_buffer)
@@ -69,17 +44,19 @@ int gbuffer_initialize(GBuffer *g_buffer)
 	glGenFramebuffers(1, &g_buffer->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_buffer->fbo);
 
+	g_buffer->position_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT0, GL_RGBA32F);
+	g_buffer->albedo_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT1, GL_RGBA32F);
+	g_buffer->normal_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT2, GL_RGBA32F);
+	g_buffer->roughness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT3, GL_RGBA32F);
+	g_buffer->metalness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT4, GL_RGBA32F);
 	initialize_depthbuffer(g_buffer);
-	initialize_rendertexture(g_buffer);
-	initialize_positionbuffer(g_buffer);
-	initialize_normalbuffer(g_buffer);
-	initialize_specularbuffer(g_buffer);
 
 	GLenum DrawBuffers[] = {
 		GL_COLOR_ATTACHMENT0,
 		GL_COLOR_ATTACHMENT1,
 		GL_COLOR_ATTACHMENT2,
-		GL_COLOR_ATTACHMENT3
+		GL_COLOR_ATTACHMENT3,
+		GL_COLOR_ATTACHMENT4
 	};
 
 	glDrawBuffers(STATIC_ELEMENT_COUNT(DrawBuffers), DrawBuffers);

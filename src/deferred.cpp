@@ -8,7 +8,8 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	glBindFragDataLocation(shader->program, 0, "PositionOut");
 	glBindFragDataLocation(shader->program, 1, "AlbedoOut");
 	glBindFragDataLocation(shader->program, 2, "NormalOut");
-	glBindFragDataLocation(shader->program, 3, "SpecularOut");
+	glBindFragDataLocation(shader->program, 3, "RoughnessOut");
+	glBindFragDataLocation(shader->program, 4, "MetalnessOut");
 	glBindAttribLocation(shader->program, 0, "position");
 	glBindAttribLocation(shader->program, 1, "normal");
 	glBindAttribLocation(shader->program, 2, "tangent");
@@ -25,11 +26,12 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	shader->invTModelview_loc = glGetUniformLocation(shader->program, "invTModelView");
 	shader->view_loc = glGetUniformLocation(shader->program, "ModelViewProj");
 	shader->albedo_base_loc = glGetUniformLocation(shader->program, "AlbedoBase");
-	shader->specular_base_loc = glGetUniformLocation(shader->program, "SpecularBase");
-	shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap");
-	shader->albedo_map_loc = glGetUniformLocation(shader->program, "AlbedoOut");
+	shader->metalness_base_loc = glGetUniformLocation(shader->program, "MetalnessBase");
+	shader->roughness_base_loc = glGetUniformLocation(shader->program, "RoughnessBase");
+	shader->albedo_map_loc = glGetUniformLocation(shader->program, "AlbedoMap");
 	shader->normal_map_loc = glGetUniformLocation(shader->program, "NormalMap");
-	shader->specular_map_loc = glGetUniformLocation(shader->program, "SpecularMap");
+	shader->metalness_map_loc = glGetUniformLocation(shader->program, "MetalnessMap");
+	shader->roughness_map_loc = glGetUniformLocation(shader->program, "RoughnessMap");
 	shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap");
 	return 0;
 }
@@ -71,7 +73,8 @@ int deferred_initialize(Deferred* d)
 		"#define MESH_VERTEX_UV1\n",
 		"#define USE_NORMAL_MAP\n",
 		"#define USE_ALBEDO_MAP\n",
-		"#define USE_SPECULAR_MAP\n",
+		//"#define USE_ROUGHNESS_MAP\n",
+		//"#define USE_METALNESS_MAP\n",
 		"#define USE_AO_MAP\n",
 	};
 	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
@@ -102,7 +105,8 @@ int deferred_initialize(Deferred* d)
 	d->lighting_shader.gbuffer_position_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Position");
 	d->lighting_shader.gbuffer_normal_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Normal");
 	d->lighting_shader.gbuffer_albedo_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Albedo");
-	d->lighting_shader.gbuffer_specular_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Specular");
+	d->lighting_shader.gbuffer_roughness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Roughness");
+	d->lighting_shader.gbuffer_metalness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Metalness");
 	d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth");
 	d->lighting_shader.env_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvCubemap");
 	d->lighting_shader.inv_view_loc = glGetUniformLocation(d->lighting_shader.program, "InvView");
@@ -145,8 +149,11 @@ static void render_geometry(Deferred* d, Scene *s)
 	// bind albedo base color
 	glUniform3fv(shader->albedo_base_loc, 1, s->material.albedo_base);
 
-	// bind specular base color
-	glUniform3fv(shader->specular_base_loc, 1, s->material.specular_base);
+	// bind metalness base color
+	glUniform3fv(shader->metalness_base_loc, 1, s->material.metalness_base);
+
+	// bind roughness base color
+	glUniform3fv(shader->roughness_base_loc, 1, s->material.roughness_base);
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
@@ -158,15 +165,20 @@ static void render_geometry(Deferred* d, Scene *s)
 	glBindTexture(GL_TEXTURE_2D, s->material.normal_map);
 	glUniform1i(shader->normal_map_loc, 1);
 
-	// bind specular map
+	// bind metalness map
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, s->material.specular_map);
-	glUniform1i(shader->specular_map_loc, 2);
+	glBindTexture(GL_TEXTURE_2D, s->material.metalness_map);
+	glUniform1i(shader->metalness_map_loc, 2);
+
+	// bind roughness map
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, s->material.roughness_map);
+	glUniform1i(shader->roughness_map_loc, 3);
 
 	// bind normal map
-	glActiveTexture(GL_TEXTURE3);
+	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, s->material.ao_map);
-	glUniform1i(shader->ao_map_loc, 3);
+	glUniform1i(shader->ao_map_loc, 4);
 
 	// calc model matrix
 	mat4x4 model;
@@ -233,12 +245,14 @@ static void render_shading(Deferred* d, Scene *s)
 	view_light_pos_in[2] = s->main_light.position[2];
 	view_light_pos_in[3] = 1.0f;
 
+	//mat4x4 inv_view;
+	//mat4x4_invert(inv_view, s->camera.view);
 	vec4 view_light_pos;
 	mat4x4_mul_vec4(view_light_pos, s->camera.view, view_light_pos_in);
 
 	vec3 ambient_term;
 	vec3_scale(ambient_term, s->ambient_color, s->ambient_intensity);
-	glUniform3fv(d->lighting_shader.ambient_term_loc, 1, (const GLfloat*)ambient_term );
+	glUniform3fv(d->lighting_shader.ambient_term_loc, 1, (const GLfloat*)ambient_term);
 	glUniform3fv(d->lighting_shader.light_pos_loc, 1, (const GLfloat*)view_light_pos);
 	glUniform3fv(d->lighting_shader.light_color_loc, 1, (const GLfloat*)s->main_light.color);
 	glUniform1f(d->lighting_shader.light_intensity_loc, s->main_light.intensity);
@@ -286,7 +300,8 @@ static void render_debug(Deferred *d, Scene *s)
 		case RENDER_MODE_POSITION: 	render_buffer = d->g_buffer.position_render_buffer; break;
 		case RENDER_MODE_ALBEDO: 	render_buffer = d->g_buffer.albedo_render_buffer; break;
 		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; program_idx = 1; break;
-		case RENDER_MODE_SPECULAR: 	render_buffer = d->g_buffer.specular_render_buffer; break;
+		case RENDER_MODE_ROUGHNESS: 	render_buffer = d->g_buffer.roughness_render_buffer; break;
+		case RENDER_MODE_METALNESS: 	render_buffer = d->g_buffer.metalness_render_buffer; break;
 		case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; break;
 	}
 

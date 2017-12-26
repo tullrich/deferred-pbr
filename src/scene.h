@@ -49,10 +49,12 @@ typedef struct
 typedef struct
 {
 	vec3 albedo_base;
-	vec3 specular_base;
+	vec3 metalness_base;
+	vec3 roughness_base;
 	GLuint albedo_map;
 	GLuint normal_map;
-	GLuint specular_map;
+	GLuint metalness_map;
+	GLuint roughness_map;
 	GLuint emissive_map;
 	GLuint ao_map;
 } Material;

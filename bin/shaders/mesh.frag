@@ -13,7 +13,8 @@ in vec3 Bitangent;
 uniform mat4 ModelView;
 uniform mat4 invTModelView;
 uniform vec3 AlbedoBase;
-uniform vec3 SpecularBase;
+uniform vec3 RoughnessBase;
+uniform vec3 MetalnessBase;
 
 #ifdef USE_ALBEDO_MAP
 uniform sampler2D AlbedoMap;
@@ -21,8 +22,11 @@ uniform sampler2D AlbedoMap;
 #ifdef USE_NORMAL_MAP
 uniform sampler2D NormalMap;
 #endif
-#ifdef USE_SPECULAR_MAP
-uniform sampler2D SpecularMap;
+#ifdef USE_ROUGHNESS_MAP
+uniform sampler2D RoughnessMap;
+#endif
+#ifdef USE_METALNESS_MAP
+uniform sampler2D MetalnessMap;
 #endif
 #ifdef USE_AO_MAP
 uniform sampler2D AOMap;
@@ -31,13 +35,15 @@ uniform sampler2D AOMap;
 out vec3 PositionOut;
 out vec4 AlbedoOut;
 out vec3 NormalOut;
-out vec4 SpecularOut;
+out vec3 RoughnessOut;
+out vec3 MetalnessOut;
 
 struct SurfaceOut
 {
 	vec3 Albedo;
 	vec3 Normal;
-	vec4 Specular;
+	vec3 Roughness;
+	vec3 Metalness;
 	float Occlusion;
 };
 
@@ -61,10 +67,15 @@ void SurfaceShaderTextured(out SurfaceOut surface)
 	surface.Albedo *= texture(AlbedoMap, Texcoord).xyz;
 #endif // USE_ALBEDO_MAP
 
-	surface.Specular = vec4(SpecularBase, 0.0f);
-#ifdef USE_SPECULAR_MAP
-	surface.Specular *= texture(SpecularMap, Texcoord);
-#endif // USE_SPECULAR_MAP
+	surface.Roughness = RoughnessBase;
+#ifdef USE_ROUGHNESS_MAP
+	surface.Roughness *= texture(RoughnessMap, Texcoord).xyz;
+#endif // USE_ROUGHNESS_MAP
+
+	surface.Metalness = MetalnessBase;
+#ifdef USE_METALNESS_MAP
+	surface.Metalness *= texture(MetalnessMap, Texcoord).xyz;
+#endif // USE_METALNESS_MAP
 
 #ifdef USE_AO_MAP
 	surface.Occlusion = texture(AOMap, Texcoord).x;
@@ -81,5 +92,6 @@ void main()
 	PositionOut = Position;
 	AlbedoOut = vec4(surface.Albedo, surface.Occlusion);
 	NormalOut = surface.Normal;
-	SpecularOut = surface.Specular;
+	RoughnessOut = surface.Roughness;
+	MetalnessOut = surface.Metalness;
 }

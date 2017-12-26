@@ -31,7 +31,8 @@ static const char* render_mode_def[] = {
 	"Position",
 	"Albedo",
 	"Normal",
-	"Specular",
+	"Roughness",
+	"Metalness",
 	"Depth",
 };
 
@@ -234,8 +235,8 @@ static int get_particle_texture_index() {
 }
 
 static int initialize_meshes() {
-	mesh_make_box(&gMeshes[0], 1.0f);
-	mesh_sphere_tessellate(&gMeshes[1], 1.0f, 100, 100);
+	mesh_make_box(&gMeshes[0], 5.0f);
+	mesh_sphere_tessellate(&gMeshes[1], 2.5f, 100, 100);
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshPaths); i++) {
 		if (mesh_load_obj(&gMeshes[i+2], gMeshPaths[i])) {
 			return 1;
@@ -249,10 +250,11 @@ static int initialize_materials() {
 		gMaterials[0].albedo_map = utility_load_texture_unknown();
 	if (!(gMaterials[0].normal_map= utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg")))
 		gMaterials[0].normal_map = utility_load_texture_unknown();
-	if (!(gMaterials[0].specular_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png")))
-		gMaterials[0].specular_map = utility_load_texture_unknown();
+	if (!(gMaterials[0].metalness_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png")))
+		gMaterials[0].metalness_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[0].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[0].specular_base, 1.0f);
+	vec3_swizzle(gMaterials[0].roughness_base, 1.0f);
+	vec3_swizzle(gMaterials[0].metalness_base, 1.0f);
 
 	if (!(gMaterials[1].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png")))
 		gMaterials[1].albedo_map = utility_load_texture_unknown();
@@ -261,21 +263,24 @@ static int initialize_materials() {
 	if (!(gMaterials[1].ao_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - AO Map.png")))
 		gMaterials[1].ao_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[1].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[1].specular_base, 1.0f);
+	vec3_swizzle(gMaterials[1].roughness_base, 1.0f);
+	vec3_swizzle(gMaterials[1].metalness_base, 1.0f);
 
 	if (!(gMaterials[2].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png")))
 		gMaterials[2].albedo_map = utility_load_texture_unknown();
 	if (!(gMaterials[2].normal_map= utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png")))
 		gMaterials[2].normal_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[2].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[2].specular_base, 1.0f);
+	vec3_swizzle(gMaterials[2].roughness_base, 1.0f);
+	vec3_swizzle(gMaterials[2].metalness_base, 1.0f);
 
 	if (!(gMaterials[3].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png")))
 		gMaterials[3].albedo_map = utility_load_texture_unknown();
 	if (!(gMaterials[3].normal_map= utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png")))
 		gMaterials[3].normal_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[3].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[3].specular_base, 1.0f);
+	vec3_swizzle(gMaterials[3].roughness_base, 1.0f);
+	vec3_swizzle(gMaterials[3].metalness_base, 1.0f);
 
 	return 0;
 }
@@ -334,7 +339,7 @@ static int init_scene() {
 	memset(&gScene, 0, sizeof(Scene));
 
 	// Setup camera
-	gScene.camera.boomLen = 15.0f;
+	gScene.camera.boomLen = 30.0f;
 	gScene.camera.fovy = 90.0f;
 
 	// Setup skybox
@@ -356,7 +361,7 @@ static int init_scene() {
 	gScene.material = gMaterials[material_idx];
 
 	// Setup model
-	gScene.model_scale = 5.0f;
+	gScene.model_scale = 1.0f;
 
 	return 0;
 }
@@ -496,8 +501,9 @@ static int frame() {
 		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::ColorEdit3("Albedo Base", gScene.material.albedo_base);
-		ImGui::ColorEdit3("Specular Base", gScene.material.specular_base);
+		ImGui::ColorEdit3("Albedo", gScene.material.albedo_base);
+		ImGui::ColorEdit3("Roughness", gScene.material.roughness_base);
+		ImGui::ColorEdit3("Metalness", gScene.material.metalness_base);
 		if (ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (ImGui::Button("Sci-Fi Cube")) {
 				gScene.material = gMaterials[0];
