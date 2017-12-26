@@ -42,6 +42,8 @@ static int load_debug_shader(DebugShader* shader, const char* vert, const char* 
 	shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord");
 	shader->gbuffer_render_loc = glGetUniformLocation(shader->program, "GBuffer_Render");
 	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
+	shader->z_near_loc = glGetUniformLocation(shader->program, "ZNear");
+	shader->z_far_loc = glGetUniformLocation(shader->program, "ZFar");
 	return 0;
 }
 
@@ -118,9 +120,14 @@ int deferred_initialize(Deferred* d)
 	const char* debug_ndc_defines[] ={
 		"#define DEBUG_RENDER_NORMALIZE\n"
 	};
+	const char* debug_linearize_defines[] ={
+		"#define DEBUG_RENDER_LINEARIZE\n"
+	};
 	if(load_debug_shader(&d->debug_shader[0], "shaders/passthrough.vert", "shaders/passthrough.frag", NULL, 0) ||
 	   load_debug_shader(&d->debug_shader[1], "shaders/passthrough.vert", "shaders/passthrough.frag",
-						  debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines))) {
+						  debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines)) ||
+	   load_debug_shader(&d->debug_shader[2], "shaders/passthrough.vert", "shaders/passthrough.frag",
+						  debug_linearize_defines, STATIC_ELEMENT_COUNT(debug_linearize_defines))) {
 		printf("Unable to load debug shader\n");
 		return 1;
 	}
@@ -293,14 +300,14 @@ static void render_skybox(Deferred *d, Scene *s)
 
 static void render_debug(Deferred *d, Scene *s)
 {
-	int program_idx = 0;;
+	int program_idx = 0;
 	GLuint render_buffer = 0;
 	switch(d->render_mode) {
 		case RENDER_MODE_ALBEDO: 	render_buffer = d->g_buffer.albedo_render_buffer; break;
 		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; program_idx = 1; break;
 		case RENDER_MODE_ROUGHNESS: 	render_buffer = d->g_buffer.roughness_render_buffer; break;
 		case RENDER_MODE_METALNESS: 	render_buffer = d->g_buffer.metalness_render_buffer; break;
-		case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; break;
+		case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; program_idx = 2; break;
 	}
 
 	glUseProgram(d->debug_shader[program_idx].program);
@@ -311,9 +318,13 @@ static void render_debug(Deferred *d, Scene *s)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, render_buffer);
 	glUniform1i(d->debug_shader[program_idx].gbuffer_render_loc, 0);
+
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, d->g_buffer.depth_render_buffer);
 	glUniform1i(d->debug_shader[program_idx].gbuffer_depth_loc, 1);
+
+	glUniform1f(d->debug_shader[program_idx].z_near_loc, Z_NEAR);
+	glUniform1f(d->debug_shader[program_idx].z_far_loc, Z_FAR);
 
 	utility_draw_fullscreen_quad(d->debug_shader[program_idx].texcoord_loc, d->debug_shader[program_idx].pos_loc);
 }

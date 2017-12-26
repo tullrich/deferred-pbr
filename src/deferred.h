@@ -83,6 +83,8 @@ typedef struct
 	GLint texcoord_loc;
 	GLint gbuffer_render_loc;
 	GLint gbuffer_depth_loc;
+	GLint z_near_loc;
+	GLint z_far_loc;
 
 } DebugShader;
 
@@ -92,7 +94,7 @@ typedef struct
 	SkyboxShader skybox_shader;
 	SurfaceShader surf_shader[2];
 	LightingShader lighting_shader;
-	DebugShader debug_shader[2];
+	DebugShader debug_shader[3];
 	GBuffer g_buffer;
 } Deferred;
 

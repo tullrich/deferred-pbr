@@ -1,6 +1,4 @@
 Deferred:
-	Skybox/Skydome
-	Fix Normal render view (linearize depth & shift onto 0-1)
 	Pbr
 	Linear color space transform
 
