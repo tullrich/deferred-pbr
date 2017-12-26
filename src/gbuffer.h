@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-#define GBUFFER_ATTACHMENTS_COUNT 6
+#define GBUFFER_ATTACHMENTS_COUNT 5
 
 typedef struct
 {
@@ -13,7 +13,6 @@ typedef struct
 	{
 		struct
 		{
-			GLuint position_render_buffer;
 			GLuint normal_render_buffer;
 			GLuint albedo_render_buffer;
 			GLuint roughness_render_buffer;

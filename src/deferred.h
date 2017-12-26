@@ -53,7 +53,6 @@ typedef struct
 	{
 		struct
 		{
-			GLint gbuffer_position_loc;
 			GLint gbuffer_normal_loc;
 			GLint gbuffer_albedo_loc;
 			GLint gbuffer_roughness_loc;
@@ -71,6 +70,7 @@ typedef struct
 	GLint light_intensity_loc;
 	GLint eye_pos_loc;
 	GLint inv_view_loc;
+	GLint inv_proj_loc;
 
 } LightingShader;
 

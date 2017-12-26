@@ -9,10 +9,8 @@ in vec2 texcoord;
 in vec4 tangent;
 #endif
 
-uniform mat4 ModelView;
 uniform mat4 ModelViewProj;
 
-out vec3 Position;
 out vec3 Normal;
 #ifdef MESH_VERTEX_UV1
 out vec2 Texcoord;
@@ -24,7 +22,6 @@ out vec3 Bitangent;
 
 void main()
 {
-	Position = (ModelView * vec4(position, 1.0)).xyz;
 	Normal = normal;
 
 #ifdef MESH_VERTEX_UV1

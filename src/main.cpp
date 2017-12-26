@@ -28,7 +28,6 @@ static int show_manipulator = 0;
 
 static const char* render_mode_def[] = {
 	"Shaded",
-	"Position",
 	"Albedo",
 	"Normal",
 	"Roughness",

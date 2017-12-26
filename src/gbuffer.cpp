@@ -44,19 +44,17 @@ int gbuffer_initialize(GBuffer *g_buffer)
 	glGenFramebuffers(1, &g_buffer->fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, g_buffer->fbo);
 
-	g_buffer->position_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT0, GL_RGBA32F);
-	g_buffer->albedo_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT1, GL_RGBA32F);
-	g_buffer->normal_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT2, GL_RGBA32F);
-	g_buffer->roughness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT3, GL_RGBA32F);
-	g_buffer->metalness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT4, GL_RGBA32F);
+	g_buffer->albedo_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT0, GL_RGBA32F);
+	g_buffer->normal_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT1, GL_RGBA32F);
+	g_buffer->roughness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT2, GL_RGBA32F);
+	g_buffer->metalness_render_buffer = initialize_attachment(GL_COLOR_ATTACHMENT3, GL_RGBA32F);
 	initialize_depthbuffer(g_buffer);
 
 	GLenum DrawBuffers[] = {
 		GL_COLOR_ATTACHMENT0,
 		GL_COLOR_ATTACHMENT1,
 		GL_COLOR_ATTACHMENT2,
-		GL_COLOR_ATTACHMENT3,
-		GL_COLOR_ATTACHMENT4
+		GL_COLOR_ATTACHMENT3
 	};
 
 	glDrawBuffers(STATIC_ELEMENT_COUNT(DrawBuffers), DrawBuffers);

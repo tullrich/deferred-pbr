@@ -2,7 +2,6 @@
 
 in vec2 Texcoord;
 
-uniform sampler2D GBuffer_Position;
 uniform sampler2D GBuffer_Normal;
 uniform sampler2D GBuffer_Albedo;
 uniform sampler2D GBuffer_Roughness;
@@ -10,22 +9,40 @@ uniform sampler2D GBuffer_Metalness;
 uniform sampler2D GBuffer_Depth;
 uniform samplerCube EnvCubemap;
 
-uniform vec3 	AmbientTerm;
-uniform vec3 	MainLightPosition;
-uniform vec3 	MainLightColor;
-uniform float 	MainLightIntensity;
-uniform mat4x4  InvView;
+uniform vec3 AmbientTerm;
+uniform vec3 MainLightPosition;
+uniform vec3 MainLightColor;
+uniform float MainLightIntensity;
+uniform mat4x4 InvView;
+uniform mat4x4 InvProjection;
 
 out vec4 outColor;
 
+vec3 Fresnel(vec3 f0, float product)
+{
+    return mix(f0, vec3(1.0), pow(1.01 - product, 5.0));
+}
+
+vec3 ViewPositionFromDepth(vec2 texcoord, float depth)
+{
+  // Get x/w and y/w from the viewport position
+  vec3 projectedPos = vec3(texcoord, depth) * 2.0f - 1.0f;;
+
+  // Transform by the inverse projection matrix
+  vec4 positionVS = InvProjection * vec4(projectedPos, 1.0f);
+
+  // Divide by w to get the view-space position
+  return positionVS.xyz / positionVS.w;
+}
+
 void main()
 {
-	vec3 position = texture(GBuffer_Position, Texcoord).xyz;
 	vec4 albedo = texture(GBuffer_Albedo, Texcoord);
 	vec3 normal = normalize(texture(GBuffer_Normal, Texcoord).xyz);
 	float metalness = texture(GBuffer_Metalness, Texcoord).r;
 	float roughness = texture(GBuffer_Roughness, Texcoord).r;
 	float depth = texture(GBuffer_Depth, Texcoord).x;
+  vec3 position = ViewPositionFromDepth(Texcoord, depth);
 
 	vec3 lightDir = normalize(MainLightPosition - position);
 

@@ -5,11 +5,10 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 																 defines, defines_count))) {
 		return 1;
 	}
-	glBindFragDataLocation(shader->program, 0, "PositionOut");
-	glBindFragDataLocation(shader->program, 1, "AlbedoOut");
-	glBindFragDataLocation(shader->program, 2, "NormalOut");
-	glBindFragDataLocation(shader->program, 3, "RoughnessOut");
-	glBindFragDataLocation(shader->program, 4, "MetalnessOut");
+	glBindFragDataLocation(shader->program, 0, "AlbedoOut");
+	glBindFragDataLocation(shader->program, 1, "NormalOut");
+	glBindFragDataLocation(shader->program, 2, "RoughnessOut");
+	glBindFragDataLocation(shader->program, 3, "MetalnessOut");
 	glBindAttribLocation(shader->program, 0, "position");
 	glBindAttribLocation(shader->program, 1, "normal");
 	glBindAttribLocation(shader->program, 2, "tangent");
@@ -22,7 +21,6 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	shader->normal_loc = glGetAttribLocation(shader->program, "normal");
 	shader->tangent_loc = glGetAttribLocation(shader->program, "tangent");
 	shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord");
-	shader->modelview_loc = glGetUniformLocation(shader->program, "ModelView");
 	shader->invTModelview_loc = glGetUniformLocation(shader->program, "invTModelView");
 	shader->view_loc = glGetUniformLocation(shader->program, "ModelViewProj");
 	shader->albedo_base_loc = glGetUniformLocation(shader->program, "AlbedoBase");
@@ -102,7 +100,6 @@ int deferred_initialize(Deferred* d)
 	d->lighting_shader.light_intensity_loc = glGetUniformLocation(d->lighting_shader.program, "MainLightIntensity");
 	d->lighting_shader.eye_pos_loc = glGetUniformLocation(d->lighting_shader.program, "EyePosition");
 
-	d->lighting_shader.gbuffer_position_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Position");
 	d->lighting_shader.gbuffer_normal_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Normal");
 	d->lighting_shader.gbuffer_albedo_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Albedo");
 	d->lighting_shader.gbuffer_roughness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Roughness");
@@ -110,6 +107,7 @@ int deferred_initialize(Deferred* d)
 	d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth");
 	d->lighting_shader.env_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvCubemap");
 	d->lighting_shader.inv_view_loc = glGetUniformLocation(d->lighting_shader.program, "InvView");
+	d->lighting_shader.inv_proj_loc = glGetUniformLocation(d->lighting_shader.program, "InvProjection");
 
 	if(gbuffer_initialize(&d->g_buffer)) {
 		printf("Unable to create g-buffer.\n");
@@ -190,13 +188,9 @@ static void render_geometry(Deferred* d, Scene *s)
 	vec3_sub(model[3], model[3], s->mesh.bounds.center);
 	vec3_add(model[3], model[3], s->model_translation);
 
-	// bind model-view matrix
-	mat4x4 mv;
-	mat4x4_mul(mv, s->camera.view, model);
-	glUniformMatrix4fv(shader->modelview_loc, 1, GL_FALSE, (const GLfloat*)mv);
-
 	// bind inverse transpose model-view matrix
-	mat4x4 inv_mv, invT_mv;
+	mat4x4 mv, inv_mv, invT_mv;
+	mat4x4_mul(mv, s->camera.view, model);
 	mat4x4_invert(inv_mv, mv);
 	mat4x4_transpose(invT_mv, inv_mv);
 	glUniformMatrix4fv(shader->invTModelview_loc, 1, GL_FALSE, (const GLfloat*)invT_mv);
@@ -264,6 +258,11 @@ static void render_shading(Deferred* d, Scene *s)
 	mat4x4_invert(inv_view_rot, view_rot);
 	glUniformMatrix4fv(d->lighting_shader.inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view_rot);
 
+	// View rotation only
+	mat4x4 inv_proj;
+	mat4x4_invert(inv_proj, s->camera.proj);
+	glUniformMatrix4fv(d->lighting_shader.inv_proj_loc, 1, GL_FALSE, (const GLfloat*)inv_proj);
+
 	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
 }
 
@@ -297,7 +296,6 @@ static void render_debug(Deferred *d, Scene *s)
 	int program_idx = 0;;
 	GLuint render_buffer = 0;
 	switch(d->render_mode) {
-		case RENDER_MODE_POSITION: 	render_buffer = d->g_buffer.position_render_buffer; break;
 		case RENDER_MODE_ALBEDO: 	render_buffer = d->g_buffer.albedo_render_buffer; break;
 		case RENDER_MODE_NORMAL: 	render_buffer = d->g_buffer.normal_render_buffer; program_idx = 1; break;
 		case RENDER_MODE_ROUGHNESS: 	render_buffer = d->g_buffer.roughness_render_buffer; break;

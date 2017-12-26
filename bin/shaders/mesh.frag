@@ -1,6 +1,5 @@
 #version 130
 
-in vec3 Position;
 in vec3 Normal;
 #ifdef MESH_VERTEX_UV1
 in vec2 Texcoord;
@@ -10,7 +9,6 @@ in vec3 Tangent;
 in vec3 Bitangent;
 #endif
 
-uniform mat4 ModelView;
 uniform mat4 invTModelView;
 uniform vec3 AlbedoBase;
 uniform vec3 RoughnessBase;
@@ -32,7 +30,6 @@ uniform sampler2D MetalnessMap;
 uniform sampler2D AOMap;
 #endif
 
-out vec3 PositionOut;
 out vec4 AlbedoOut;
 out vec3 NormalOut;
 out vec3 RoughnessOut;
@@ -89,7 +86,6 @@ void main()
 	SurfaceOut surface;
 	SurfaceShaderTextured(surface);
 
-	PositionOut = Position;
 	AlbedoOut = vec4(surface.Albedo, surface.Occlusion);
 	NormalOut = surface.Normal;
 	RoughnessOut = surface.Roughness;
