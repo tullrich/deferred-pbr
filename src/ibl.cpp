@@ -87,7 +87,7 @@ static float area_element(float x, float y)
 	return atan2f(x * y, sqrtf(x * x + y * y + 1));
 }
 
-float texcoord_solid_angle(float u, float v, float size)
+static float texcoord_solid_angle(float u, float v, float size)
 {
 	float InvResolution = 1.0f / size;
 
@@ -102,17 +102,17 @@ float texcoord_solid_angle(float u, float v, float size)
 	return SolidAngle;
 }
 
-static void radiance_sample(vec4 result, vec3 eye_dir, int face, float su, float sv, float solid_angle, IrradianceCompute *ir) {
+static void radiance_sample(vec3 result, vec3 eye_dir, int face, float su, float sv, float solid_angle, IrradianceCompute *ir) {
 	vec3 ray;
 	dir_for_fragment(ray, face, su, sv, ir);
-	float lambert = fmaxf(vec3_mul_inner(ray, eye_dir), 0.0f);
-	float term = powf(lambert, 1.0f)*solid_angle;
 
-	vec4 sample;
+	float lambert = fmaxf(vec3_mul_inner(ray, eye_dir), 0.0f);
+	float term = lambert*solid_angle;
+
+	vec3 sample;
 	sample_cubemap(sample, ray, ir->cubemap, ir->width, ir->height);
 	vec3_scale(sample, sample, term);
-	sample[3] = term;
-	vec4_add(result, result, sample);
+	vec3_add(result, result, sample);
 }
 
 static void compute_irradiance_fragment(vec3 out, int face, float u, float v, IrradianceCompute *ir) {
@@ -120,7 +120,7 @@ static void compute_irradiance_fragment(vec3 out, int face, float u, float v, Ir
 	dir_for_fragment(eye_dir, face, u , v, ir);
 
 #if 1
-	vec4 result = { 0.0f };
+	vec3 result = { 0.0f };
 	for (unsigned int sv = 0; sv < ir->height; sv++) {
 		for (unsigned int su = 0; su < ir->width; su++) {
 			float ndc_su = 2.0f*(su+0.5f)/(float)ir->width - 1.0f;
@@ -134,7 +134,8 @@ static void compute_irradiance_fragment(vec3 out, int face, float u, float v, Ir
 			radiance_sample(result, eye_dir, 5, ndc_su, ndc_sv, solid_angle, ir);
 		}
 	}
-	vec3_scale(out, result, 1.0f/result[3]);
+	vec3_scale(out, result, 1.0f/(float)M_PI);
+	//vec3_scale(out, result, 1.0f/result[3]);
 #else
 	vec4 result ={0.0f};
 #define RANGE_0_1(val) (.5f*val+0.5f)

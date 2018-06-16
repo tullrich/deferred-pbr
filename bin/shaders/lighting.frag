@@ -1,5 +1,7 @@
 #version 130
 
+#define PI 3.1415926
+
 in vec2 Texcoord;
 
 uniform sampler2D GBuffer_Normal;
@@ -18,11 +20,13 @@ uniform mat4x4 InvProjection;
 
 out vec4 outColor;
 
+// Schlick-Frensel curve approximation
 vec3 Fresnel(vec3 f0, float product)
 {
     return mix(f0, vec3(1.0), pow(1.01 - product, 5.0));
 }
 
+// Reconstruct view space position from depth
 vec3 ViewPositionFromDepth(vec2 texcoord, float depth)
 {
   // Get x/w and y/w from the viewport position
@@ -35,45 +39,62 @@ vec3 ViewPositionFromDepth(vec2 texcoord, float depth)
   return positionVS.xyz / positionVS.w;
 }
 
+// simple phong specular calculation with normalization
+vec3 PhongSpecular(vec3 V, vec3 L, vec3 N, vec3 specular, float roughness)
+{
+    vec3 R = reflect(-L, N);
+    float spec = max(0.0, dot(V, R));
+    float k = 1.999 / (roughness * roughness);
+    return min(1.0, 3.0 * 0.0398 * k) * pow(spec, min(10000.0, k)) * specular;
+}
+
 void main()
 {
+  // Surface Properties
 	vec4 albedo = texture(GBuffer_Albedo, Texcoord);
 	vec3 normal = normalize(texture(GBuffer_Normal, Texcoord).xyz);
 	float metalness = texture(GBuffer_Metalness, Texcoord).r;
 	float roughness = texture(GBuffer_Roughness, Texcoord).r;
+  float occlusion = albedo.w;
 	float depth = texture(GBuffer_Depth, Texcoord).x;
   vec3 position = ViewPositionFromDepth(Texcoord, depth);
-
-	vec3 lightDir = normalize(MainLightPosition - position);
-
 	vec4 worldNormal = InvView * vec4(normal, 0);
- 	vec3 EnvAmbient = texture(EnvCubemap, worldNormal.xyz).xyz;
 
-	// irradiance
-	vec3 ambient_term = albedo.xyz * EnvAmbient * AmbientTerm;// * albedo.w;
+  // Direction to light in viewspace
+  vec3 L = normalize(MainLightPosition - position);
 
-	vec3 E_l = MainLightColor * MainLightIntensity;
-	float E_theta = max(dot(lightDir, normal), 0);
-	vec3 diffuse_term = albedo.xyz * E_l * E_theta;
+  // Direction to eye in viewspace
+  vec3 V = normalize(-position);
 
-	vec3 eyeDir = normalize(-position);
-	vec3 halfVector = normalize(lightDir + eyeDir);
-	vec3 specular_term = roughness * E_l * pow(max(dot(normal,halfVector),0.0), 300);
+  // Half-Vector between light and eye in viewspace
+  vec3 H = normalize(L + V);
 
-	vec3 exitance = diffuse_term + ambient_term + specular_term;
+  // cos(angle) between surface normal and light
+  float NdL = max(0.001, dot(normal, L));
 
-	// rim light
-	//exitance = vec3(1.0, 1.0, 1.0) * smoothstep(0.2, 1.0, max(0.5-dot(normal, eyeDir), 0));
+  // cos(angle) between surface normal and eye
+  float NdV = max(0.001, dot(normal, V));
 
-	// env mapping
-	//vec4 reflectDir = InvView * vec4(reflect(-eyeDir, normal), 0);
-	//exitance = texture(EnvCubemap, reflectDir.xyz).xyz;
+  vec3 lightColor = MainLightColor * MainLightIntensity;
+  vec3 diffuseColor = mix(albedo.xyz, vec3(0.0f), metalness);
+  vec3 specularColor = mix(vec3(0.04f), albedo.xyz, metalness);
+ 	vec3 envAmbientColor = texture(EnvCubemap, worldNormal.xyz).xyz;
 
+  // specular reflectance with PHONG
+  vec3 specfresnel = Fresnel(specularColor, NdV);
+  vec3 specref = PhongSpecular(V, L, normal, specfresnel, roughness) * NdL;
 
-	//float ratio = 1.0 /1.3333;
-	//vec4 refractedDir = InvView * vec4(refract(-eyeDir, normal, ratio), 0);
-	//exitance = texture(EnvCubemap, refractedDir.xyz).xyz;
+  // lambertian diffuse term
+  vec3 diffuse_light = vec3(0);
+  diffuse_light += diffuseColor * (vec3(1.0) - specfresnel) * lightColor * NdL;
+  diffuse_light += diffuseColor * envAmbientColor;
 
-	outColor = vec4(exitance, 1.0);
+  // specular reflectance with phong
+  vec3 reflected_light = vec3(0);
+  reflected_light += specref * lightColor;
+
+  // compute total lighting
+  vec3 result = diffuse_light + reflected_light;
+	outColor = vec4(result, 1.0);
 	gl_FragDepth = depth;
 }

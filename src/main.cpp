@@ -241,6 +241,8 @@ static int initialize_meshes() {
 			return 1;
 		}
 	}
+	gMeshes[0].texcoords = NULL;
+	gMeshes[1].texcoords = NULL;
 	return 0;
 }
 
@@ -253,7 +255,7 @@ static int initialize_materials() {
 		gMaterials[0].metalness_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[0].albedo_base, 1.0f);
 	vec3_swizzle(gMaterials[0].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[0].metalness_base, 1.0f);
+	vec3_swizzle(gMaterials[0].metalness_base, 0.0f);
 
 	if (!(gMaterials[1].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png")))
 		gMaterials[1].albedo_map = utility_load_texture_unknown();
@@ -263,7 +265,7 @@ static int initialize_materials() {
 		gMaterials[1].ao_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[1].albedo_base, 1.0f);
 	vec3_swizzle(gMaterials[1].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[1].metalness_base, 1.0f);
+	vec3_swizzle(gMaterials[1].metalness_base, 0.0f);
 
 	if (!(gMaterials[2].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png")))
 		gMaterials[2].albedo_map = utility_load_texture_unknown();
@@ -271,7 +273,7 @@ static int initialize_materials() {
 		gMaterials[2].normal_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[2].albedo_base, 1.0f);
 	vec3_swizzle(gMaterials[2].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[2].metalness_base, 1.0f);
+	vec3_swizzle(gMaterials[2].metalness_base, 0.0f);
 
 	if (!(gMaterials[3].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png")))
 		gMaterials[3].albedo_map = utility_load_texture_unknown();
@@ -279,13 +281,13 @@ static int initialize_materials() {
 		gMaterials[3].normal_map = utility_load_texture_unknown();
 	vec3_swizzle(gMaterials[3].albedo_base, 1.0f);
 	vec3_swizzle(gMaterials[3].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[3].metalness_base, 1.0f);
+	vec3_swizzle(gMaterials[3].metalness_base, 0.0f);
 
 	return 0;
 }
 
 static int initialize_skybox_textures() {
-	//ibl_compute_irradiance_map(skybox_SanFrancisco_low);
+	//ibl_compute_irradiance_map(skybox_SaintPetersBasilica_low);
 
 	if(!(gSkyboxes[0].env_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica)))
 		return 1;
@@ -316,7 +318,7 @@ static void init_main_light() {
 	gScene.main_light.color[0] = 1.0f;
 	gScene.main_light.color[1] = 1.0f;
 	gScene.main_light.color[2] = 1.0f;
-	gScene.main_light.intensity = 0.0f;
+	gScene.main_light.intensity = 1.0f;
 }
 
 static void refresh_emitter( void *clientData ) {
@@ -501,8 +503,8 @@ static int frame() {
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::ColorEdit3("Albedo", gScene.material.albedo_base);
-		ImGui::ColorEdit3("Roughness", gScene.material.roughness_base);
-		ImGui::ColorEdit3("Metalness", gScene.material.metalness_base);
+		ImGui::SliderFloat("Roughness", &gScene.material.roughness_base[0],  0.0f, 1.0f);
+		ImGui::SliderFloat("Metalness", &gScene.material.metalness_base[0],  0.0f, 1.0f);
 		if (ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (ImGui::Button("Sci-Fi Cube")) {
 				gScene.material = gMaterials[0];
