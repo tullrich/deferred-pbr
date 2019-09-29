@@ -42,10 +42,15 @@ add_executable( Deferred
 	src/imgui/imgui_internal.h
 	src/imgui/imgui_demo.cpp
 	src/imgui/imgui_draw.cpp
+	src/imgui/imgui_widgets.cpp
 	src/imgui/imgui.cpp
-	src/imgui/stb_textedit.h
-	src/imgui/imgui_impl_sdl_gl3.h
-	src/imgui/imgui_impl_sdl_gl3.cpp
+	src/imgui/imstb_textedit.h
+	src/imgui/imstb_rectpack.h
+	src/imgui/imstb_truetype.h
+	src/imgui/imgui_impl_opengl3.h
+	src/imgui/imgui_impl_opengl3.cpp
+	src/imgui/imgui_impl_sdl.h
+	src/imgui/imgui_impl_sdl.cpp
 
 	src/imgui/ImGuizmo.h
 	src/imgui/ImGuizmo.cpp
