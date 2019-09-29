@@ -1,5 +1,7 @@
 #include "deferred.h"
 
+DEFINE_ENUM(RenderMode, render_mode_strings, ENUM_RenderMode);
+
 static int load_surface_shader(SurfaceShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
 	if(!(shader->program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
 																 defines, defines_count))) {

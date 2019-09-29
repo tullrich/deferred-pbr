@@ -2,6 +2,9 @@
 
 #define PARTICLE_GRAVITY -9.81f
 
+DEFINE_ENUM(ParticleShadingMode, particle_shading_mode_strings, ENUM_ParticleShadingMode);
+DEFINE_ENUM(ParticleOrientationMode, particle_orient_mode_strings, ENUM_ParticleOrientationMode);
+
 static void random_direction(vec3 out) {
 	float theta = (float)M_PI * utility_random_real11();
 	float phi = acosf(utility_random_real11());
@@ -61,6 +64,18 @@ int particle_emitter_destroy(ParticleEmitter *emitter) {
 		free(emitter->sort_records);
 	}
 	memset(emitter, 0, sizeof(ParticleEmitter));
+	return 0;
+}
+
+int particle_emitter_refresh(ParticleEmitter *emitter) {
+	const ParticleEmitterDesc* desc = emitter->desc;
+	int ret;
+	if ((ret = particle_emitter_destroy(emitter))) {
+		return ret;
+	}
+	if ((ret = particle_emitter_initialize(emitter, desc))) {
+		return ret;
+	}
 	return 0;
 }
 
@@ -173,4 +188,64 @@ void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position) {
 
 	// sort
 	quicksort(emitter->sort_records, 0, emitter->count-1);
+}
+
+static int get_particle_texture_index(GLuint texId, const ParticleEmitterTextureDesc* texDefs, int texDefsCount) {
+	for (int i = 0; i < texDefsCount; i++) {
+		if (texId == texDefs[i].texture) {
+			return i;
+		}
+	}
+	return 0;
+}
+
+void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, int* burst_count, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
+	if ( ImGui::Button("Refresh") ) {
+		particle_emitter_refresh(emitter);
+	}
+	ImGui::SliderFloat( "Spawn Rate", &desc->spawn_rate, 0, 500.0f );
+	ImGui::SliderInt( "Max Particles", &desc->max, 1, 2048 );
+
+	ImGui::Combo( "Shading Mode", ( int* )&desc->shading_mode, particle_shading_mode_strings, particle_shading_mode_strings_count );
+
+	if ( desc->shading_mode == PARTICLE_SHADING_TEXTURED ) {
+		int texture_idx = get_particle_texture_index(desc->texture, tex_defs, tex_defs_count);
+		if (ImGui::BeginCombo("Texture", tex_defs[texture_idx].name, 0))
+    {
+      for (int i = 0; i < tex_defs_count; i++)
+      {
+        if (ImGui::Selectable(tex_defs[i].name, (texture_idx == i)))
+				{
+					desc->texture = tex_defs[i].texture;
+				}
+        if ((texture_idx == i))
+				{
+          ImGui::SetItemDefaultFocus();
+				}
+      }
+      ImGui::EndCombo();
+    }
+	}
+	ImGui::SliderFloat( "Start Scale", &desc->start_scale, .01f, 10.0f );
+	ImGui::SliderFloat( "End Scale", &desc->end_scale, .01f, 10.0f );
+	ImGui::ColorEdit4( "Start Color", desc->start_color );
+	ImGui::ColorEdit4( "End Color", desc->end_color );
+
+	ImGui::Combo( "Orientation Mode", ( int* )&desc->orient_mode, particle_orient_mode_strings, particle_orient_mode_strings_count );
+	ImGui::Checkbox( "Depth Sort", ( bool* )&desc->depth_sort_alpha_blend );
+	ImGui::Checkbox( "Soft", ( bool* )&desc->soft );
+	ImGui::Checkbox( "Gravity", ( bool* )&desc->simulate_gravity );
+	ImGui::Checkbox( "Mute", ( bool* )&emitter->muted );
+	//TwAddVarRW( bar, "Cone Axis", TW_TYPE_DIR3F, &gEmitterDesc.emit_cone_axis, "" );
+	ImGui::SliderFloat( "Life Time", &desc->life_time, 0.0f, 10.0f );
+	ImGui::SliderFloat( "Life Time Variance", &desc->life_time_variance, 0.0f, 10.0f );
+	ImGui::SliderFloat( "Speed", &desc->speed, 0.0f, 10.0f );
+	ImGui::SliderFloat( "Speed Variance", &desc->speed_variance, 0.0f, 10.0f );
+
+	ImGui::SliderFloat( "Local Scale", &emitter->scale, 0.0f, 10.0f );
+	ImGui::InputFloat3( "Local Translation", emitter->pos );
+	if ( ImGui::Button( "Burst" ) ) {
+		particle_emitter_burst(emitter, *burst_count);
+	}
+	ImGui::SliderInt( "Burst Count", burst_count, 0, 1000 );
 }

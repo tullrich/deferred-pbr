@@ -95,3 +95,27 @@ typedef struct
 
 void scene_camera_forward(const Scene* s, vec3 out);
 void scene_camera_up(const Scene* s, vec3 out);
+
+typedef struct
+{
+	const char* name;
+	const char* paths[6];
+	const char* low_paths[6];
+	const char* irr_paths[6];
+	Skybox skybox;
+} SkyboxDesc;
+
+typedef struct
+{
+	const char* name;
+	const char* albedo_map_path;
+	const char* normal_map_path;
+	const char* metalness_map_path;
+	const char* roughness_map_path;
+	const char* emissive_map_path;
+	const char* ao_map_path;
+	vec3 albedo_base;
+	vec3 metalness_base;
+	vec3 roughness_base;
+	Material material;
+} MaterialDesc;

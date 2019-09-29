@@ -5,17 +5,16 @@
 #include "forward.h"
 #include "ibl.h"
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl_gl3.h"
+#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include "imgui/ImGuizmo.h"
 
-static SDL_Window*			gSDLWindow;
-static Scene 				gScene;
-static Deferred 			gDeferred;
-static Forward 				gForward;
+static Scene gScene;
+static Deferred gDeferred;
+static Forward gForward;
 
-static ParticleEmitterDesc 	gEmitterDesc;
-static ParticleEmitter 		gEmitter;
+static ParticleEmitterDesc gEmitterDesc;
+static ParticleEmitter gEmitter;
 
 static int burst_count = 150;
 static int rotate_cam = 0;
@@ -24,142 +23,93 @@ static int material_idx = 0;
 static int mesh_idx = 0;
 static int show_manipulator = 0;
 
-// box render modes
-
-static const char* render_mode_def[] = {
-	"Shaded",
-	"Albedo",
-	"Normal",
-	"Roughness",
-	"Metalness",
-	"Depth",
+static SkyboxDesc gSkyboxes[] = {
+	{
+		.name = "Saint Peters Basilica",
+		.paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica", ".jpg"),
+		.low_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", ".jpg"),
+		.irr_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", "_irradiance.png")
+	},
+	{
+		.name = "San Francisco",
+		.paths = CUBEMAP_FILEPATHS("images/SanFrancisco4", ".jpg"),
+		.low_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", ".jpg"),
+		.irr_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", "_irradiance.png")
+	},
+	{
+		.name = "UV Debug",
+		.paths = {
+			"images/uv_map.png",
+			"images/uv_map.png",
+			"images/uv_map.png",
+			"images/uv_map.png",
+			"images/uv_map.png",
+			"images/uv_map.png",
+		}
+	}
 };
 
-
-static const char* geometry_mode_def[] = {
-	"Box",
-	"Sphere",
-	"Buddha",
-	"Dragon",
-	"Bunny",
-	"None",
+static ParticleEmitterTextureDesc gParticleTextures[] = {
+	{ .name = "Flare", .path = "images/particles/flare.png" },
+	{ .name = "Particle", .path = "images/particles/particle.png"},
+	{ .name = "Smoke", .path = "images/particles/smoke.png" },
+	{ .name = "Divine", .path = "images/particles/divine.png" },
+	{ .name = "UV Debug", .path = "images/uv_map.png" }
 };
 
-// particle shading modes
-static const char* particle_shading_mode_def[] = {
-	"Flat",
-	"Textured",
+static MeshDesc gMeshes[] = {
+	{ .name = "Box" },
+	{ .name = "Sphere" },
+	{ .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
+	{ .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
+	{ .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
+	{ .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj" },
+	{ .name = "None" }
 };
 
-// particle orientation mode
-static const char* particle_orient_mode_def[] = {
-	"Free",
-	"Screen Aligned",
+static MaterialDesc gMaterials[] = {
+	{
+		.name = "Sci-Fi Cube",
+		.albedo_map_path = "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
+		.normal_map_path = "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
+		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
+		.albedo_base = { 1.0f,  1.0f,  1.0f },
+		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.roughness_base = { 1.0f,  1.0f,  1.0f }
+	},
+	{
+		.name = "Medievil",
+		.albedo_map_path = "images/Medievil/Medievil Stonework - Color Map.png",
+		.normal_map_path = "images/Medievil/Medievil Stonework - (Normal Map).png",
+		.ao_map_path = "images/Medievil/Medievil Stonework - AO Map.png",
+		.albedo_base = { 1.0f,  1.0f,  1.0f },
+		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.roughness_base = { 1.0f,  1.0f,  1.0f }
+	},
+	{
+		.name = "Moorish Lattice",
+		.albedo_map_path = "images/MoorishLattice/moorish_lattice_diffuse.png",
+		.normal_map_path = "images/MoorishLattice/moorish_lattice_normal.png",
+		.albedo_base = { 1.0f,  1.0f,  1.0f },
+		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.roughness_base = { 1.0f,  1.0f,  1.0f }
+	},
+	{
+		.name = "Terracotta",
+		.albedo_map_path = "images/Terracotta/terracotta_diffuse.png",
+		.normal_map_path = "images/Terracotta/terracotta_normal.png",
+		.albedo_base = { 1.0f,  1.0f,  1.0f },
+		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.roughness_base = { 1.0f,  1.0f,  1.0f }
+	},
+	{
+		.name = "UV Debug",
+		.albedo_map_path = "images/uv_map2.png",
+		.albedo_base = { 1.0f,  1.0f,  1.0f },
+		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.roughness_base = { 1.0f,  1.0f,  1.0f }
+	}
 };
-
-// particle texture index
-static const char* particle_texture_def[] = {
-	"Flare",
-	"Particle",
-	"Smoke",
-	"Divine",
-	"UV Debug",
-};
-
-
-static const char* skybox_def[] = {
-	"Saint Peters Basilica",
-	"San Francisco",
-	"UV Debug",
-};
-
-static Skybox gSkyboxes[STATIC_ELEMENT_COUNT(skybox_def)];
-
-// SanFrancisco skybox textures (must match CubeMapFaces enum)
-static const char* skybox_SanFrancisco[] = {
-	"images/SanFrancisco4/posz.jpg",
-	"images/SanFrancisco4/negz.jpg",
-	"images/SanFrancisco4/posy.jpg",
-	"images/SanFrancisco4/negy.jpg",
-	"images/SanFrancisco4/posx.jpg",
-	"images/SanFrancisco4/negx.jpg",
-};
-
-static const char* skybox_SanFrancisco_low[] ={
-	"images/SanFrancisco4_low/posz.jpg",
-	"images/SanFrancisco4_low/negz.jpg",
-	"images/SanFrancisco4_low/posy.jpg",
-	"images/SanFrancisco4_low/negy.jpg",
-	"images/SanFrancisco4_low/posx.jpg",
-	"images/SanFrancisco4_low/negx.jpg",
-};
-
-static const char* skybox_SanFrancisco_irr[] ={
-	"images/SanFrancisco4_low/posz_irradiance.png",
-	"images/SanFrancisco4_low/negz_irradiance.png",
-	"images/SanFrancisco4_low/posy_irradiance.png",
-	"images/SanFrancisco4_low/negy_irradiance.png",
-	"images/SanFrancisco4_low/posx_irradiance.png",
-	"images/SanFrancisco4_low/negx_irradiance.png",
-};
-
-// SaintPetersBasilica skybox textures (must match CubeMapFaces enum)
-static const char* skybox_SaintPetersBasilica[] = {
-	"images/SaintPetersBasilica/posz.jpg",
-	"images/SaintPetersBasilica/negz.jpg",
-	"images/SaintPetersBasilica/posy.jpg",
-	"images/SaintPetersBasilica/negy.jpg",
-	"images/SaintPetersBasilica/posx.jpg",
-	"images/SaintPetersBasilica/negx.jpg",
-};
-
-static const char* skybox_SaintPetersBasilica_low[] ={
-	"images/SaintPetersBasilica_low/posz.jpg",
-	"images/SaintPetersBasilica_low/negz.jpg",
-	"images/SaintPetersBasilica_low/posy.jpg",
-	"images/SaintPetersBasilica_low/negy.jpg",
-	"images/SaintPetersBasilica_low/posx.jpg",
-	"images/SaintPetersBasilica_low/negx.jpg",
-};
-
-static const char* skybox_SaintPetersBasilica_irr[] ={
-	"images/SaintPetersBasilica_low/posz_irradiance.png",
-	"images/SaintPetersBasilica_low/negz_irradiance.png",
-	"images/SaintPetersBasilica_low/posy_irradiance.png",
-	"images/SaintPetersBasilica_low/negy_irradiance.png",
-	"images/SaintPetersBasilica_low/posx_irradiance.png",
-	"images/SaintPetersBasilica_low/negx_irradiance.png",
-};
-
-static const char* skybox_UV_Debug[] = {
-	"images/uv_map.png",
-	"images/uv_map.png",
-	"images/uv_map.png",
-	"images/uv_map.png",
-	"images/uv_map.png",
-	"images/uv_map.png",
-};
-
-
-// particle texture index -> paths LUT
-static const char* gParticleTexturePaths[] ={
-	"images/particles/flare.png",
-	"images/particles/particle.png",
-	"images/particles/smoke.png",
-	"images/particles/divine.png",
-	"images/uv_map.png",
-};
-
-static GLuint gParticleTextures[STATIC_ELEMENT_COUNT(gParticleTexturePaths)];
-
-static const char* gMeshPaths[] ={
-	"meshes/buddha/buddha.obj",
-	"meshes/dragon/dragon.obj",
-	"meshes/bunny/bunny.obj"
-};
-static Mesh gMeshes[2+STATIC_ELEMENT_COUNT(gMeshPaths)];
-
-static Material gMaterials[4];
 
 static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	memset(out, 0, sizeof(ParticleEmitterDesc));
@@ -172,7 +122,7 @@ static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
 	out->speed = 8.0f; out->speed_variance = 5.0f;
 	out->life_time = 2.5f; out->life_time_variance = 0.5f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[0];
+	out->texture = gParticleTextures[0].texture;
 	out->start_scale = 1.0f; out->end_scale = 0.01f;
 	vec3_dup(out->emit_cone_axis, Axis_Right);
 };
@@ -190,7 +140,7 @@ static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
 	out->life_time = 2.5f;
 	out->life_time_variance = 0.5f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[1];
+	out->texture = gParticleTextures[1].texture;
 	out->start_scale = 0.1f;
 	out->end_scale = 0.5f;
 	vec3_dup(out->emit_cone_axis, Axis_Up);
@@ -209,131 +159,68 @@ static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
 	out->life_time = 3.0f;
 	out->life_time_variance = 0.0f;
 	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[2];
+	out->texture = gParticleTextures[2].texture;
 	out->start_scale = 2.0f;
 	out->end_scale = 4.5f;
 	vec3_dup(out->emit_cone_axis, Axis_Up);
 };
 
 static int initialize_particle_textures() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTexturePaths); i++) {
-		if ((gParticleTextures[i] = utility_load_image(GL_TEXTURE_2D, gParticleTexturePaths[i])) < 0) {
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTextures); i++) {
+		if ((gParticleTextures[i].texture = utility_load_image(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
 			return 1;
-		}
-	}
-	return 0;
-}
-
-static int get_particle_texture_index() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTexturePaths); i++) {
-		if (gEmitterDesc.texture == gParticleTextures[i]) {
-			return i;
 		}
 	}
 	return 0;
 }
 
 static int initialize_meshes() {
-	mesh_make_box(&gMeshes[0], 5.0f);
-	mesh_sphere_tessellate(&gMeshes[1], 2.5f, 100, 100);
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshPaths); i++) {
-		if (mesh_load_obj(&gMeshes[i+2], gMeshPaths[i])) {
+	mesh_make_box(&gMeshes[0].mesh, 5.0f);
+	mesh_sphere_tessellate(&gMeshes[1].mesh, 2.5f, 100, 100);
+	for (int i = 2; i < (STATIC_ELEMENT_COUNT(gMeshes) - 1); i++) {
+		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path)) {
 			return 1;
 		}
 	}
-	gMeshes[0].texcoords = NULL;
-	gMeshes[1].texcoords = NULL;
 	return 0;
 }
 
 static int initialize_materials() {
-	if (!(gMaterials[0].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg")))
-		gMaterials[0].albedo_map = utility_load_texture_unknown();
-	if (!(gMaterials[0].normal_map= utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg")))
-		gMaterials[0].normal_map = utility_load_texture_unknown();
-	if (!(gMaterials[0].metalness_map = utility_load_image(GL_TEXTURE_2D, "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png")))
-		gMaterials[0].metalness_map = utility_load_texture_unknown();
-	vec3_swizzle(gMaterials[0].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[0].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[0].metalness_base, 0.0f);
-
-	if (!(gMaterials[1].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - Color Map.png")))
-		gMaterials[1].albedo_map = utility_load_texture_unknown();
-	if (!(gMaterials[1].normal_map= utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - (Normal Map).png")))
-		gMaterials[1].normal_map = utility_load_texture_unknown();
-	if (!(gMaterials[1].ao_map = utility_load_image(GL_TEXTURE_2D, "images/Medievil/Medievil Stonework - AO Map.png")))
-		gMaterials[1].ao_map = utility_load_texture_unknown();
-	vec3_swizzle(gMaterials[1].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[1].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[1].metalness_base, 0.0f);
-
-	if (!(gMaterials[2].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_diffuse.png")))
-		gMaterials[2].albedo_map = utility_load_texture_unknown();
-	if (!(gMaterials[2].normal_map= utility_load_image(GL_TEXTURE_2D, "images/MoorishLattice/moorish_lattice_normal.png")))
-		gMaterials[2].normal_map = utility_load_texture_unknown();
-	vec3_swizzle(gMaterials[2].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[2].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[2].metalness_base, 0.0f);
-
-	if (!(gMaterials[3].albedo_map = utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_diffuse.png")))
-		gMaterials[3].albedo_map = utility_load_texture_unknown();
-	if (!(gMaterials[3].normal_map= utility_load_image(GL_TEXTURE_2D, "images/Terracotta/terracotta_normal.png")))
-		gMaterials[3].normal_map = utility_load_texture_unknown();
-	vec3_swizzle(gMaterials[3].albedo_base, 1.0f);
-	vec3_swizzle(gMaterials[3].roughness_base, 1.0f);
-	vec3_swizzle(gMaterials[3].metalness_base, 0.0f);
-
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++) {
+		MaterialDesc* desc = &gMaterials[i];
+		if (!desc->albedo_map_path || !(desc->material.albedo_map = utility_load_image(GL_TEXTURE_2D, desc->albedo_map_path)))
+			desc->material.albedo_map = utility_load_texture_unknown();
+		if (!desc->normal_map_path || !(desc->material.normal_map = utility_load_image(GL_TEXTURE_2D, desc->normal_map_path)))
+			desc->material.normal_map = utility_load_texture_unknown();
+		if (!desc->metalness_map_path || !(desc->material.metalness_map = utility_load_image(GL_TEXTURE_2D, desc->metalness_map_path)))
+			desc->material.metalness_map = utility_load_texture_unknown();
+		if (!desc->roughness_map_path || !(desc->material.roughness_map = utility_load_image(GL_TEXTURE_2D, desc->roughness_map_path)))
+			desc->material.roughness_map = utility_load_texture_unknown();
+		if (!desc->ao_map_path || !(desc->material.ao_map = utility_load_image(GL_TEXTURE_2D, desc->ao_map_path)))
+			desc->material.ao_map = utility_load_texture_unknown();
+		if (!desc->emissive_map_path || !(desc->material.emissive_map = utility_load_image(GL_TEXTURE_2D, desc->emissive_map_path)))
+			desc->material.emissive_map = utility_load_texture_unknown();
+		vec3_dup(desc->material.albedo_base, desc->albedo_base);
+		vec3_dup(desc->material.metalness_base, desc->metalness_base);
+		vec3_dup(desc->material.roughness_base, desc->roughness_base);
+	}
 	return 0;
 }
 
 static int initialize_skybox_textures() {
-	//ibl_compute_irradiance_map(skybox_SaintPetersBasilica_low);
-
-	if(!(gSkyboxes[0].env_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica)))
-		return 1;
-	if (!(gSkyboxes[0].irr_cubemap = utility_load_cubemap(skybox_SaintPetersBasilica_irr)))
-		return 1;
-
-	if(!(gSkyboxes[1].env_cubemap = utility_load_cubemap(skybox_SanFrancisco)))
-		return 1;
-	if (!(gSkyboxes[1].irr_cubemap = utility_load_cubemap(skybox_SanFrancisco_irr)))
-		return 1;
-
-	if(!(gSkyboxes[2].env_cubemap = utility_load_cubemap(skybox_UV_Debug)))
-		return 1;
-	gSkyboxes[2].irr_cubemap = gSkyboxes[2].env_cubemap;
-	return 0;
-}
-
-static void init_main_light() {
-	gScene.ambient_color[0] = 1.f;
-	gScene.ambient_color[1] = 1.f;
-	gScene.ambient_color[2] = 1.f;
-	gScene.ambient_intensity = 1.f;
-
-	gScene.main_light.position[0] = 5.0f;
-	gScene.main_light.position[1] = 10.0f;
-	gScene.main_light.position[2] = 5.0f;
-
-	gScene.main_light.color[0] = 1.0f;
-	gScene.main_light.color[1] = 1.0f;
-	gScene.main_light.color[2] = 1.0f;
-	gScene.main_light.intensity = 1.0f;
-}
-
-static void refresh_emitter( void *clientData ) {
-	// delete existing
-	if (gEmitter.desc) {
-		particle_emitter_destroy(&gEmitter);
-		gScene.emitters[0] = NULL;
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++)
+	{
+		//ibl_compute_irradiance_map(gSkyboxes[i].low_paths);
+		if(!(gSkyboxes[i].skybox.env_cubemap = utility_load_cubemap(gSkyboxes[i].paths)))
+			return 1;
+		if (gSkyboxes[i].irr_paths[0]) {
+			if (!(gSkyboxes[i].skybox.irr_cubemap = utility_load_cubemap(gSkyboxes[i].irr_paths)))
+				return 1;
+		} else {
+			gSkyboxes[i].skybox.irr_cubemap = gSkyboxes[i].skybox.env_cubemap;
+		}
 	}
-
-	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
-	gScene.emitters[0] = &gEmitter;
-}
-
-static void burst() {
-	particle_emitter_burst(&gEmitter, burst_count);
+	return 0;
 }
 
 static int init_scene() {
@@ -343,38 +230,39 @@ static int init_scene() {
 	gScene.camera.boomLen = 30.0f;
 	gScene.camera.fovy = 90.0f;
 
-	// Setup skybox
-	gScene.skybox = gSkyboxes[skybox_idx];
+	// Setup ambient light
+	vec3_dup(gScene.ambient_color, White);
+	gScene.ambient_intensity = 1.f;
 
 	// Setup main directional light
-	init_main_light();
+	vec3_dup(gScene.main_light.color, White);
+	gScene.main_light.intensity = 1.0f;
+	gScene.main_light.position[0] = 5.0f;
+	gScene.main_light.position[1] = 10.0f;
+	gScene.main_light.position[2] = 5.0f;
 
-	// Setup particle system
-	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
-	emitter_desc_preset_flare(&gEmitterDesc);
-	refresh_emitter( NULL );
-	gEmitter.muted = true; // start muted
+	// Setup skybox
+	gScene.skybox = gSkyboxes[skybox_idx].skybox;
 
-	// Set start mesh to the cube
-	gScene.mesh = gMeshes[0];
+	// Setup start mesh
+	gScene.mesh = gMeshes[mesh_idx].mesh;
+	gScene.model_scale = 1.0f;
 
 	// Setup start material
-	gScene.material = gMaterials[material_idx];
+	gScene.material = gMaterials[material_idx].material;
 
-	// Setup model
-	gScene.model_scale = 1.0f;
+	// Setup particle system
+	memset(&gEmitter, 0, sizeof(ParticleEmitter));
+	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
+	emitter_desc_preset_flare(&gEmitterDesc);
+	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
+	gScene.emitters[0] = &gEmitter;
+	gEmitter.muted = true; // start muted
 
 	return 0;
 }
 
 static int initialize() {
-	glewExperimental = 1;
-	glewInit();
-
-	// Initialize Imgui
-	ImGui_ImplSdlGL3_Init(gSDLWindow);
-	srand((unsigned)time(0));
-
 	int err = 0;
 	if (err = deferred_initialize(&gDeferred)) {
 		printf("deferred rendering init failed\n");
@@ -467,24 +355,33 @@ static int frame() {
 	deferred_render(&gDeferred, &gScene);
 	forward_render(&gForward, &gScene);
 
-	ImGui::SetNextWindowSize( ImVec2( 200, 100 ), ImGuiSetCond_FirstUseEver );
+	ImGui::SetNextWindowSize( ImVec2( 200, 100 ), ImGuiCond_FirstUseEver );
 	ImGui::Begin( "Controls", 0);
 
 	if ( ImGui::CollapsingHeader( "Renderer", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_def, STATIC_ELEMENT_COUNT( render_mode_def ) );
+		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_strings, render_mode_strings_count );
 	}
 	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
 		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 
-		if (ImGui::Combo( "Geometry", ( int* )&mesh_idx, geometry_mode_def, STATIC_ELEMENT_COUNT(geometry_mode_def))) {
-			if (mesh_idx < STATIC_ELEMENT_COUNT(gMeshes)) {
-				gScene.mesh = gMeshes[mesh_idx];
-			} else {
-				gScene.mesh.vertices = NULL;
-			}
-		}
+		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0))
+    {
+      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++)
+      {
+        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i)))
+				{
+					mesh_idx = i;
+					gScene.mesh = gMeshes[i].mesh;
+				}
+        if ((mesh_idx == i))
+				{
+          ImGui::SetItemDefaultFocus();
+				}
+      }
+      ImGui::EndCombo();
+    }
 		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
 		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
 
@@ -492,11 +389,22 @@ static int frame() {
 		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
 		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
 		ImGui::Checkbox("Show Manipulator", (bool*)&show_manipulator);
-
-		if(ImGui::Combo( "Skybox", ( int* )&skybox_idx, skybox_def, STATIC_ELEMENT_COUNT( skybox_def ) )) {
-			gScene.skybox = gSkyboxes[skybox_idx];
+		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0))
+		{
+			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++)
+			{
+				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i)))
+				{
+					skybox_idx = i;
+					gScene.skybox = gSkyboxes[i].skybox;
+				}
+				if ((skybox_idx == i))
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
 		}
-
 		ImGui::SliderFloat3("Model Position", gScene.model_translation, 0.0f, 25.0f, "%.0f");
 		ImGui::SliderFloat("Model Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
 		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
@@ -505,71 +413,37 @@ static int frame() {
 		ImGui::ColorEdit3("Albedo", gScene.material.albedo_base);
 		ImGui::SliderFloat("Roughness", &gScene.material.roughness_base[0],  0.0f, 1.0f);
 		ImGui::SliderFloat("Metalness", &gScene.material.metalness_base[0],  0.0f, 1.0f);
-		if (ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
-			if (ImGui::Button("Sci-Fi Cube")) {
-				gScene.material = gMaterials[0];
+		if (ImGui::BeginCombo("Textures", gMaterials[material_idx].name, 0))
+		{
+			for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++)
+			{
+				if (ImGui::Selectable(gMaterials[i].name, (material_idx == i)))
+				{
+					material_idx = i;
+					gScene.material = gMaterials[i].material;
+				}
+				if ((material_idx == i))
+				{
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			if (ImGui::Button("Medievil")) {
-				gScene.material = gMaterials[1];
-			}
-			if (ImGui::Button("Moorish Lattice")) {
-				gScene.material = gMaterials[2];
-			}
-			if (ImGui::Button("Terracotta")) {
-				gScene.material = gMaterials[3];
-			}
+			ImGui::EndCombo();
 		}
 	}
-	if ( ImGui::CollapsingHeader( "Emitter", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-		if ( ImGui::Button("Refresh") ) {
-			refresh_emitter(NULL);
-		}
-		ImGui::SliderFloat( "Spawn Rate", &gEmitterDesc.spawn_rate, 0, 500.0f );
-		ImGui::SliderInt( "Max Particles", &gEmitterDesc.max, 1, 2048 );
-
-		ImGui::Combo( "Shading Mode", ( int* )&gEmitterDesc.shading_mode, particle_shading_mode_def, STATIC_ELEMENT_COUNT( particle_shading_mode_def ) );
-
-		if ( gEmitterDesc.shading_mode == PARTICLE_SHADING_TEXTURED ) {
-			int texture_idx = get_particle_texture_index();
-			if ( ImGui::Combo( "Texture", ( int* )&texture_idx, particle_texture_def, STATIC_ELEMENT_COUNT( particle_texture_def ) ) ) {
-				gEmitterDesc.texture = gParticleTextures[texture_idx];
+	if ( ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen)) {
+		particle_emitter_gui(&gEmitterDesc, &gEmitter, &burst_count, gParticleTextures, STATIC_ELEMENT_COUNT( gParticleTextures ));
+		if ( ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if ( ImGui::Button("Flare") ) {
+				emitter_desc_preset_flare(&gEmitterDesc);
+				particle_emitter_refresh(&gEmitter);
 			}
-		}
-		ImGui::SliderFloat( "Start Scale", &gEmitterDesc.start_scale, .01f, 10.0f );
-		ImGui::SliderFloat( "End Scale", &gEmitterDesc.end_scale, .01f, 10.0f );
-		ImGui::ColorEdit4( "Start Color", gEmitterDesc.start_color );
-		ImGui::ColorEdit4( "End Color", gEmitterDesc.end_color );
-
-		ImGui::Combo( "Orientation Mode", ( int* )&gEmitterDesc.orient_mode, particle_orient_mode_def, STATIC_ELEMENT_COUNT( particle_orient_mode_def ) );
-		ImGui::Checkbox( "Depth Sort", ( bool* )&gEmitterDesc.depth_sort_alpha_blend );
-		ImGui::Checkbox( "Soft", ( bool* )&gEmitterDesc.soft );
-		ImGui::Checkbox( "Gravity", ( bool* )&gEmitterDesc.simulate_gravity );
-		ImGui::Checkbox( "Mute", ( bool* )&gEmitter.muted );
-		//TwAddVarRW( bar, "Cone Axis", TW_TYPE_DIR3F, &gEmitterDesc.emit_cone_axis, "" );
-		ImGui::SliderFloat( "Life Time", &gEmitterDesc.life_time, 0.0f, 10.0f );
-		ImGui::SliderFloat( "Life Time Variance", &gEmitterDesc.life_time_variance, 0.0f, 10.0f );
-		ImGui::SliderFloat( "Speed", &gEmitterDesc.speed, 0.0f, 10.0f );
-		ImGui::SliderFloat( "Speed Variance", &gEmitterDesc.speed_variance, 0.0f, 10.0f );
-
-		ImGui::SliderFloat( "Local Scale", &gEmitter.scale, 0.0f, 10.0f );
-		ImGui::InputFloat3( "Local Translation", gEmitter.pos );
-		if ( ImGui::Button( "Burst" ) ) {
-			burst();
-		}
-		ImGui::SliderInt( "Burst Count", &burst_count, 0, 1000 );
-
-		if ( ImGui::CollapsingHeader( "Presets", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-			if ( ImGui::Button( "Flare" ) ) {
-				emitter_desc_preset_flare( &gEmitterDesc );
-				refresh_emitter( NULL );
+			if ( ImGui::Button("Particle") ) {
+				emitter_desc_preset_particle(&gEmitterDesc);
+				particle_emitter_refresh(&gEmitter);
 			}
-			if ( ImGui::Button( "Particle" ) ) {
-				emitter_desc_preset_particle( &gEmitterDesc );
-				refresh_emitter( NULL );
-			}
-			if ( ImGui::Button( "Smoke" ) ) {
-				emitter_desc_preset_smoke( &gEmitterDesc );
-				refresh_emitter( NULL );
+			if ( ImGui::Button("Smoke") ) {
+				emitter_desc_preset_smoke(&gEmitterDesc);
+				particle_emitter_refresh(&gEmitter);
 			}
 		}
 	}
@@ -592,33 +466,42 @@ static int frame() {
 		vec3_dup(gScene.main_light.position, light_mat[3]);
 	}
 
-	ImGui::Render();
-
-	GL_CHECK_ERROR();
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
 
 	SDL_Init(SDL_INIT_VIDEO);              // Initialize SDL
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,          8);
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,           8);
+  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,          8);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,          16);
+  SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,         32);
+  SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE,      8);
+  SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
+  SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
+  SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,          8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,           8);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,          8);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,          16);
-    SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,         32);
-    SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE,      8);
-    SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
-    SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
-    SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
-    if(!(gSDLWindow = SDL_CreateWindow("Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
-			, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
-        return 1;
-    }
+	SDL_Window*	window;
+  if(!(window = SDL_CreateWindow("Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+		, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
+      return 1;
+  }
 
-	SDL_GLContext glcontext = SDL_GL_CreateContext(gSDLWindow);
+	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+	glewExperimental = 1;
+	glewInit();
+
+	// Initialize Imgui
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
+  ImGui_ImplOpenGL3_Init("#version 130");
+
+	srand((unsigned)time(0));
+
 	if(initialize()) {
 		printf("Failed to initialize. Exiting.\n");
 		return 1;
@@ -630,27 +513,23 @@ int main(int argc, char* argv[]) {
 	// The window is open: enter program loop (see SDL_PollEvent)
 	int quit = 0;
 	while (!quit) {
-		ImGui_ImplSdlGL3_NewFrame(gSDLWindow);
-		ImGuizmo::BeginFrame();
-		bool imguiCaptureMouse = ImGui::GetIO().WantCaptureMouse;
-
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 
-			if (imguiCaptureMouse) {
-				if (ImGui_ImplSdlGL3_ProcessEvent(&event)) {
+			if (ImGui::GetIO().WantCaptureMouse) {
+				if (ImGui_ImplSDL2_ProcessEvent(&event)) {
 					continue;
 				}
 			}
 			else {
 				if (event.type == SDL_MOUSEBUTTONDOWN) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						SDL_SetWindowGrab(gSDLWindow, SDL_TRUE);
+						SDL_SetWindowGrab(window, SDL_TRUE);
 					}
 				}
 				else if (event.type == SDL_MOUSEBUTTONUP) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						SDL_SetWindowGrab(gSDLWindow, SDL_FALSE);
+						SDL_SetWindowGrab(window, SDL_FALSE);
 					}
 				}
 				else if (event.type == SDL_MOUSEMOTION) {
@@ -674,20 +553,30 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame(window);
+    ImGui::NewFrame();
+
 		if (frame())
 		{
 			quit = 1;
 			break;
 		}
 
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		GL_CHECK_ERROR();
+
 		// swap
-		SDL_GL_SwapWindow(gSDLWindow);
+		SDL_GL_SwapWindow(window);
 	}
 
 	// Clean up
-	ImGui_ImplSdlGL3_Shutdown();
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
 	SDL_GL_DeleteContext(glcontext);
-	SDL_DestroyWindow(gSDLWindow);
+	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
 }

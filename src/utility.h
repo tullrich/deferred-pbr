@@ -25,6 +25,15 @@ typedef enum
 	CUBEMAP_RIGHT
 } CubeMapFaces;
 
+#define CUBEMAP_FILEPATHS(folder, suffix) {							\
+		folder "/posz" suffix,															\
+		folder "/negz" suffix,															\
+		folder "/posy" suffix,															\
+		folder "/negy" suffix,															\
+		folder "/posx" suffix,															\
+		folder "/negx" suffix																\
+	}
+
 GLuint utility_load_texture_unknown();
 GLuint utility_load_image(GLenum target, const char *filepath);
 GLuint utility_load_cubemap(const char** filepaths);

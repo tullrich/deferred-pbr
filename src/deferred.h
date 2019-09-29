@@ -4,6 +4,16 @@
 #include "gbuffer.h"
 #include "scene.h"
 
+#define ENUM_RenderMode(D)								\
+	D(RENDER_MODE_SHADED, 		"Shaded")			\
+	D(RENDER_MODE_ALBEDO, 		"Albedo")			\
+	D(RENDER_MODE_NORMAL, 		"Normal")			\
+	D(RENDER_MODE_ROUGHNESS, 	"Roughness")	\
+	D(RENDER_MODE_METALNESS, 	"Metalness")	\
+	D(RENDER_MODE_DEPTH, 			"Depth")
+
+DECLARE_ENUM(RenderMode, render_mode_strings, ENUM_RenderMode);
+
 typedef struct
 {
 	GLuint program;

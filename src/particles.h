@@ -1,17 +1,17 @@
 #pragma once
 #include "common.h"
 
-typedef enum
-{
-	PARTICLE_SHADING_FLAT,
-	PARTICLE_SHADING_TEXTURED,
-} ParticleShadingMode;
+#define ENUM_ParticleShadingMode(D)						\
+	D(PARTICLE_SHADING_FLAT, 			"Flat")				\
+	D(PARTICLE_SHADING_TEXTURED, 	"Textured")
 
-typedef enum
-{
-	PARTICLE_ORIENT_FREE,
-	PARTICLE_ORIENT_SCREEN_ALIGNED,
-} ParticleOrientationMode;
+DECLARE_ENUM(ParticleShadingMode, particle_shading_mode_strings, ENUM_ParticleShadingMode);
+
+#define ENUM_ParticleOrientationMode(D)								\
+	D(PARTICLE_ORIENT_FREE, 					"Free")						\
+	D(PARTICLE_ORIENT_SCREEN_ALIGNED, "Screen Aligned")
+
+DECLARE_ENUM(ParticleOrientationMode, particle_orient_mode_strings, ENUM_ParticleOrientationMode);
 
 // single particle
 typedef struct
@@ -88,11 +88,11 @@ typedef struct
 
 	// if true, renders this as 'soft' particles
 	int soft;
-	
+
 	// if true, particle velocity is modified by gravity
 	int simulate_gravity;
 
-	// emitter cone axis 
+	// emitter cone axis
 	vec3 emit_cone_axis;
 } ParticleEmitterDesc;
 
@@ -144,6 +144,7 @@ void particle_update(Particle* part, float dt);
 
 int particle_emitter_initialize(ParticleEmitter *emitter, const ParticleEmitterDesc* def);
 int particle_emitter_destroy(ParticleEmitter *emitter);
+int particle_emitter_refresh(ParticleEmitter *emitter);
 
 Particle* particle_emitter_emit_one(ParticleEmitter* emitter);
 void particle_emitter_burst(ParticleEmitter* emitter, int count);
@@ -151,3 +152,12 @@ void particle_emitter_burst(ParticleEmitter* emitter, int count);
 void particle_emitter_destroy_at_index(ParticleEmitter* emitter, int index);
 void particle_emitter_update(ParticleEmitter* emitter, float dt);
 void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position);
+
+typedef struct
+{
+	const char* name;
+	const char* path;
+	GLuint texture;
+} ParticleEmitterTextureDesc;
+
+void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, int* burst_count, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);

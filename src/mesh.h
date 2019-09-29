@@ -43,3 +43,11 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
 void mesh_free(Mesh *out_mesh);
 int mesh_load_obj(Mesh *out_mesh, const char *filepath);
+
+
+typedef struct
+{
+	const char* name;
+	const char* path;
+	Mesh mesh;
+} MeshDesc;

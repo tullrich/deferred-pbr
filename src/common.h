@@ -12,6 +12,7 @@
 #include "stb_image.h"
 #include "FreeImage.h"
 #include "tinyobj_loader_c/tinyobj_loader_c.h"
+#include "imgui/imgui.h"
 
 #include "linmath.h"
 
@@ -173,14 +174,18 @@ extern const quat Quat_Identity;
 #define M_PI_2 (M_PI/2.0)
 #endif
 
-typedef enum
-{
-	RENDER_MODE_SHADED,
-	RENDER_MODE_ALBEDO,
-	RENDER_MODE_NORMAL,
-	RENDER_MODE_ROUGHNESS,
-	RENDER_MODE_METALNESS,
-	RENDER_MODE_DEPTH
-} RenderMode;
+#define ENUM_ORD_VALUE(V, S) V,
+#define ENUM_STR_VALUE(V, S) S,
+#define DECLARE_ENUM(name, strTable, values) 										\
+	typedef enum {																								\
+		values(ENUM_ORD_VALUE)																			\
+	} name;																												\
+	extern const char* strTable[];																\
+	extern const int strTable##_count;
+#define DEFINE_ENUM(name, strTable, values)											\
+	const char* strTable[] = {																		\
+	  values(ENUM_STR_VALUE)																			\
+	};																														\
+	const int strTable##_count = STATIC_ELEMENT_COUNT(strTable);
 
 #include "utility.h"
