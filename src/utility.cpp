@@ -126,6 +126,8 @@ GLuint utility_create_program_defines(const char *vert_filename, const char *fra
 
 	glDeleteShader(vert_shader);
 	glDeleteShader(frag_shader);
+
+	printf("Loaded Program -- Vertex: '%s' Fragment: '%s' Defines: %i\n", vert_filename, frag_filename, defines_count);
 	return program;
 }
 
@@ -291,7 +293,7 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 
 	glGenerateMipmap(target);
 
-	printf("Loaded Image '%s': Width: %i, Height %i, Components %i\n", filepath, width, height, components);
+	printf("Loaded Image -- '%s' Width: %i Height %i Components %i\n", filepath, width, height, components);
 
 	return texture_id;
 }
@@ -330,7 +332,7 @@ GLuint utility_load_cubemap(const char** filepaths) {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-	printf("Loaded Cubemap '%s': Width: %i, Height %i, Components %i\n", filepaths[0], width, height, components);
+	printf("Loaded Cubemap -- '%s' Width: %i Height %i Components %i\n", filepaths[0], width, height, components);
 	return texture_id;
 }
 

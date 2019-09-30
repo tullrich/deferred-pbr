@@ -418,6 +418,8 @@ int mesh_load_obj(Mesh *out_mesh, const char *filepath) {
 	tinyobj_materials_free(materials, num_materials);
 	tinyobj_attrib_free(&attrib);
 
+	printf("Loaded Mesh -- '%s' Vertices: %i UVs: %s\n", filepath, out_mesh->vertex_count, BOOL_TO_STRING(out_mesh->texcoords != NULL));
+
 free_file_contents_and_exit:
 	free(file_contents);
 	return ret;

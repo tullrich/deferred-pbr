@@ -119,6 +119,11 @@ int forward_initialize(Forward* f) {
 			, soft_defines, STATIC_ELEMENT_COUNT(soft_defines))) {
 		return 1;
 	}
+
+	if ((f->light_icon = utility_load_image(GL_TEXTURE_2D, "icons/lightbulb.png")) < 0) {
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -214,8 +219,7 @@ void forward_render(Forward* f, Scene *s) {
 	}
 
 	// Draw main light icon
-	static GLuint light_icon = utility_load_image(GL_TEXTURE_2D, "icons/lightbulb.png");
-	draw_billboard(f, light_icon, s->main_light.position, 2.0f, s);
+	draw_billboard(f, f->light_icon, s->main_light.position, 2.0f, s);
 
 	glDepthMask(GL_TRUE);
 

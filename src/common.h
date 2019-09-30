@@ -169,6 +169,7 @@ extern const quat Quat_Identity;
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 #define RAD_TO_DEG(rad) (deg*180.0f/(float)M_PI)
 #define DEG_TO_RAD(deg) (deg*(float)M_PI/180.0f)
+#define BOOL_TO_STRING(b) ((b) ? "true" : "false")
 
 #ifdef _WIN32
 #define M_PI_2 (M_PI/2.0)

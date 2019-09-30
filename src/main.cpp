@@ -266,50 +266,51 @@ static int init_scene() {
 
 static int initialize() {
 	int err = 0;
+
+	printf("<-- Initializing deferred renderer... -->\n");
 	if (err = deferred_initialize(&gDeferred)) {
-		printf("deferred rendering init failed\n");
+		printf("Deferred renderer init failed\n");
 		return err;
 	}
-	printf("deferred initialized\n");
 
-	if (err = initialize_skybox_textures()) {
-		printf("skyboxes init failed\n");
-		return err;
-	}
-	printf("skyboxes initialized\n");
-
+	printf("<-- Initializing forward renderer... -->\n");
 	if (err = forward_initialize(&gForward)) {
-		printf("forward rendering init failed\n");
+		printf("Forward renderer init failed\n");
 		return err;
 	}
-	gForward.g_buffer = &gDeferred.g_buffer;
-	printf("forward initialized\n");
 
+	printf("<-- Initializing skyboxes... -->\n");
+	if (err = initialize_skybox_textures()) {
+		printf("Skyboxes init failed\n");
+		return err;
+	}
+
+	printf("<-- Initializing particle rendering... -->\n");
 	if (err = initialize_particle_rendering()) {
-		printf("particle rendering init failed\n");
+		printf("Particle rendering init failed\n");
 		return err;
 	}
-	printf("particle rendering initialized\n");
 
+	printf("<-- Initializing meshes... -->\n");
 	if (err = initialize_meshes()) {
-		printf("mesh loading failed\n");
+		printf("Mesh loading failed\n");
 		return err;
 	}
-	printf("meshes loaded\n");
 
+	printf("<-- Initializing materials... -->\n");
 	if (err = initialize_materials()) {
-		printf("material loading failed\n");
+		printf("Material loading failed\n");
 		return err;
 	}
-	printf("materials loaded\n");
 
+	printf("<-- Initializing scene... -->\n");
 	if (err = init_scene()) {
-		printf("scene init failed\n");
+		printf("Scene init failed\n");
 		return err;
 	}
-	printf("scene initialized\n");
 
 	GL_CHECK_ERROR();
+	printf("<-- Initialization complete -->\n");
 	return 0;
 }
 

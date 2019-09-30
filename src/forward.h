@@ -30,6 +30,9 @@ typedef struct
 
 	// Optional gbuffer
 	GBuffer* g_buffer;
+
+	// Light 2d icon
+	GLuint light_icon;
 } Forward;
 
 int forward_initialize(Forward* f);
