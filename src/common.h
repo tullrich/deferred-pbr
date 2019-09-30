@@ -161,8 +161,8 @@ extern const vec4 Vec_Zero;
 extern const vec4 Vec_One;
 extern const quat Quat_Identity;
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 640
+#define WINDOW_WIDTH 1424
+#define WINDOW_HEIGHT 1000
 #define Z_NEAR 0.1f
 #define Z_FAR 100.0f
 

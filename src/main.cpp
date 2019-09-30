@@ -5,6 +5,7 @@
 #include "forward.h"
 #include "ibl.h"
 
+#include "imgui/imgui_custom_theme.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/ImGuizmo.h"
@@ -359,37 +360,14 @@ static int frame() {
 	ImGui::SetNextWindowSize( ImVec2( 200, 100 ), ImGuiCond_FirstUseEver );
 	ImGui::Begin( "Controls", 0);
 
-	if ( ImGui::CollapsingHeader( "Renderer", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+	if ( ImGui::CollapsingHeader( "Camera", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_strings, render_mode_strings_count );
-	}
-	if ( ImGui::CollapsingHeader( "Scene", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+		ImGui::Separator();
 		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
 		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
-
-		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0))
-    {
-      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++)
-      {
-        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i)))
-				{
-					mesh_idx = i;
-					gScene.mesh = gMeshes[i].mesh;
-				}
-        if ((mesh_idx == i))
-				{
-          ImGui::SetItemDefaultFocus();
-				}
-      }
-      ImGui::EndCombo();
-    }
-		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
-		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
-
-		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
-		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
-		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
-		ImGui::Checkbox("Show Manipulator", (bool*)&show_manipulator);
+	}
+	if ( ImGui::CollapsingHeader( "Environment", ImGuiTreeNodeFlags_DefaultOpen ) ) {
 		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0))
 		{
 			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++)
@@ -406,6 +384,31 @@ static int frame() {
 			}
 			ImGui::EndCombo();
 		}
+		ImGui::Checkbox("Show Manipulator", (bool*)&show_manipulator);
+		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
+		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
+		ImGui::Separator();
+		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
+		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
+		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
+	}
+	if ( ImGui::CollapsingHeader( "Model", ImGuiTreeNodeFlags_DefaultOpen ) ) {
+		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0))
+    {
+      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++)
+      {
+        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i)))
+				{
+					mesh_idx = i;
+					gScene.mesh = gMeshes[i].mesh;
+				}
+        if ((mesh_idx == i))
+				{
+          ImGui::SetItemDefaultFocus();
+				}
+      }
+      ImGui::EndCombo();
+    }
 		ImGui::SliderFloat3("Model Position", gScene.model_translation, 0.0f, 25.0f, "%.0f");
 		ImGui::SliderFloat("Model Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
 		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
@@ -500,6 +503,7 @@ int main(int argc, char* argv[]) {
   ImGui::CreateContext();
   ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
   ImGui_ImplOpenGL3_Init("#version 130");
+	StyleImguiCustom();
 
 	srand((unsigned)time(0));
 
@@ -525,6 +529,12 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			else {
+      	if (event.type == SDL_KEYDOWN) {
+					if (event.key.keysym.sym == SDLK_ESCAPE) {
+						quit = 1;
+						break;
+					}
+				}
 				if (event.type == SDL_MOUSEBUTTONDOWN) {
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						SDL_SetWindowGrab(window, SDL_TRUE);
@@ -560,18 +570,20 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDL2_NewFrame(window);
     ImGui::NewFrame();
 
-		if (frame())
-		{
+		if (frame()) {
 			quit = 1;
 			break;
 		}
 
+		// ImGui::ShowDemoWindow();
+
+		// Render ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		GL_CHECK_ERROR();
 
 		// swap
 		SDL_GL_SwapWindow(window);
+		GL_CHECK_ERROR();
 	}
 
 	// Clean up

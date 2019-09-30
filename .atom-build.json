@@ -1,5 +1,5 @@
 {
   "cmd": "make",
   "args": [ "-j4" ],
-  "cwd": "/home/tim/projects/mine/deferred/build"
+  "cwd": "/home/tim/Projects/Mine/deferred/build"
 }
