@@ -16,12 +16,11 @@ static Forward gForward;
 static ParticleEmitterDesc gEmitterDesc;
 static ParticleEmitter gEmitter;
 
-static int burst_count = 150;
 static int rotate_cam = 0;
+static int show_manipulator = 0;
 static int skybox_idx = 0;
 static int material_idx = 0;
 static int mesh_idx = 0;
-static int show_manipulator = 0;
 
 static SkyboxDesc gSkyboxes[] = {
 	{
@@ -47,14 +46,6 @@ static SkyboxDesc gSkyboxes[] = {
 			"images/uv_map.png",
 		}
 	}
-};
-
-static ParticleEmitterTextureDesc gParticleTextures[] = {
-	{ .name = "Flare", .path = "images/particles/flare.png" },
-	{ .name = "Particle", .path = "images/particles/particle.png"},
-	{ .name = "Smoke", .path = "images/particles/smoke.png" },
-	{ .name = "Divine", .path = "images/particles/divine.png" },
-	{ .name = "UV Debug", .path = "images/uv_map.png" }
 };
 
 static MeshDesc gMeshes[] = {
@@ -111,65 +102,75 @@ static MaterialDesc gMaterials[] = {
 	}
 };
 
-static void emitter_desc_preset_flare(ParticleEmitterDesc* out) {
-	memset(out, 0, sizeof(ParticleEmitterDesc));
-	out->max = 1024;
-	out->spawn_rate = 60;
-	vec4_dup(out->start_color, Yellow);
-	vec4_dup(out->end_color, Red); out->end_color[3] = 0.0f;
-	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
-	out->depth_sort_alpha_blend = 0;
-	out->speed = 8.0f; out->speed_variance = 5.0f;
-	out->life_time = 2.5f; out->life_time_variance = 0.5f;
-	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[0].texture;
-	out->start_scale = 1.0f; out->end_scale = 0.01f;
-	vec3_dup(out->emit_cone_axis, Axis_Right);
+static ParticleEmitterTextureDesc gParticleTextures[] = {
+	{ .name = "Flare", .path = "images/particles/flare.png" },
+	{ .name = "Particle", .path = "images/particles/particle.png"},
+	{ .name = "Smoke", .path = "images/particles/smoke.png" },
+	{ .name = "Divine", .path = "images/particles/divine.png" },
+	{ .name = "UV Debug", .path = "images/uv_map.png" }
 };
 
-static void emitter_desc_preset_particle(ParticleEmitterDesc* out) {
-	memset(out, 0, sizeof(ParticleEmitterDesc));
-	out->max = 1024;
-	out->spawn_rate = 60.0f;
-	vec4_rgba(out->start_color, 100, 100, 255, 255);
-	vec4_dup( out->end_color, White ); out->end_color[ 3 ] = 0.0f;
-	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
-	out->depth_sort_alpha_blend = 0;
-	out->speed = 4.0f;
-	out->speed_variance = 1.0f;
-	out->life_time = 2.5f;
-	out->life_time_variance = 0.5f;
-	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[1].texture;
-	out->start_scale = 0.1f;
-	out->end_scale = 0.5f;
-	vec3_dup(out->emit_cone_axis, Axis_Up);
+ParticleEmitterDesc gEmitterDescs[] = {
+	{
+		.max = 1024,
+		.spawn_rate = 60.0f,
+		.start_color = { Yellow[0], Yellow[1], Yellow[2], Yellow[3] },
+		.end_color = { Red[0], Red[1], Red[2], Red[3] },
+		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
+		.speed = 8.0f, .speed_variance = 5.0f,
+		.life_time = 2.5f, .life_time_variance = 0.5f,
+		.burst_count = 150,
+		.shading_mode = PARTICLE_SHADING_TEXTURED,
+		.start_scale = 1.0f, .end_scale = 0.1f,
+		.depth_sort_alpha_blend = 0,
+		.soft = 0,
+		.simulate_gravity = 0,
+		.emit_cone_axis = { Axis_Right[0], Axis_Right[1], Axis_Right[2] }
+	},
+	{
+		.max = 1024,
+		.spawn_rate = 60.0f,
+		.start_color = { 100/255.0f, 100/255.0f, 1.0f, 1.0f },
+		.end_color = { 1.0f, 1.0f, 1.0f, 0.0f },
+		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
+		.speed = 4.0f, .speed_variance = 1.0f,
+		.life_time = 2.5f, .life_time_variance = 0.5f,
+		.burst_count = 150,
+		.shading_mode = PARTICLE_SHADING_TEXTURED,
+		.start_scale = 0.1f, .end_scale = 0.5,
+		.depth_sort_alpha_blend = 0,
+		.soft = 0,
+		.simulate_gravity = 0,
+		.emit_cone_axis = { Axis_Up[0], Axis_Up[1], Axis_Up[2] }
+	},
+	{
+		.max = 1024,
+		.spawn_rate = 24.0f,
+		.start_color = { Green[0], Green[1], Green[2], 0.4f },
+		.end_color = { 1.0f, 1.0f, 1.0f, 0.0f },
+		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
+		.speed = 3.0f, .speed_variance = 0.0f,
+		.life_time = 3.0f, .life_time_variance = 0.0f,
+		.burst_count = 150,
+		.shading_mode = PARTICLE_SHADING_TEXTURED,
+		.start_scale = 2.0f, .end_scale = 4.5f,
+		.depth_sort_alpha_blend = 1,
+		.soft = 0,
+		.simulate_gravity = 0,
+		.emit_cone_axis = { Axis_Up[0], Axis_Up[1], Axis_Up[2] }
+	}
 };
 
-static void emitter_desc_preset_smoke(ParticleEmitterDesc* out) {
-	memset(out, 0, sizeof(ParticleEmitterDesc));
-	out->max = 1024;
-	out->spawn_rate = 24.0f;
-	vec4_dup(out->start_color, Green); out->start_color[3] = 0.4f;
-	vec4_dup(out->end_color, White); out->end_color[3] = 0.0f;
-	out->orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED;
-	out->depth_sort_alpha_blend = 1;
-	out->speed = 3.0f;
-	out->speed_variance = 0.0f;
-	out->life_time = 3.0f;
-	out->life_time_variance = 0.0f;
-	out->shading_mode = PARTICLE_SHADING_TEXTURED;
-	out->texture = gParticleTextures[2].texture;
-	out->start_scale = 2.0f;
-	out->end_scale = 4.5f;
-	vec3_dup(out->emit_cone_axis, Axis_Up);
-};
-
-static int initialize_particle_textures() {
+static int initialize_particle_rendering() {
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTextures); i++) {
 		if ((gParticleTextures[i].texture = utility_load_image(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
 			return 1;
 		}
+	}
+
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gEmitterDescs); i++) {
+		int idx = (i < STATIC_ELEMENT_COUNT(gParticleTextures)) ? i : 0;
+		gEmitterDescs[i].texture = gParticleTextures[idx].texture;
 	}
 	return 0;
 }
@@ -254,7 +255,7 @@ static int init_scene() {
 	// Setup particle system
 	memset(&gEmitter, 0, sizeof(ParticleEmitter));
 	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
-	emitter_desc_preset_flare(&gEmitterDesc);
+	gEmitterDesc = gEmitterDescs[0];
 	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
 	gScene.emitters[0] = &gEmitter;
 	gEmitter.muted = true; // start muted
@@ -283,7 +284,7 @@ static int initialize() {
 	gForward.g_buffer = &gDeferred.g_buffer;
 	printf("forward initialized\n");
 
-	if (err = initialize_particle_textures()) {
+	if (err = initialize_particle_rendering()) {
 		printf("particle rendering init failed\n");
 		return err;
 	}
@@ -431,18 +432,18 @@ static int frame() {
 		}
 	}
 	if ( ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen)) {
-		particle_emitter_gui(&gEmitterDesc, &gEmitter, &burst_count, gParticleTextures, STATIC_ELEMENT_COUNT( gParticleTextures ));
+		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT( gParticleTextures ));
 		if ( ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if ( ImGui::Button("Flare") ) {
-				emitter_desc_preset_flare(&gEmitterDesc);
+				gEmitterDesc = gEmitterDescs[0];
 				particle_emitter_refresh(&gEmitter);
 			}
 			if ( ImGui::Button("Particle") ) {
-				emitter_desc_preset_particle(&gEmitterDesc);
+				gEmitterDesc = gEmitterDescs[1];
 				particle_emitter_refresh(&gEmitter);
 			}
 			if ( ImGui::Button("Smoke") ) {
-				emitter_desc_preset_smoke(&gEmitterDesc);
+				gEmitterDesc = gEmitterDescs[2];
 				particle_emitter_refresh(&gEmitter);
 			}
 		}
@@ -501,6 +502,8 @@ int main(int argc, char* argv[]) {
   ImGui_ImplOpenGL3_Init("#version 130");
 
 	srand((unsigned)time(0));
+
+	SDL_GL_SwapWindow(window); // clear window
 
 	if(initialize()) {
 		printf("Failed to initialize. Exiting.\n");

@@ -71,6 +71,9 @@ typedef struct
 	// life time variance
 	float life_time_variance;
 
+	// The number of particles to spawn when bursting
+	int burst_count;
+
 	// particle shading mode
 	ParticleShadingMode shading_mode;
 
@@ -160,4 +163,4 @@ typedef struct
 	GLuint texture;
 } ParticleEmitterTextureDesc;
 
-void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, int* burst_count, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);
+void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);

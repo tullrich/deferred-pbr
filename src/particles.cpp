@@ -199,7 +199,7 @@ static int get_particle_texture_index(GLuint texId, const ParticleEmitterTexture
 	return 0;
 }
 
-void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, int* burst_count, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
+void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
 	if ( ImGui::Button("Refresh") ) {
 		particle_emitter_refresh(emitter);
 	}
@@ -245,7 +245,7 @@ void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, i
 	ImGui::SliderFloat( "Local Scale", &emitter->scale, 0.0f, 10.0f );
 	ImGui::InputFloat3( "Local Translation", emitter->pos );
 	if ( ImGui::Button( "Burst" ) ) {
-		particle_emitter_burst(emitter, *burst_count);
+		particle_emitter_burst(emitter, desc->burst_count);
 	}
-	ImGui::SliderInt( "Burst Count", burst_count, 0, 1000 );
+	ImGui::SliderInt( "Burst Count", &desc->burst_count, 0, 1000 );
 }
