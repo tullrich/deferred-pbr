@@ -36,18 +36,20 @@ typedef struct
 	unsigned int index_count;
 
 	Bounds bounds;
+	float base_scale;
 } Mesh;
 
 void mesh_make_box(Mesh *out_mesh, float side_len);
 void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
 void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
 void mesh_free(Mesh *out_mesh);
-int mesh_load_obj(Mesh *out_mesh, const char *filepath);
+int mesh_load_obj(Mesh *out_mesh, const char *filepath, float base_scale = 1.0f);
 
 
 typedef struct
 {
 	const char* name;
 	const char* path;
+	float base_scale;
 	Mesh mesh;
 } MeshDesc;

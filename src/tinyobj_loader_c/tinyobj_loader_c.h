@@ -1256,7 +1256,7 @@ int tinyobj_parse_obj(tinyobj_attrib_t *attrib, tinyobj_shape_t **shapes,
 
     if (ret != TINYOBJ_SUCCESS) {
       /* warning. */
-      fprintf(stderr, "TINYOBJ: Failed to parse .mtl file: %s\n", filename);
+      // fprintf(stderr, "TINYOBJ: Failed to parse .mtl file: %s\n", filename);
     }
 
     free(filename);

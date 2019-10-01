@@ -236,7 +236,6 @@ void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, c
 	ImGui::Checkbox( "Soft", ( bool* )&desc->soft );
 	ImGui::Checkbox( "Gravity", ( bool* )&desc->simulate_gravity );
 	ImGui::Checkbox( "Mute", ( bool* )&emitter->muted );
-	//TwAddVarRW( bar, "Cone Axis", TW_TYPE_DIR3F, &gEmitterDesc.emit_cone_axis, "" );
 	ImGui::SliderFloat( "Life Time", &desc->life_time, 0.0f, 10.0f );
 	ImGui::SliderFloat( "Life Time Variance", &desc->life_time_variance, 0.0f, 10.0f );
 	ImGui::SliderFloat( "Speed", &desc->speed, 0.0f, 10.0f );

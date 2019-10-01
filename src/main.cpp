@@ -1,8 +1,7 @@
 #include "common.h"
-#include "particles.h"
-#include "scene.h"
 #include "deferred.h"
 #include "forward.h"
+#include "scene.h"
 #include "ibl.h"
 
 #include "imgui/imgui_custom_theme.h"
@@ -55,7 +54,7 @@ static MeshDesc gMeshes[] = {
 	{ .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
 	{ .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
 	{ .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
-	{ .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj" },
+	{ .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj", .base_scale = 50.0f },
 	{ .name = "None" }
 };
 
@@ -180,7 +179,7 @@ static int initialize_meshes() {
 	mesh_make_box(&gMeshes[0].mesh, 5.0f);
 	mesh_sphere_tessellate(&gMeshes[1].mesh, 2.5f, 100, 100);
 	for (int i = 2; i < (STATIC_ELEMENT_COUNT(gMeshes) - 1); i++) {
-		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path)) {
+		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path, gMeshes[i].base_scale)) {
 			return 1;
 		}
 	}
@@ -188,38 +187,21 @@ static int initialize_meshes() {
 }
 
 static int initialize_materials() {
+	int ret;
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++) {
-		MaterialDesc* desc = &gMaterials[i];
-		if (!desc->albedo_map_path || !(desc->material.albedo_map = utility_load_image(GL_TEXTURE_2D, desc->albedo_map_path)))
-			desc->material.albedo_map = utility_load_texture_unknown();
-		if (!desc->normal_map_path || !(desc->material.normal_map = utility_load_image(GL_TEXTURE_2D, desc->normal_map_path)))
-			desc->material.normal_map = utility_load_texture_unknown();
-		if (!desc->metalness_map_path || !(desc->material.metalness_map = utility_load_image(GL_TEXTURE_2D, desc->metalness_map_path)))
-			desc->material.metalness_map = utility_load_texture_unknown();
-		if (!desc->roughness_map_path || !(desc->material.roughness_map = utility_load_image(GL_TEXTURE_2D, desc->roughness_map_path)))
-			desc->material.roughness_map = utility_load_texture_unknown();
-		if (!desc->ao_map_path || !(desc->material.ao_map = utility_load_image(GL_TEXTURE_2D, desc->ao_map_path)))
-			desc->material.ao_map = utility_load_texture_unknown();
-		if (!desc->emissive_map_path || !(desc->material.emissive_map = utility_load_image(GL_TEXTURE_2D, desc->emissive_map_path)))
-			desc->material.emissive_map = utility_load_texture_unknown();
-		vec3_dup(desc->material.albedo_base, desc->albedo_base);
-		vec3_dup(desc->material.metalness_base, desc->metalness_base);
-		vec3_dup(desc->material.roughness_base, desc->roughness_base);
+		if ((ret = material_load(&gMaterials[i].material, &gMaterials[i]))) {
+			return ret;
+		}
 	}
 	return 0;
 }
 
-static int initialize_skybox_textures() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++)
-	{
+static int initialize_skyboxes() {
+	int ret;
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
 		//ibl_compute_irradiance_map(gSkyboxes[i].low_paths);
-		if(!(gSkyboxes[i].skybox.env_cubemap = utility_load_cubemap(gSkyboxes[i].paths)))
-			return 1;
-		if (gSkyboxes[i].irr_paths[0]) {
-			if (!(gSkyboxes[i].skybox.irr_cubemap = utility_load_cubemap(gSkyboxes[i].irr_paths)))
-				return 1;
-		} else {
-			gSkyboxes[i].skybox.irr_cubemap = gSkyboxes[i].skybox.env_cubemap;
+		if ((ret = skybox_load(&gSkyboxes[i].skybox, &gSkyboxes[i]))) {
+			return ret;
 		}
 	}
 	return 0;
@@ -280,7 +262,7 @@ static int initialize() {
 	}
 
 	printf("<-- Initializing skyboxes... -->\n");
-	if (err = initialize_skybox_textures()) {
+	if (err = initialize_skyboxes()) {
 		printf("Skyboxes init failed\n");
 		return err;
 	}
@@ -332,9 +314,8 @@ static void update_scene(float dt) {
 	mat4x4_perspective(gScene.camera.proj, gScene.camera.fovy * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
 	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
 
-	vec3 cone_axis;
-	vec3_dup(cone_axis, gEmitterDesc.emit_cone_axis);
-	vec3_norm(gEmitterDesc.emit_cone_axis, cone_axis);
+	// update emitter
+	particle_emitter_update(&gEmitter, dt);
 }
 
 static int frame() {
@@ -344,11 +325,8 @@ static int frame() {
 	float dt = frameTime - prevFrameTime;
 	prevFrameTime = frameTime;
 
-	// update camera
+	// update camera and emitters
 	update_scene(dt);
-
-	// update emitter
-	particle_emitter_update(&gEmitter, dt);
 
 	// clear backbuffer
 	utility_set_clear_color(0, 0, 0);
@@ -358,98 +336,84 @@ static int frame() {
 	deferred_render(&gDeferred, &gScene);
 	forward_render(&gForward, &gScene);
 
-	ImGui::SetNextWindowSize( ImVec2( 200, 100 ), ImGuiCond_FirstUseEver );
-	ImGui::Begin( "Controls", 0);
+	ImGui::SetNextWindowSize(ImVec2( 200, 100 ), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Controls", 0);
 
-	if ( ImGui::CollapsingHeader( "Camera", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-		ImGui::Combo( "Render Mode", ( int* )&gDeferred.render_mode, render_mode_strings, render_mode_strings_count );
+	if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
 		ImGui::Separator();
-		ImGui::Checkbox( "Cam Rotate", ( bool* )&rotate_cam );
+		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
 		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 	}
-	if ( ImGui::CollapsingHeader( "Environment", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0))
-		{
-			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++)
-			{
-				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i)))
-				{
+	if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
+			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
+				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
 					skybox_idx = i;
 					gScene.skybox = gSkyboxes[i].skybox;
 				}
-				if ((skybox_idx == i))
-				{
+				if ((skybox_idx == i)) {
 					ImGui::SetItemDefaultFocus();
 				}
 			}
 			ImGui::EndCombo();
 		}
-		ImGui::Checkbox("Show Manipulator", (bool*)&show_manipulator);
-		ImGui::ColorEdit3( "Ambient Color", gScene.ambient_color );
-		ImGui::SliderFloat( "Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f );
-		ImGui::Separator();
-		ImGui::InputFloat3( "Light Position", gScene.main_light.position );
-		ImGui::ColorEdit3( "Light Color", gScene.main_light.color );
-		ImGui::SliderFloat( "Light Intensity", &gScene.main_light.intensity, 0, 1.0f );
+		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
+		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f);
 	}
-	if ( ImGui::CollapsingHeader( "Model", ImGuiTreeNodeFlags_DefaultOpen ) ) {
-		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0))
-    {
-      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++)
-      {
-        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i)))
-				{
+	if (ImGui::CollapsingHeader("Point Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::PushID(1);
+		bool show_light_manipulator = (show_manipulator == 1);
+		if (ImGui::Checkbox("Show Manipulator", &show_light_manipulator)) {
+			show_manipulator = (show_light_manipulator) ? 1 : 0;
+		}
+		ImGui::InputFloat3("Position", gScene.main_light.position);
+		ImGui::ColorEdit3("Color", gScene.main_light.color);
+		ImGui::SliderFloat("Intensity", &gScene.main_light.intensity, 0, 1.0f);
+		ImGui::PopID();
+	}
+	if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::PushID(2);
+		bool show_model_manipulator = (show_manipulator == 2);
+		if (ImGui::Checkbox("Show Manipulator", &show_model_manipulator)) {
+			show_manipulator = (show_model_manipulator) ? 2 : 0;
+		}
+		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0)) {
+      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
+        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i))) {
 					mesh_idx = i;
 					gScene.mesh = gMeshes[i].mesh;
 				}
-        if ((mesh_idx == i))
-				{
+        if ((mesh_idx == i)) {
           ImGui::SetItemDefaultFocus();
 				}
       }
       ImGui::EndCombo();
     }
-		ImGui::SliderFloat3("Model Position", gScene.model_translation, 0.0f, 25.0f, "%.0f");
-		ImGui::SliderFloat("Model Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
-		ImGui::SliderFloat("Model Scale", &gScene.model_scale, .01f, 25.0f );
+		ImGui::InputFloat3("Position", gScene.model_translation);
+		ImGui::SliderFloat("Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
+		ImGui::SliderFloat("Scale", &gScene.model_scale, .01f, 25.0f );
+		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::ColorEdit3("Albedo", gScene.material.albedo_base);
-		ImGui::SliderFloat("Roughness", &gScene.material.roughness_base[0],  0.0f, 1.0f);
-		ImGui::SliderFloat("Metalness", &gScene.material.metalness_base[0],  0.0f, 1.0f);
-		if (ImGui::BeginCombo("Textures", gMaterials[material_idx].name, 0))
-		{
-			for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++)
-			{
-				if (ImGui::Selectable(gMaterials[i].name, (material_idx == i)))
-				{
-					material_idx = i;
-					gScene.material = gMaterials[i].material;
-				}
-				if ((material_idx == i))
-				{
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
-		}
+		material_gui(&gScene.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
 	}
-	if ( ImGui::CollapsingHeader("Emitter", ImGuiTreeNodeFlags_DefaultOpen)) {
-		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT( gParticleTextures ));
-		if ( ImGui::CollapsingHeader("Presets", ImGuiTreeNodeFlags_DefaultOpen)) {
-			if ( ImGui::Button("Flare") ) {
-				gEmitterDesc = gEmitterDescs[0];
-				particle_emitter_refresh(&gEmitter);
-			}
-			if ( ImGui::Button("Particle") ) {
-				gEmitterDesc = gEmitterDescs[1];
-				particle_emitter_refresh(&gEmitter);
-			}
-			if ( ImGui::Button("Smoke") ) {
-				gEmitterDesc = gEmitterDescs[2];
-				particle_emitter_refresh(&gEmitter);
-			}
+	if ( ImGui::CollapsingHeader("Emitter", 0)) {
+		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT(gParticleTextures));
+		if (ImGui::Button("Flare")) {
+			gEmitterDesc = gEmitterDescs[0];
+			particle_emitter_refresh(&gEmitter);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Particle")) {
+			gEmitterDesc = gEmitterDescs[1];
+			particle_emitter_refresh(&gEmitter);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Smoke")) {
+			gEmitterDesc = gEmitterDescs[2];
+			particle_emitter_refresh(&gEmitter);
 		}
 	}
 	ImGuizmo::SetDrawlist();
@@ -457,9 +421,13 @@ static int frame() {
 
 	// Render light manipulator gizmo
 	if (show_manipulator) {
-		mat4x4 light_mat;
-		mat4x4_identity(light_mat);
-		vec3_dup(light_mat[3], gScene.main_light.position);
+		mat4x4 manip_mat;
+		mat4x4_identity(manip_mat);
+		if (show_manipulator == 1) {
+			vec3_dup(manip_mat[3], gScene.main_light.position);
+		} else {
+			vec3_dup(manip_mat[3], gScene.model_translation);
+		}
 		ImGuizmo::Enable(true);
 		ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
 		ImGuizmo::Manipulate(
@@ -467,16 +435,20 @@ static int frame() {
 			&gScene.camera.proj[0][0],
 			ImGuizmo::TRANSLATE,
 			ImGuizmo::LOCAL,
-			&light_mat[0][0]);
-		vec3_dup(gScene.main_light.position, light_mat[3]);
+			&manip_mat[0][0]);
+		if (show_manipulator == 1) {
+			vec3_dup(gScene.main_light.position, manip_mat[3]);
+		} else {
+			vec3_dup(gScene.model_translation, manip_mat[3]);
+		}
 	}
 
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
-
-	SDL_Init(SDL_INIT_VIDEO);              // Initialize SDL
+  // init SDL
+	SDL_Init(SDL_INIT_VIDEO);
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,          8);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,           8);
@@ -488,82 +460,79 @@ int main(int argc, char* argv[]) {
   SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
   SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
-
+  // init platform window
 	SDL_Window*	window;
   if(!(window = SDL_CreateWindow("Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
 		, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
       return 1;
   }
 
+	// init gl
 	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+	SDL_GL_SetSwapInterval(1); // Enable vsync
 	glewExperimental = 1;
 	glewInit();
 
-	// Initialize Imgui
+	// init Imgui
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
   ImGui_ImplOpenGL3_Init("#version 130");
 	StyleImguiCustom();
 
+	// seed random
 	srand((unsigned)time(0));
 
-	SDL_GL_SwapWindow(window); // clear window
+ 	// clear window during load
+	SDL_GL_SwapWindow(window);
 
+	// main init
 	if(initialize()) {
 		printf("Failed to initialize. Exiting.\n");
 		return 1;
 	}
 
-	// Enable vsync
-	SDL_GL_SetSwapInterval(1);
-
-	// The window is open: enter program loop (see SDL_PollEvent)
+	// while the window is open: enter program loop
 	int quit = 0;
 	while (!quit) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-
-			if (ImGui::GetIO().WantCaptureMouse) {
+	  	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
+				quit = 1;
+				break;
+			} else if (ImGui::GetIO().WantCaptureMouse) {
 				if (ImGui_ImplSDL2_ProcessEvent(&event)) {
-					continue;
+					continue; // ImGui handled this event
 				}
-			}
-			else {
-      	if (event.type == SDL_KEYDOWN) {
-					if (event.key.keysym.sym == SDLK_ESCAPE) {
-						quit = 1;
-						break;
-					}
-				}
-				if (event.type == SDL_MOUSEBUTTONDOWN) {
+			} else {
+				switch (event.type) {
+				case SDL_MOUSEBUTTONDOWN:
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						SDL_SetWindowGrab(window, SDL_TRUE);
 					}
-				}
-				else if (event.type == SDL_MOUSEBUTTONUP) {
+					break;
+				case SDL_MOUSEBUTTONUP:
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						SDL_SetWindowGrab(window, SDL_FALSE);
 					}
-				}
-				else if (event.type == SDL_MOUSEMOTION) {
+					break;
+				case SDL_MOUSEMOTION:
 					if (event.motion.state & SDL_BUTTON_LMASK) {
 						gScene.camera.rot[1] += event.motion.xrel / (float)WINDOW_WIDTH;
 						gScene.camera.rot[0] += event.motion.yrel / (float)WINDOW_HEIGHT;
 					}
-				}
-				else if (event.type == SDL_MOUSEWHEEL) {
+					break;
+				case SDL_MOUSEWHEEL:
 					if (event.wheel.y == 1)  {
 						gScene.camera.boomLen -= 2.f;
-					}
-					else if (event.wheel.y == -1) {
+					} else if (event.wheel.y == -1) {
 						gScene.camera.boomLen +=  2.f;
 					}
+					break;
+				case SDL_QUIT:
+					quit = 1;
+					break;
 				}
-			}
-			if (event.type == SDL_QUIT) {
-				quit = 1;
-				break;
 			}
 		}
 
@@ -576,9 +545,8 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 
+		// render ImGui
 		// ImGui::ShowDemoWindow();
-
-		// Render ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -587,7 +555,7 @@ int main(int argc, char* argv[]) {
 		GL_CHECK_ERROR();
 	}
 
-	// Clean up
+	// clean up
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();

@@ -36,6 +36,10 @@ add_executable( Deferred
 	src/ibl.cpp
 	src/mesh.h
 	src/mesh.cpp
+  src/skybox.h
+  src/skybox.cpp
+  src/material.h
+  src/material.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h

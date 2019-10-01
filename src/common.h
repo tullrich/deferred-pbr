@@ -105,47 +105,46 @@ static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
 		euler[2] = atan2f(m[1][0]/cosTheta,m[0][0]/cosTheta);
 	 }
  }
- static inline void mat4x4_make_transform(mat4x4 r, const vec3 scale, const quat rotation, const vec3 translation) {
-	 mat4x4_identity(r);
-	 mat4x4_from_quat(r, rotation);
-	 mat4x4_scale_aniso(r, r, scale[0], scale[1], scale[2]);
-	 vec3_dup(r[3], translation);
-	 r[3][3] = 1.0f;
- }
+static inline void mat4x4_make_transform(mat4x4 r, const vec3 scale, const quat rotation, const vec3 translation) {
+	mat4x4_identity(r);
+	mat4x4_from_quat(r, rotation);
+	mat4x4_scale_aniso(r, r, scale[0], scale[1], scale[2]);
+	vec3_dup(r[3], translation);
+	r[3][3] = 1.0f;
+}
 
- static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, const quat rotation, const vec3 translation) {
-	 vec3 scaleVec;
-	 vec3_swizzle(scaleVec, scale);
-	 mat4x4_make_transform(r, scaleVec, rotation, translation);
- }
+static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, const quat rotation, const vec3 translation) {
+	vec3 scaleVec;
+	vec3_swizzle(scaleVec, scale);
+	mat4x4_make_transform(r, scaleVec, rotation, translation);
+}
 
- static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n, float f)
- {
- 	float const e = 1.f / tanf(y_fov / 2.f);
+static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n, float f) {
+	float const e = 1.f / tanf(y_fov / 2.f);
 
- 	m[0][0] = e / aspect;
- 	m[0][1] = 0.f;
- 	m[0][2] = 0.f;
- 	m[0][3] = 0.f;
+	m[0][0] = e / aspect;
+	m[0][1] = 0.f;
+	m[0][2] = 0.f;
+	m[0][3] = 0.f;
 
- 	m[1][0] = 0.f;
- 	m[1][1] = e;
- 	m[1][2] = 0.f;
- 	m[1][3] = 0.f;
+	m[1][0] = 0.f;
+	m[1][1] = e;
+	m[1][2] = 0.f;
+	m[1][3] = 0.f;
 
- 	m[2][0] = 0.f;
- 	m[2][1] = 0.f;
- 	m[2][2] = -1.f;
- 	m[2][3] = -1.f;
+	m[2][0] = 0.f;
+	m[2][1] = 0.f;
+	m[2][2] = -1.f;
+	m[2][3] = -1.f;
 
- 	m[3][0] = 0.f;
- 	m[3][1] = 0.f;
- 	m[3][2] = -2.0f * n;
- 	m[3][3] = 0.f;
- }
+	m[3][0] = 0.f;
+	m[3][1] = 0.f;
+	m[3][2] = -2.0f * n;
+	m[3][3] = 0.f;
+}
 
- #define FORMAT_VEC3(v) v[0], v[1], v[2]
- #define FORMAT_VEC4(v) v[0], v[1], v[2], v[3]
+#define FORMAT_VEC3(v) v[0], v[1], v[2]
+#define FORMAT_VEC4(v) v[0], v[1], v[2], v[3]
 
 extern const vec4 Black;
 extern const vec4 White;

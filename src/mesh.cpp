@@ -59,6 +59,7 @@ void mesh_make_box(Mesh *out_mesh, float side_len) {
 	out_mesh->vertex_count = 24;
 	out_mesh->index_count = 24;
 	vec3_swizzle(out_mesh->bounds.extents, 0.5f*side_len);
+	out_mesh->base_scale = 1.0f;
 	out_mesh->vertices = (float*)malloc(sizeof(box_vertices));
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(box_vertices); i++) {
 		out_mesh->vertices[i] = box_vertices[i]*side_len;
@@ -91,6 +92,7 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 	out_mesh->vertex_count = rings * sectors;
 	out_mesh->index_count = (rings-1) * (sectors-1) * 4;
 	out_mesh->mode = GL_QUADS;
+	out_mesh->base_scale = 1.0f;
 	vec3_swizzle(out_mesh->bounds.extents, radius);
 
 	unsigned int r, s;
@@ -373,7 +375,7 @@ static float* compute_mesh_tangents(const tinyobj_attrib_t *attrib) {
 	return tangents;
 }
 
-int mesh_load_obj(Mesh *out_mesh, const char *filepath) {
+int mesh_load_obj(Mesh *out_mesh, const char *filepath, float base_scale) {
 	int ret = 0;
 
 	// Read mesh file
@@ -412,6 +414,7 @@ int mesh_load_obj(Mesh *out_mesh, const char *filepath) {
 
 	// Compute bounds from vertex positions
 	out_mesh->bounds = compute_mesh_bounds(out_mesh);
+	out_mesh->base_scale = (base_scale > 0) ? base_scale : 1.0f;
 
 	// Free tinyobj data
 	tinyobj_shapes_free(shapes, num_shapes);

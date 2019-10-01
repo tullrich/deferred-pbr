@@ -298,7 +298,7 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 	return texture_id;
 }
 
-GLuint utility_load_cubemap(const char** filepaths) {
+GLuint utility_load_cubemap(const char* const* filepaths) {
 	GLuint texture_id;
 	glGenTextures(1, &texture_id);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);

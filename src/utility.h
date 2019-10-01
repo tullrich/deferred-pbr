@@ -36,7 +36,7 @@ typedef enum
 
 GLuint utility_load_texture_unknown();
 GLuint utility_load_image(GLenum target, const char *filepath);
-GLuint utility_load_cubemap(const char** filepaths);
+GLuint utility_load_cubemap(const char* const* filepaths);
 
 float utility_secs_since_launch();
 float utility_mod_time(float modulus);

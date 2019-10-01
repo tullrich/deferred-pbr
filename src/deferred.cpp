@@ -49,8 +49,7 @@ static int load_debug_shader(DebugShader* shader, const char* vert, const char* 
 	return 0;
 }
 
-int deferred_initialize(Deferred* d)
-{
+int deferred_initialize(Deferred* d) {
 	memset(d, 0, sizeof(Deferred));
 	d->render_mode = RENDER_MODE_SHADED;
 
@@ -137,8 +136,7 @@ int deferred_initialize(Deferred* d)
 	return 0;
 }
 
-static void render_geometry(Deferred* d, Scene *s)
-{
+static void render_geometry(Deferred* d, Scene *s) {
 	gbuffer_bind(&d->g_buffer);
 
 	utility_set_clear_color(0, 0, 0);
@@ -193,7 +191,8 @@ static void render_geometry(Deferred* d, Scene *s)
 	mat4x4_rotate_X(model, model, DEG_TO_RAD(s->model_rot[0]));
 	mat4x4_rotate_Y(model, model, DEG_TO_RAD(s->model_rot[1]));
 	mat4x4_rotate_Z(model, model, DEG_TO_RAD(s->model_rot[2]));
-	mat4x4_scale_aniso(model, model, s->model_scale, s->model_scale, s->model_scale);
+	float scale = s->model_scale * s->mesh.base_scale;
+	mat4x4_scale_aniso(model, model, scale, scale, scale);
 	vec3_sub(model[3], model[3], s->mesh.bounds.center);
 	vec3_add(model[3], model[3], s->model_translation);
 
@@ -216,8 +215,7 @@ static void render_geometry(Deferred* d, Scene *s)
 			  shader->pos_loc);
 }
 
-static void render_shading(Deferred* d, Scene *s)
-{
+static void render_shading(Deferred* d, Scene *s) {
 	glUseProgram(d->lighting_shader.program);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -275,8 +273,7 @@ static void render_shading(Deferred* d, Scene *s)
 	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
 }
 
-static void render_skybox(Deferred *d, Scene *s)
-{
+static void render_skybox(Deferred *d, Scene *s) {
 	glUseProgram(d->skybox_shader.program);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -300,8 +297,7 @@ static void render_skybox(Deferred *d, Scene *s)
 	utility_draw_fullscreen_quad2(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
 }
 
-static void render_debug(Deferred *d, Scene *s)
-{
+static void render_debug(Deferred *d, Scene *s) {
 	int program_idx = 0;
 	GLuint render_buffer = 0;
 	switch(d->render_mode) {
@@ -331,8 +327,7 @@ static void render_debug(Deferred *d, Scene *s)
 	utility_draw_fullscreen_quad(d->debug_shader[program_idx].texcoord_loc, d->debug_shader[program_idx].pos_loc);
 }
 
-void deferred_render(Deferred *d, Scene *s)
-{
+void deferred_render(Deferred *d, Scene *s) {
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 

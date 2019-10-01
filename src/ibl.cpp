@@ -1,7 +1,6 @@
 #include "ibl.h"
 
-static FREE_IMAGE_FORMAT getFreeimageFormat(const char *filepath)
-{
+static FREE_IMAGE_FORMAT getFreeimageFormat(const char *filepath) {
 	FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
 	fif = FreeImage_GetFileType(filepath, 0);
 	if (fif == FIF_UNKNOWN)
@@ -81,14 +80,12 @@ static void sample_cubemap(vec3 out, const vec3 dir, FIBITMAP **cubemap, unsigne
 	out[2] = value.rgbBlue / 255.0f;
 }
 
-static float area_element(float x, float y)
-{
+static float area_element(float x, float y) {
 	//http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
 	return atan2f(x * y, sqrtf(x * x + y * y + 1));
 }
 
-static float texcoord_solid_angle(float u, float v, float size)
-{
+static float texcoord_solid_angle(float u, float v, float size) {
 	float InvResolution = 1.0f / size;
 
 	// U and V are the -1..1 texture coordinate on the current face.
