@@ -213,7 +213,7 @@ static int init_scene() {
 
 	// Setup camera
 	gScene.camera.boomLen = 30.0f;
-	gScene.camera.fovy = 90.0f;
+	gScene.camera.fovy = 80.0f;
 
 	// Setup ambient light
 	vec3_dup(gScene.ambient_color, White);
@@ -222,9 +222,9 @@ static int init_scene() {
 	// Setup main directional light
 	vec3_dup(gScene.main_light.color, White);
 	gScene.main_light.intensity = 1.0f;
-	gScene.main_light.position[0] = 5.0f;
-	gScene.main_light.position[1] = 10.0f;
-	gScene.main_light.position[2] = 5.0f;
+	gScene.main_light.position[0] = 0.0f;
+	gScene.main_light.position[1] = 0.0f;
+	gScene.main_light.position[2] = 10.0f;
 
 	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx].skybox;
@@ -242,8 +242,29 @@ static int init_scene() {
 	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
 	gEmitter.muted = true; // start muted
 
+#ifdef SPHERE_SCENE
 	gScene.models[0] = &gModel;
 	gScene.emitters[0] = &gEmitter;
+#else
+#define SPHERE_ROWS 5
+#define SPHERE_COLUMNS 5
+#define SPHERE_SPACING 8.0F
+	for (int i = 0; i < SPHERE_ROWS; i++) {
+		for (int j = 0; j < SPHERE_COLUMNS; j++) {
+			Model* m = (Model*)calloc(1, sizeof(Model));
+			m->position[0] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
+			m->position[1] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
+			m->mesh = gMeshes[1].mesh;
+			m->material = gMaterials[0].material;
+			m->scale = 1.0f;
+			gScene.models[i * SPHERE_COLUMNS + j] = m;
+		}
+	}
+	int center_idx = SPHERE_ROWS * SPHERE_COLUMNS / 2;
+	gModel = *gScene.models[center_idx];
+	gScene.models[center_idx] = &gModel;
+#endif
+
 	return 0;
 }
 
