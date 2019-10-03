@@ -6,6 +6,7 @@
 #include "material.h"
 #include "skybox.h"
 
+#define SCENE_MODELS_MAX 256
 #define SCENE_EMITTERS_MAX 256
 
 typedef struct
@@ -17,7 +18,7 @@ typedef struct
 
 typedef struct
 {
-	// position
+	// camera position
 	vec3 pos;
 
 	// xyz-euler orientation
@@ -41,35 +42,43 @@ typedef struct
 
 typedef struct
 {
-	// main camera values
+	// Model translation
+	vec3 position;
+
+	// Model euler angle rotation
+	vec3 rot;
+
+	// Model uniform scale
+	float scale;
+
+	// The geometry to render
+	Mesh mesh;
+
+	// The material to render with
+	Material material;
+} Model;
+
+typedef struct
+{
+	// Main camera values
 	Camera camera;
 
 	// Scene skybox
 	Skybox skybox;
 
-	// global lighting environment
+	// The global ambient light
 	vec3 ambient_color;
+
+	// The intensity of the ambient light
 	float ambient_intensity;
 
-	// The selected mesh to render
-	Mesh mesh;
-
-	// The material to render
-	Material material;
-
-	// Model translation
-	vec3 model_translation;
-
-	// Model euler angle rotation
-	vec3 model_rot;
-
-	// Model uniform scale
-	float model_scale;
-
-	// main light
+	// Main light
 	PointLight main_light;
 
-	// active particle emitters
+	// Models to render
+	Model* models[SCENE_MODELS_MAX];
+
+	// Particle emitters to render
 	ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
 } Scene;
 

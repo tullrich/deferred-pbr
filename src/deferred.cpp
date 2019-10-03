@@ -136,79 +136,72 @@ int deferred_initialize(Deferred* d) {
 	return 0;
 }
 
-static void render_geometry(Deferred* d, Scene *s) {
-	gbuffer_bind(&d->g_buffer);
-
-	utility_set_clear_color(0, 0, 0);
-	glClearDepth(1.0f);
-	glDisable(GL_BLEND);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	if (!s->mesh.vertices)
+static void render_geometry(Model* model, Deferred* d, Scene *s) {
+	if (!model->mesh.vertices)
 		return;
 
-	int shader_idx = (s->mesh.texcoords) ? 0:1;
+	int shader_idx = (model->mesh.texcoords) ? 0:1;
 	const SurfaceShader* shader = &d->surf_shader[shader_idx];
 	glUseProgram(shader->program);
 
 	// bind albedo base color
-	glUniform3fv(shader->albedo_base_loc, 1, s->material.albedo_base);
+	glUniform3fv(shader->albedo_base_loc, 1, model->material.albedo_base);
 
 	// bind metalness base color
-	glUniform3fv(shader->metalness_base_loc, 1, s->material.metalness_base);
+	glUniform3fv(shader->metalness_base_loc, 1, model->material.metalness_base);
 
 	// bind roughness base color
-	glUniform3fv(shader->roughness_base_loc, 1, s->material.roughness_base);
+	glUniform3fv(shader->roughness_base_loc, 1, model->material.roughness_base);
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, s->material.albedo_map);
+	glBindTexture(GL_TEXTURE_2D, model->material.albedo_map);
 	glUniform1i(shader->albedo_map_loc, 0);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, s->material.normal_map);
+	glBindTexture(GL_TEXTURE_2D, model->material.normal_map);
 	glUniform1i(shader->normal_map_loc, 1);
 
 	// bind metalness map
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, s->material.metalness_map);
+	glBindTexture(GL_TEXTURE_2D, model->material.metalness_map);
 	glUniform1i(shader->metalness_map_loc, 2);
 
 	// bind roughness map
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, s->material.roughness_map);
+	glBindTexture(GL_TEXTURE_2D, model->material.roughness_map);
 	glUniform1i(shader->roughness_map_loc, 3);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, s->material.ao_map);
+	glBindTexture(GL_TEXTURE_2D, model->material.ao_map);
 	glUniform1i(shader->ao_map_loc, 4);
 
 	// calc model matrix
-	mat4x4 model;
-	mat4x4_identity(model);
-	mat4x4_rotate_X(model, model, DEG_TO_RAD(s->model_rot[0]));
-	mat4x4_rotate_Y(model, model, DEG_TO_RAD(s->model_rot[1]));
-	mat4x4_rotate_Z(model, model, DEG_TO_RAD(s->model_rot[2]));
-	float scale = s->model_scale * s->mesh.base_scale;
-	mat4x4_scale_aniso(model, model, scale, scale, scale);
-	vec3_sub(model[3], model[3], s->mesh.bounds.center);
-	vec3_add(model[3], model[3], s->model_translation);
+	mat4x4 m;
+	mat4x4_identity(m);
+	mat4x4_rotate_X(m, m, DEG_TO_RAD(model->rot[0]));
+	mat4x4_rotate_Y(m, m, DEG_TO_RAD(model->rot[1]));
+	mat4x4_rotate_Z(m, m, DEG_TO_RAD(model->rot[2]));
+	float scale = model->scale * model->mesh.base_scale;
+	mat4x4_scale_aniso(m, m, scale, scale, scale);
+	vec3_sub(m[3], m[3], model->mesh.bounds.center);
+	vec3_add(m[3], m[3], model->position);
 
 	// bind inverse transpose model-view matrix
 	mat4x4 mv, inv_mv, invT_mv;
-	mat4x4_mul(mv, s->camera.view, model);
+	mat4x4_mul(mv, s->camera.view, m);
 	mat4x4_invert(inv_mv, mv);
 	mat4x4_transpose(invT_mv, inv_mv);
 	glUniformMatrix4fv(shader->invTModelview_loc, 1, GL_FALSE, (const GLfloat*)invT_mv);
 
 	// bind model-view-projection matrix
 	mat4x4 mvp;
-	mat4x4_mul(mvp, s->camera.viewProj, model);
+	mat4x4_mul(mvp, s->camera.viewProj, m);
 	glUniformMatrix4fv(shader->view_loc, 1, GL_FALSE, (const GLfloat*)mvp);
 
-	mesh_draw(&s->mesh,
+	mesh_draw(&model->mesh,
 			  shader->texcoord_loc,
 			  shader->normal_loc,
 			  shader->tangent_loc,
@@ -334,7 +327,16 @@ void deferred_render(Deferred *d, Scene *s) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
-	render_geometry(d, s);
+	gbuffer_bind(&d->g_buffer);
+
+	utility_set_clear_color(0, 0, 0);
+	glClearDepth(1.0f);
+	glDisable(GL_BLEND);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	for (int i = 0; i < SCENE_MODELS_MAX, s->models[i]; i++) {
+		render_geometry(s->models[i], d, s);
+	}
 
 	if (d->render_mode == RENDER_MODE_SHADED) {
 		render_shading(d, s);

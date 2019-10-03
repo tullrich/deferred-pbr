@@ -13,6 +13,7 @@ static Scene gScene;
 static Deferred gDeferred;
 static Forward gForward;
 
+static Model gModel;
 static ParticleEmitterDesc gEmitterDesc;
 static ParticleEmitter gEmitter;
 
@@ -228,21 +229,21 @@ static int init_scene() {
 	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx].skybox;
 
-	// Setup start mesh
-	gScene.mesh = gMeshes[mesh_idx].mesh;
-	gScene.model_scale = 1.0f;
-
-	// Setup start material
-	gScene.material = gMaterials[material_idx].material;
+	// Setup start model
+	memset(&gModel, 0, sizeof(Model));
+	gModel.mesh = gMeshes[mesh_idx].mesh;
+	gModel.scale = 1.0f;
+	gModel.material = gMaterials[material_idx].material;
 
 	// Setup particle system
 	memset(&gEmitter, 0, sizeof(ParticleEmitter));
 	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
 	gEmitterDesc = gEmitterDescs[0];
 	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
-	gScene.emitters[0] = &gEmitter;
 	gEmitter.muted = true; // start muted
 
+	gScene.models[0] = &gModel;
+	gScene.emitters[0] = &gEmitter;
 	return 0;
 }
 
@@ -383,7 +384,7 @@ static int frame() {
       for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
         if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i))) {
 					mesh_idx = i;
-					gScene.mesh = gMeshes[i].mesh;
+					gModel.mesh = gMeshes[i].mesh;
 				}
         if ((mesh_idx == i)) {
           ImGui::SetItemDefaultFocus();
@@ -391,13 +392,13 @@ static int frame() {
       }
       ImGui::EndCombo();
     }
-		ImGui::InputFloat3("Position", gScene.model_translation);
-		ImGui::SliderFloat("Rotation (Deg)", &gScene.model_rot[1], 0.0f, 360.0f, "%.0f");
-		ImGui::SliderFloat("Scale", &gScene.model_scale, .01f, 25.0f );
+		ImGui::InputFloat3("Position", gModel.position);
+		ImGui::SliderFloat("Rotation (Deg)", &gModel.rot[1], 0.0f, 360.0f, "%.0f");
+		ImGui::SliderFloat("Scale", &gModel.scale, .01f, 25.0f );
 		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-		material_gui(&gScene.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
+		material_gui(&gModel.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
 	}
 	if ( ImGui::CollapsingHeader("Emitter", 0)) {
 		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT(gParticleTextures));
@@ -426,7 +427,7 @@ static int frame() {
 		if (show_manipulator == 1) {
 			vec3_dup(manip_mat[3], gScene.main_light.position);
 		} else {
-			vec3_dup(manip_mat[3], gScene.model_translation);
+			vec3_dup(manip_mat[3], gModel.position);
 		}
 		ImGuizmo::Enable(true);
 		ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
@@ -439,7 +440,7 @@ static int frame() {
 		if (show_manipulator == 1) {
 			vec3_dup(gScene.main_light.position, manip_mat[3]);
 		} else {
-			vec3_dup(gScene.model_translation, manip_mat[3]);
+			vec3_dup(gModel.position, manip_mat[3]);
 		}
 	}
 
