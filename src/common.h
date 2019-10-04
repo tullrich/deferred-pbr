@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <algorithm>
 
 #include "SDL.h"
 #include <GL/glew.h>

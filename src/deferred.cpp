@@ -74,9 +74,9 @@ int deferred_initialize(Deferred* d) {
 		"#define MESH_VERTEX_UV1\n",
 		"#define USE_NORMAL_MAP\n",
 		"#define USE_ALBEDO_MAP\n",
-		//"#define USE_ROUGHNESS_MAP\n",
-		//"#define USE_METALNESS_MAP\n",
-		"#define USE_AO_MAP\n",
+		"#define USE_ROUGHNESS_MAP\n",
+		"#define USE_METALNESS_MAP\n",
+		// "#define USE_AO_MAP\n",
 	};
 	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
 							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {

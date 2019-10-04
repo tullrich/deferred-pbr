@@ -68,6 +68,7 @@ static MaterialDesc gMaterials[] = {
 		.albedo_map_path = "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
 		.normal_map_path = "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
 		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
+		.roughness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
 		.albedo_base = { 1.0f,  1.0f,  1.0f },
 		.metalness_base = { 0.0f, 0.0f, 0.0f },
 		.roughness_base = { .2f,  .2f,  .2f }
@@ -220,14 +221,14 @@ static int init_scene() {
 
 	// Setup ambient light
 	vec3_dup(gScene.ambient_color, White);
-	gScene.ambient_intensity = 1.f;
+	gScene.ambient_intensity = 0.03f;
 
 	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx].skybox;
 
 	// Setup main directional light
 	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
-	light_initialize_point(&gLight, lightPos, White, 1.0f);
+	light_initialize_directional(&gLight, lightPos, White, 3.0f);
 	gScene.light = &gLight;
 
 	// Setup particle system
@@ -243,16 +244,21 @@ static int init_scene() {
 	gScene.models[0] = &gModel;
 	gScene.emitters[0] = &gEmitter;
 #else
-#define SPHERE_ROWS 5
-#define SPHERE_COLUMNS 5
+#define SPHERE_ROWS 7
+#define SPHERE_COLUMNS 7
 #define SPHERE_SPACING 8.0F
 	printf("Creating %ix%i spheres scene\n", SPHERE_ROWS, SPHERE_COLUMNS);
+	mesh_idx = 1;
+	material_idx = 0;
 	for (int i = 0; i < SPHERE_ROWS; i++) {
 		for (int j = 0; j < SPHERE_COLUMNS; j++) {
 			Model* m = (Model*)malloc(sizeof(Model));
 			model_initialize(m, &gMeshes[1].mesh, &gMaterials[0].material);
-			m->position[0] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
-			m->position[1] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
+			m->position[0] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
+			m->position[1] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
+			// vec3_dup(m->material.albedo_base, Red);
+			vec3_swizzle(m->material.roughness_base, std::max(j/((float)SPHERE_COLUMNS), 0.05f));
+			vec3_swizzle(m->material.metalness_base, i/((float)SPHERE_ROWS));
 			gScene.models[i * SPHERE_COLUMNS + j] = m;
 		}
 	}
