@@ -5,16 +5,10 @@
 #include "mesh.h"
 #include "material.h"
 #include "skybox.h"
+#include "light.h"
 
 #define SCENE_MODELS_MAX 256
 #define SCENE_EMITTERS_MAX 256
-
-typedef struct
-{
-	vec3 position;
-	vec3 color;
-	float intensity;
-} PointLight;
 
 typedef struct
 {
@@ -73,7 +67,7 @@ typedef struct
 	float ambient_intensity;
 
 	// Main light
-	PointLight main_light;
+	Light light;
 
 	// Models to render
 	Model* models[SCENE_MODELS_MAX];

@@ -40,6 +40,8 @@ add_executable( Deferred
   src/skybox.cpp
   src/material.h
   src/material.cpp
+  src/light.h
+  src/light.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h

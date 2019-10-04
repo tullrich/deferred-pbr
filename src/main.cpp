@@ -67,7 +67,7 @@ static MaterialDesc gMaterials[] = {
 		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
 		.albedo_base = { 1.0f,  1.0f,  1.0f },
 		.metalness_base = { 0.0f, 0.0f, 0.0f },
-		.roughness_base = { 1.0f,  1.0f,  1.0f }
+		.roughness_base = { .2f,  .2f,  .2f }
 	},
 	{
 		.name = "Medievil",
@@ -220,11 +220,8 @@ static int init_scene() {
 	gScene.ambient_intensity = 1.f;
 
 	// Setup main directional light
-	vec3_dup(gScene.main_light.color, White);
-	gScene.main_light.intensity = 1.0f;
-	gScene.main_light.position[0] = 0.0f;
-	gScene.main_light.position[1] = 0.0f;
-	gScene.main_light.position[2] = 10.0f;
+	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
+	light_init_point(&gScene.light, lightPos, White, 1.0f);
 
 	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx].skybox;
@@ -243,12 +240,14 @@ static int init_scene() {
 	gEmitter.muted = true; // start muted
 
 #ifdef SPHERE_SCENE
+	printf("Creating single model scene\n")
 	gScene.models[0] = &gModel;
 	gScene.emitters[0] = &gEmitter;
 #else
 #define SPHERE_ROWS 5
 #define SPHERE_COLUMNS 5
 #define SPHERE_SPACING 8.0F
+	printf("Creating %ix%i spheres scene\n", SPHERE_ROWS, SPHERE_COLUMNS);
 	for (int i = 0; i < SPHERE_ROWS; i++) {
 		for (int j = 0; j < SPHERE_COLUMNS; j++) {
 			Model* m = (Model*)calloc(1, sizeof(Model));
@@ -390,9 +389,9 @@ static int frame() {
 		if (ImGui::Checkbox("Show Manipulator", &show_light_manipulator)) {
 			show_manipulator = (show_light_manipulator) ? 1 : 0;
 		}
-		ImGui::InputFloat3("Position", gScene.main_light.position);
-		ImGui::ColorEdit3("Color", gScene.main_light.color);
-		ImGui::SliderFloat("Intensity", &gScene.main_light.intensity, 0, 1.0f);
+		ImGui::InputFloat3("Position", gScene.light.position);
+		ImGui::ColorEdit3("Color", gScene.light.color);
+		ImGui::SliderFloat("Intensity", &gScene.light.intensity, 0, 1.0f);
 		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -446,7 +445,7 @@ static int frame() {
 		mat4x4 manip_mat;
 		mat4x4_identity(manip_mat);
 		if (show_manipulator == 1) {
-			vec3_dup(manip_mat[3], gScene.main_light.position);
+			vec3_dup(manip_mat[3], gScene.light.position);
 		} else {
 			vec3_dup(manip_mat[3], gModel.position);
 		}
@@ -459,7 +458,7 @@ static int frame() {
 			ImGuizmo::LOCAL,
 			&manip_mat[0][0]);
 		if (show_manipulator == 1) {
-			vec3_dup(gScene.main_light.position, manip_mat[3]);
+			vec3_dup(gScene.light.position, manip_mat[3]);
 		} else {
 			vec3_dup(gModel.position, manip_mat[3]);
 		}

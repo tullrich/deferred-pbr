@@ -97,7 +97,7 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, floa
 
 		// submit
 		vec4 color; color[3] = 1.0f;
-		vec3_dup(color, s->main_light.color);
+		vec3_dup(color, s->light.color);
 		vec3 scale3;
 		vec3_swizzle(scale3, scale);
 		draw_quad(shader, Vec_Zero, rot, scale3, color);
@@ -219,7 +219,7 @@ void forward_render(Forward* f, Scene *s) {
 	}
 
 	// Draw main light icon
-	draw_billboard(f, f->light_icon, s->main_light.position, 2.0f, s);
+	draw_billboard(f, f->light_icon, s->light.position, 2.0f, s);
 
 	glDepthMask(GL_TRUE);
 
