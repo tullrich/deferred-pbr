@@ -77,7 +77,7 @@ void SurfaceShaderTextured(out SurfaceOut surface)
 #ifdef USE_AO_MAP
 	surface.Occlusion = texture(AOMap, Texcoord).x;
 #else
-	surface.Occlusion = 0.0f;
+	surface.Occlusion = 1.0f;
 #endif//  USE_AO_MAP
 }
 
