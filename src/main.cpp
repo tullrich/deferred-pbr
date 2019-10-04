@@ -380,7 +380,7 @@ static int frame() {
 		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
 		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f);
 	}
-	if (ImGui::CollapsingHeader("Point Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::PushID(1);
 		bool show_light_manipulator = (show_manipulator == 1);
 		if (ImGui::Checkbox("Show Manipulator", &show_light_manipulator)) {
@@ -432,36 +432,12 @@ static int frame() {
 			particle_emitter_refresh(&gEmitter);
 		}
 	}
-	ImGuizmo::SetDrawlist();
 	ImGui::End();
 
-	// Render light manipulator gizmo
-	if (show_manipulator) {
-		ImGuizmo::OPERATION op = ImGuizmo::TRANSLATE;
-		mat4x4 manip_mat;
-		mat4x4_identity(manip_mat);
-		if (show_manipulator == 1) {
-			vec3_dup(manip_mat[3], gLight.position);
-			// if (gLight.type == LIGHT_TYPE_DIRECTIONAL) {
-			// 	op = ImGuizmo::ROTATE;
-			// }
-		} else {
-			vec3_dup(manip_mat[3], gModel.position);
-		}
-		ImGuizmo::Enable(true);
-		ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
-		ImGuizmo::Manipulate(
-			&gScene.camera.view[0][0],
-			&gScene.camera.proj[0][0],
-			op,
-			ImGuizmo::LOCAL,
-			&manip_mat[0][0]
-		);
-		if (show_manipulator == 1) {
-			vec3_dup(gLight.position, manip_mat[3]);
-		} else {
-			vec3_dup(gModel.position, manip_mat[3]);
-		}
+	// render translation gizmo
+	switch (show_manipulator) {
+		case 1: utility_translation_gizmo(gLight.position, gScene.camera.view, gScene.camera.proj); break;
+		case 2: utility_translation_gizmo(gModel.position, gScene.camera.view, gScene.camera.proj); break;
 	}
 
 	return 0;
@@ -560,6 +536,7 @@ int main(int argc, char* argv[]) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window);
     ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 
 		if (frame()) {
 			quit = 1;

@@ -45,3 +45,5 @@ int utility_random_bool();
 float utility_random_real01(); //[0, 1]
 float utility_random_real11(); //[-1, 1]
 float utility_random_range(float min, float max); // [min, max]
+
+void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj);

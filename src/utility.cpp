@@ -1,5 +1,6 @@
 #include "utility.h"
 #include "scene.h"
+#include "imgui/ImGuizmo.h"
 
 void utility_report_gl_err(const char * file, const char * func, int line) {
 	GLenum e;
@@ -233,7 +234,7 @@ void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 	glEnd();
 }
 
-void utility_draw_fullscreen_quad2( GLint texcoord_loc, GLint pos_loc ) {
+void utility_draw_fullscreen_quad2(GLint texcoord_loc, GLint pos_loc) {
 	glBegin( GL_QUADS );
 		glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
 		glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
@@ -364,4 +365,20 @@ float utility_random_real11() {
 
 float utility_random_range(float min, float max) {
 	return min + rand() / (float)RAND_MAX * (max - min);
+}
+
+void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj) {
+	mat4x4 manip_mat;
+	mat4x4_identity(manip_mat);
+	vec3_dup(manip_mat[3], out);
+	ImGuizmo::Enable(true);
+	ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
+	ImGuizmo::Manipulate(
+		&view[0][0],
+		&proj[0][0],
+		ImGuizmo::TRANSLATE,
+		ImGuizmo::LOCAL,
+		&manip_mat[0][0]
+	);
+	vec3_dup(out, manip_mat[3]);
 }
