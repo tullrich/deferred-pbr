@@ -15,5 +15,6 @@ typedef struct
 	float intensity;
 } Light;
 
-void light_init_point(Light *out, const vec3 pos, const vec3 color, float intensity);
-void light_init_directional(Light *out, const vec3 pos, const vec3 color, float intensity);
+void light_initialize_point(Light *out, const vec3 pos, const vec3 color, float intensity);
+void light_initialize_directional(Light *out, const vec3 pos, const vec3 color, float intensity);
+void light_gui(Light *light);

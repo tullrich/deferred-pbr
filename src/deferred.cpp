@@ -234,7 +234,7 @@ static void render_shading(Deferred* d, Scene *s) {
 
 	// light setup
 	vec4 view_light_pos_in;
-	vec4_dup(view_light_pos_in, s->light.position);
+	vec4_dup(view_light_pos_in, s->light->position);
 
 	vec4 view_light_pos;
 	mat4x4_mul_vec4(view_light_pos, s->camera.view, view_light_pos_in);
@@ -243,8 +243,8 @@ static void render_shading(Deferred* d, Scene *s) {
 	vec3_scale(ambient_term, s->ambient_color, s->ambient_intensity);
 	glUniform3fv(d->lighting_shader.ambient_term_loc, 1, (const GLfloat*)ambient_term);
 	glUniform4fv(d->lighting_shader.light_pos_loc, 1, (const GLfloat*)view_light_pos);
-	glUniform3fv(d->lighting_shader.light_color_loc, 1, (const GLfloat*)s->light.color);
-	glUniform1f(d->lighting_shader.light_intensity_loc, s->light.intensity);
+	glUniform3fv(d->lighting_shader.light_color_loc, 1, (const GLfloat*)s->light->color);
+	glUniform1f(d->lighting_shader.light_intensity_loc, s->light->intensity);
 
 	// View rotation only
 	mat4x4 view_rot, inv_view_rot;

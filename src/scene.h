@@ -52,6 +52,8 @@ typedef struct
 	Material material;
 } Model;
 
+void model_initialize(Model *out, const Mesh *mesh, const Material *mat);
+
 typedef struct
 {
 	// Main camera values
@@ -67,7 +69,7 @@ typedef struct
 	float ambient_intensity;
 
 	// Main light
-	Light light;
+	Light* light;
 
 	// Models to render
 	Model* models[SCENE_MODELS_MAX];

@@ -9,10 +9,13 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/ImGuizmo.h"
 
+#define SPHERE_SCENE 1
+
 static Scene gScene;
 static Deferred gDeferred;
 static Forward gForward;
 
+static Light gLight;
 static Model gModel;
 static ParticleEmitterDesc gEmitterDesc;
 static ParticleEmitter gEmitter;
@@ -111,7 +114,7 @@ static ParticleEmitterTextureDesc gParticleTextures[] = {
 	{ .name = "UV Debug", .path = "images/uv_map.png" }
 };
 
-ParticleEmitterDesc gEmitterDescs[] = {
+static ParticleEmitterDesc gEmitterDescs[] = {
 	{
 		.max = 1024,
 		.spawn_rate = 60.0f,
@@ -219,18 +222,13 @@ static int init_scene() {
 	vec3_dup(gScene.ambient_color, White);
 	gScene.ambient_intensity = 1.f;
 
-	// Setup main directional light
-	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
-	light_init_point(&gScene.light, lightPos, White, 1.0f);
-
 	// Setup skybox
 	gScene.skybox = gSkyboxes[skybox_idx].skybox;
 
-	// Setup start model
-	memset(&gModel, 0, sizeof(Model));
-	gModel.mesh = gMeshes[mesh_idx].mesh;
-	gModel.scale = 1.0f;
-	gModel.material = gMaterials[material_idx].material;
+	// Setup main directional light
+	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
+	light_initialize_point(&gLight, lightPos, White, 1.0f);
+	gScene.light = &gLight;
 
 	// Setup particle system
 	memset(&gEmitter, 0, sizeof(ParticleEmitter));
@@ -239,8 +237,9 @@ static int init_scene() {
 	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
 	gEmitter.muted = true; // start muted
 
-#ifdef SPHERE_SCENE
+#ifndef SPHERE_SCENE
 	printf("Creating single model scene\n")
+	model_initialize(&gModel, &gMeshes[mesh_idx].mesh, &gMaterials[material_idx].material);
 	gScene.models[0] = &gModel;
 	gScene.emitters[0] = &gEmitter;
 #else
@@ -250,12 +249,10 @@ static int init_scene() {
 	printf("Creating %ix%i spheres scene\n", SPHERE_ROWS, SPHERE_COLUMNS);
 	for (int i = 0; i < SPHERE_ROWS; i++) {
 		for (int j = 0; j < SPHERE_COLUMNS; j++) {
-			Model* m = (Model*)calloc(1, sizeof(Model));
+			Model* m = (Model*)malloc(sizeof(Model));
+			model_initialize(m, &gMeshes[1].mesh, &gMaterials[0].material);
 			m->position[0] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
 			m->position[1] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
-			m->mesh = gMeshes[1].mesh;
-			m->material = gMaterials[0].material;
-			m->scale = 1.0f;
 			gScene.models[i * SPHERE_COLUMNS + j] = m;
 		}
 	}
@@ -389,9 +386,7 @@ static int frame() {
 		if (ImGui::Checkbox("Show Manipulator", &show_light_manipulator)) {
 			show_manipulator = (show_light_manipulator) ? 1 : 0;
 		}
-		ImGui::InputFloat3("Position", gScene.light.position);
-		ImGui::ColorEdit3("Color", gScene.light.color);
-		ImGui::SliderFloat("Intensity", &gScene.light.intensity, 0, 1.0f);
+		light_gui(&gLight);
 		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -442,10 +437,14 @@ static int frame() {
 
 	// Render light manipulator gizmo
 	if (show_manipulator) {
+		ImGuizmo::OPERATION op = ImGuizmo::TRANSLATE;
 		mat4x4 manip_mat;
 		mat4x4_identity(manip_mat);
 		if (show_manipulator == 1) {
-			vec3_dup(manip_mat[3], gScene.light.position);
+			vec3_dup(manip_mat[3], gLight.position);
+			// if (gLight.type == LIGHT_TYPE_DIRECTIONAL) {
+			// 	op = ImGuizmo::ROTATE;
+			// }
 		} else {
 			vec3_dup(manip_mat[3], gModel.position);
 		}
@@ -454,11 +453,12 @@ static int frame() {
 		ImGuizmo::Manipulate(
 			&gScene.camera.view[0][0],
 			&gScene.camera.proj[0][0],
-			ImGuizmo::TRANSLATE,
+			op,
 			ImGuizmo::LOCAL,
-			&manip_mat[0][0]);
+			&manip_mat[0][0]
+		);
 		if (show_manipulator == 1) {
-			vec3_dup(gScene.light.position, manip_mat[3]);
+			vec3_dup(gLight.position, manip_mat[3]);
 		} else {
 			vec3_dup(gModel.position, manip_mat[3]);
 		}
