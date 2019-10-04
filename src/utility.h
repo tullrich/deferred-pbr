@@ -34,6 +34,7 @@ typedef enum
 		folder "/negx" suffix																\
 	}
 
+GLuint utility_load_texture_scalar(const vec4 value);
 GLuint utility_load_texture_unknown();
 GLuint utility_load_image(GLenum target, const char *filepath);
 GLuint utility_load_cubemap(const char* const* filepaths);

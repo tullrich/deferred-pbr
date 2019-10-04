@@ -132,6 +132,18 @@ GLuint utility_create_program_defines(const char *vert_filename, const char *fra
 	return program;
 }
 
+GLuint utility_load_texture_scalar(const vec4 value) {
+	GLuint texture_id;
+	glGenTextures(1, &texture_id);
+	glBindTexture(GL_TEXTURE_2D, texture_id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_FLOAT, value);
+	return texture_id;
+}
+
 GLuint utility_load_texture_unknown() {
 	GLuint texture_id;
 	glGenTextures(1, &texture_id);

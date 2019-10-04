@@ -5,16 +5,19 @@ int material_load(Material *out_material, const MaterialDesc *desc)
 {
   if (!desc->albedo_map_path || !(out_material->albedo_map = utility_load_image(GL_TEXTURE_2D, desc->albedo_map_path)))
     out_material->albedo_map = utility_load_texture_unknown();
-  if (!desc->normal_map_path || !(out_material->normal_map = utility_load_image(GL_TEXTURE_2D, desc->normal_map_path)))
-    out_material->normal_map = utility_load_texture_unknown();
+  if (!desc->normal_map_path || !(out_material->normal_map = utility_load_image(GL_TEXTURE_2D, desc->normal_map_path))) {
+    vec4 z_up;
+    z_up[0] = 0.5; z_up[1] = 0.5; z_up[2] = 1; z_up[3] = 0;
+    out_material->normal_map = utility_load_texture_scalar(z_up);
+  }
   if (!desc->metalness_map_path || !(out_material->metalness_map = utility_load_image(GL_TEXTURE_2D, desc->metalness_map_path)))
-    out_material->metalness_map = utility_load_texture_unknown();
+    out_material->metalness_map = utility_load_texture_scalar(Black);
   if (!desc->roughness_map_path || !(out_material->roughness_map = utility_load_image(GL_TEXTURE_2D, desc->roughness_map_path)))
-    out_material->roughness_map = utility_load_texture_unknown();
+    out_material->roughness_map = utility_load_texture_scalar(Black);
   if (!desc->ao_map_path || !(out_material->ao_map = utility_load_image(GL_TEXTURE_2D, desc->ao_map_path)))
-    out_material->ao_map = utility_load_texture_unknown();
+    out_material->ao_map = utility_load_texture_scalar(White);
   if (!desc->emissive_map_path || !(out_material->emissive_map = utility_load_image(GL_TEXTURE_2D, desc->emissive_map_path)))
-    out_material->emissive_map = utility_load_texture_unknown();
+    out_material->emissive_map = utility_load_texture_scalar(Black);
   vec3_dup(out_material->albedo_base, desc->albedo_base);
   vec3_dup(out_material->metalness_base, desc->metalness_base);
   vec3_dup(out_material->roughness_base, desc->roughness_base);
