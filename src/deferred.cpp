@@ -53,7 +53,13 @@ int deferred_initialize(Deferred* d) {
 	memset(d, 0, sizeof(Deferred));
 	d->render_mode = RENDER_MODE_SHADED;
 
-	// Initialzie the skybox shader
+	// Initialize default material
+	if (material_initialize_default(&d->default_mat)) {
+		printf("Unable to load default material\n");
+		return 1;
+	}
+
+	// Initialize the skybox shader
 	if(!(d->skybox_shader.program = utility_create_program("shaders/skybox.vert", "shaders/skybox.frag"))) {
 		printf("Unable to load shader\n");
 		return 1;
@@ -76,7 +82,7 @@ int deferred_initialize(Deferred* d) {
 		"#define USE_ALBEDO_MAP\n",
 		"#define USE_ROUGHNESS_MAP\n",
 		"#define USE_METALNESS_MAP\n",
-		// "#define USE_AO_MAP\n",
+		"#define USE_AO_MAP\n",
 	};
 	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
 							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {
@@ -155,27 +161,47 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, model->material.albedo_map);
+	if (model->material.albedo_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.albedo_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.albedo_map);
+	}
 	glUniform1i(shader->albedo_map_loc, 0);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, model->material.normal_map);
+	if (model->material.normal_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.normal_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.normal_map);
+	}
 	glUniform1i(shader->normal_map_loc, 1);
 
 	// bind metalness map
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, model->material.metalness_map);
+	if (model->material.metalness_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.metalness_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.metalness_map);
+	}
 	glUniform1i(shader->metalness_map_loc, 2);
 
 	// bind roughness map
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, model->material.roughness_map);
+	if (model->material.roughness_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.roughness_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.roughness_map);
+	}
 	glUniform1i(shader->roughness_map_loc, 3);
 
 	// bind normal map
 	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, model->material.ao_map);
+	if (model->material.ao_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.ao_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.ao_map);
+	}
 	glUniform1i(shader->ao_map_loc, 4);
 
 	// calc model matrix

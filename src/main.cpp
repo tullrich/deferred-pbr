@@ -69,8 +69,9 @@ static MaterialDesc gMaterials[] = {
 		.normal_map_path = "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
 		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
 		.roughness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
+		.emissive_map_path = "images/SciFiCube/Sci_Wall_Panel_01_emissive.png",
 		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 0.0f, 0.0f, 0.0f },
+		.metalness_base = { 1.0f, 1.0f, 1.0f },
 		.roughness_base = { .2f,  .2f,  .2f }
 	},
 	{
@@ -100,7 +101,7 @@ static MaterialDesc gMaterials[] = {
 	},
 	{
 		.name = "UV Debug",
-		.albedo_map_path = "images/uv_map2.png",
+		.albedo_map_path = "images/uv_map.png",
 		.albedo_base = { 1.0f,  1.0f,  1.0f },
 		.metalness_base = { 0.0f, 0.0f, 0.0f },
 		.roughness_base = { 1.0f,  1.0f,  1.0f }
@@ -194,7 +195,7 @@ static int initialize_meshes() {
 static int initialize_materials() {
 	int ret;
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++) {
-		if ((ret = material_load(&gMaterials[i].material, &gMaterials[i]))) {
+		if ((ret = material_initialize(&gMaterials[i].material, &gMaterials[i]))) {
 			return ret;
 		}
 	}
@@ -217,7 +218,7 @@ static int init_scene() {
 
 	// Setup camera
 	gScene.camera.boomLen = 30.0f;
-	gScene.camera.fovy = 80.0f;
+	gScene.camera.fovy = 72.0f;
 
 	// Setup ambient light
 	vec3_dup(gScene.ambient_color, White);
@@ -256,7 +257,7 @@ static int init_scene() {
 			model_initialize(m, &gMeshes[1].mesh, &gMaterials[0].material);
 			m->position[0] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
 			m->position[1] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
-			// vec3_dup(m->material.albedo_base, Red);
+			vec3_dup(m->material.albedo_base, Red);
 			vec3_swizzle(m->material.roughness_base, std::max(j/((float)SPHERE_COLUMNS), 0.05f));
 			vec3_swizzle(m->material.metalness_base, i/((float)SPHERE_ROWS));
 			gScene.models[i * SPHERE_COLUMNS + j] = m;
@@ -384,19 +385,19 @@ static int frame() {
 			ImGui::EndCombo();
 		}
 		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
-		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 1.0f);
+		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
 	}
 	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::PushID(1);
+		ImGui::PushID("light");
 		bool show_light_manipulator = (show_manipulator == 1);
-		if (ImGui::Checkbox("Show Manipulator", &show_light_manipulator)) {
+		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
 			show_manipulator = (show_light_manipulator) ? 1 : 0;
 		}
 		light_gui(&gLight);
 		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::PushID(2);
+		ImGui::PushID("model");
 		bool show_model_manipulator = (show_manipulator == 2);
 		if (ImGui::Checkbox("Show Manipulator", &show_model_manipulator)) {
 			show_manipulator = (show_model_manipulator) ? 2 : 0;

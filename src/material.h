@@ -28,5 +28,6 @@ typedef struct
 	Material material;
 } MaterialDesc;
 
-int material_load(Material *out_material, const MaterialDesc *desc);
+int material_initialize_default(Material *out);
+int material_initialize(Material *out_material, const MaterialDesc *desc);
 void material_gui(Material* material, int *material_idx, const MaterialDesc* mat_defs, int mat_defs_count);

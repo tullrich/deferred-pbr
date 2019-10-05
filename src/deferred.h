@@ -105,6 +105,7 @@ typedef struct
 	SurfaceShader surf_shader[2];
 	LightingShader lighting_shader;
 	DebugShader debug_shader[3];
+	Material default_mat;
 	GBuffer g_buffer;
 } Deferred;
 
