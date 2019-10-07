@@ -11,8 +11,9 @@ in vec3 Bitangent;
 
 uniform mat4 invTModelView;
 uniform vec3 AlbedoBase;
-uniform vec3 RoughnessBase;
-uniform vec3 MetalnessBase;
+uniform vec3 EmissiveBase;
+uniform float RoughnessBase;
+uniform float MetalnessBase;
 
 #ifdef USE_ALBEDO_MAP
 uniform sampler2D AlbedoMap;
@@ -26,21 +27,25 @@ uniform sampler2D RoughnessMap;
 #ifdef USE_METALNESS_MAP
 uniform sampler2D MetalnessMap;
 #endif
+#ifdef USE_EMISSIVE_MAP
+uniform sampler2D EmissiveMap;
+#endif
 #ifdef USE_AO_MAP
 uniform sampler2D AOMap;
 #endif
 
 out vec4 AlbedoOut;
 out vec3 NormalOut;
-out vec3 RoughnessOut;
-out vec3 MetalnessOut;
+out vec4 RoughnessOut;
+out vec4 MetalnessOut;
 
 struct SurfaceOut
 {
 	vec3 Albedo;
 	vec3 Normal;
-	vec3 Roughness;
-	vec3 Metalness;
+	vec3 Emissive;
+	float Roughness;
+	float Metalness;
 	float Occlusion;
 };
 
@@ -61,21 +66,26 @@ void SurfaceShaderTextured(out SurfaceOut surface)
 
 	surface.Albedo = AlbedoBase;
 #ifdef USE_ALBEDO_MAP
-	surface.Albedo *= texture(AlbedoMap, Texcoord).xyz;
+	surface.Albedo *= texture(AlbedoMap, Texcoord).rgb;
 #endif // USE_ALBEDO_MAP
 
 	surface.Roughness = RoughnessBase;
 #ifdef USE_ROUGHNESS_MAP
-	surface.Roughness *= texture(RoughnessMap, Texcoord).xyz;
+	surface.Roughness *= texture(RoughnessMap, Texcoord).r;
 #endif // USE_ROUGHNESS_MAP
 
 	surface.Metalness = MetalnessBase;
 #ifdef USE_METALNESS_MAP
-	surface.Metalness *= texture(MetalnessMap, Texcoord).xyz;
+	surface.Metalness *= texture(MetalnessMap, Texcoord).r;
 #endif // USE_METALNESS_MAP
 
+	surface.Emissive = EmissiveBase;
+#ifdef USE_EMISSIVE_MAP
+	surface.Emissive *= texture(EmissiveMap, Texcoord).rgb;
+#endif // USE_ALBEDO_MAP
+
 #ifdef USE_AO_MAP
-	surface.Occlusion = texture(AOMap, Texcoord).x;
+	surface.Occlusion = texture(AOMap, Texcoord).r;
 #else
 	surface.Occlusion = 1.0f;
 #endif//  USE_AO_MAP
@@ -88,6 +98,6 @@ void main()
 
 	AlbedoOut = vec4(surface.Albedo, surface.Occlusion);
 	NormalOut = surface.Normal;
-	RoughnessOut = surface.Roughness;
-	MetalnessOut = surface.Metalness;
+	RoughnessOut = vec4(surface.Emissive, surface.Roughness);
+	MetalnessOut = vec4(surface.Metalness, vec3(0.0f));
 }

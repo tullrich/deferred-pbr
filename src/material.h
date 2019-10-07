@@ -3,8 +3,9 @@
 typedef struct
 {
 	vec3 albedo_base;
-	vec3 metalness_base;
-	vec3 roughness_base;
+	float metalness_base;
+	float roughness_base;
+	vec3 emissive_base;
 	GLuint albedo_map;
 	GLuint normal_map;
 	GLuint metalness_map;
@@ -23,8 +24,9 @@ typedef struct
 	const char* emissive_map_path;
 	const char* ao_map_path;
 	vec3 albedo_base;
-	vec3 metalness_base;
-	vec3 roughness_base;
+	float metalness_base;
+	float roughness_base;
+	vec3 emissive_base;
 	Material material;
 } MaterialDesc;
 

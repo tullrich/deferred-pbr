@@ -28,11 +28,13 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	shader->albedo_base_loc = glGetUniformLocation(shader->program, "AlbedoBase");
 	shader->metalness_base_loc = glGetUniformLocation(shader->program, "MetalnessBase");
 	shader->roughness_base_loc = glGetUniformLocation(shader->program, "RoughnessBase");
+	shader->emissive_base_loc = glGetUniformLocation(shader->program, "EmissiveBase");
 	shader->albedo_map_loc = glGetUniformLocation(shader->program, "AlbedoMap");
 	shader->normal_map_loc = glGetUniformLocation(shader->program, "NormalMap");
 	shader->metalness_map_loc = glGetUniformLocation(shader->program, "MetalnessMap");
 	shader->roughness_map_loc = glGetUniformLocation(shader->program, "RoughnessMap");
 	shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap");
+	shader->emissive_map_loc = glGetUniformLocation(shader->program, "EmissiveMap");
 	return 0;
 }
 
@@ -83,6 +85,7 @@ int deferred_initialize(Deferred* d) {
 		"#define USE_ROUGHNESS_MAP\n",
 		"#define USE_METALNESS_MAP\n",
 		"#define USE_AO_MAP\n",
+		"#define USE_EMISSIVE_MAP\n",
 	};
 	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
 							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {
@@ -114,7 +117,7 @@ int deferred_initialize(Deferred* d) {
 	d->lighting_shader.gbuffer_roughness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Roughness");
 	d->lighting_shader.gbuffer_metalness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Metalness");
 	d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth");
-	d->lighting_shader.env_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvCubemap");
+	d->lighting_shader.env_diffuse_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvDiffuse");
 	d->lighting_shader.inv_view_loc = glGetUniformLocation(d->lighting_shader.program, "InvView");
 	d->lighting_shader.inv_proj_loc = glGetUniformLocation(d->lighting_shader.program, "InvProjection");
 
@@ -154,10 +157,13 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 	glUniform3fv(shader->albedo_base_loc, 1, model->material.albedo_base);
 
 	// bind metalness base color
-	glUniform3fv(shader->metalness_base_loc, 1, model->material.metalness_base);
+	glUniform1f(shader->metalness_base_loc, model->material.metalness_base);
 
 	// bind roughness base color
-	glUniform3fv(shader->roughness_base_loc, 1, model->material.roughness_base);
+	glUniform1f(shader->roughness_base_loc, model->material.roughness_base);
+
+	// bind emissive base color
+	glUniform3fv(shader->emissive_base_loc, 1, model->material.emissive_base);
 
 	// bind albedo map
 	glActiveTexture(GL_TEXTURE0);
@@ -203,6 +209,15 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 		glBindTexture(GL_TEXTURE_2D, d->default_mat.ao_map);
 	}
 	glUniform1i(shader->ao_map_loc, 4);
+
+	// bind normal map
+	glActiveTexture(GL_TEXTURE5);
+	if (model->material.emissive_map) {
+		glBindTexture(GL_TEXTURE_2D, model->material.emissive_map);
+	} else {
+		glBindTexture(GL_TEXTURE_2D, d->default_mat.emissive_map);
+	}
+	glUniform1i(shader->emissive_map_loc, 5);
 
 	// calc model matrix
 	mat4x4 m;
@@ -253,10 +268,10 @@ static void render_shading(Deferred* d, Scene *s) {
 		glUniform1i(d->lighting_shader.gbuffer_locs[i], i);
 	}
 
-	// bind env map
+	// bind env diffuse map
 	glActiveTexture(GL_TEXTURE0+i);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap);
-	glUniform1i(d->lighting_shader.env_map_loc, i);
+	glUniform1i(d->lighting_shader.env_diffuse_map_loc, i);
 
 	// light setup
 	vec4 view_light_pos_in;

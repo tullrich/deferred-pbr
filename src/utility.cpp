@@ -78,7 +78,7 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 		GLsizei log_length = 0;
 		GLchar message[1024];
 		glGetShaderInfoLog(shader, 1024, &log_length, message);
-		printf("Shader Compile Error: %s\n", message);
+		printf("Shader '%s' Compile Error: %s\n", filename, message);
 		glDeleteShader(shader);
 		return 0;
 	}

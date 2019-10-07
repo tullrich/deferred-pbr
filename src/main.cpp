@@ -70,41 +70,46 @@ static MaterialDesc gMaterials[] = {
 		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
 		.roughness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
 		.emissive_map_path = "images/SciFiCube/Sci_Wall_Panel_01_emissive.png",
-		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 1.0f, 1.0f, 1.0f },
-		.roughness_base = { .2f,  .2f,  .2f }
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 1.0f, 1.0f, 1.0f }
 	},
 	{
 		.name = "Medievil",
 		.albedo_map_path = "images/Medievil/Medievil Stonework - Color Map.png",
 		.normal_map_path = "images/Medievil/Medievil Stonework - (Normal Map).png",
 		.ao_map_path = "images/Medievil/Medievil Stonework - AO Map.png",
-		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 0.0f, 0.0f, 0.0f },
-		.roughness_base = { 1.0f,  1.0f,  1.0f }
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 0.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	},
 	{
 		.name = "Moorish Lattice",
 		.albedo_map_path = "images/MoorishLattice/moorish_lattice_diffuse.png",
 		.normal_map_path = "images/MoorishLattice/moorish_lattice_normal.png",
-		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 0.0f, 0.0f, 0.0f },
-		.roughness_base = { 1.0f,  1.0f,  1.0f }
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 0.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	},
 	{
 		.name = "Terracotta",
 		.albedo_map_path = "images/Terracotta/terracotta_diffuse.png",
 		.normal_map_path = "images/Terracotta/terracotta_normal.png",
-		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 0.0f, 0.0f, 0.0f },
-		.roughness_base = { 1.0f,  1.0f,  1.0f }
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 0.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	},
 	{
 		.name = "UV Debug",
 		.albedo_map_path = "images/uv_map.png",
-		.albedo_base = { 1.0f,  1.0f,  1.0f },
-		.metalness_base = { 0.0f, 0.0f, 0.0f },
-		.roughness_base = { 1.0f,  1.0f,  1.0f }
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 0.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	}
 };
 
@@ -257,9 +262,9 @@ static int init_scene() {
 			model_initialize(m, &gMeshes[1].mesh, &gMaterials[0].material);
 			m->position[0] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
 			m->position[1] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
-			vec3_dup(m->material.albedo_base, Red);
-			vec3_swizzle(m->material.roughness_base, std::max(j/((float)SPHERE_COLUMNS), 0.05f));
-			vec3_swizzle(m->material.metalness_base, i/((float)SPHERE_ROWS));
+			vec3_dup(m->material.albedo_base, White);
+			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
+			m->material.metalness_base = i/((float)SPHERE_ROWS);
 			gScene.models[i * SPHERE_COLUMNS + j] = m;
 		}
 	}
@@ -417,6 +422,20 @@ static int frame() {
 		ImGui::InputFloat3("Position", gModel.position);
 		ImGui::SliderFloat("Rotation (Deg)", &gModel.rot[1], 0.0f, 360.0f, "%.0f");
 		ImGui::SliderFloat("Scale", &gModel.scale, .01f, 25.0f );
+#ifdef SPHERE_SCENE
+		if (ImGui::Button("Refresh Scene")) {
+			for (int i = 0; i < SPHERE_ROWS; i++) {
+				for (int j = 0; j < SPHERE_COLUMNS; j++) {
+					Model *m = gScene.models[i * SPHERE_COLUMNS + j];
+					m->scale = gModel.scale;
+					m->mesh = gModel.mesh;
+					m->material = gModel.material;
+    			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
+    			m->material.metalness_base = i/((float)SPHERE_ROWS);
+				}
+			}
+		}
+#endif
 		ImGui::PopID();
 	}
 	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {

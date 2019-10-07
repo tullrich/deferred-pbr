@@ -10,10 +10,11 @@ int material_initialize_default(Material *out) {
   out->metalness_map = utility_load_texture_scalar(White);
   out->roughness_map = utility_load_texture_scalar(White);
   out->ao_map = utility_load_texture_scalar(White);
-  out->emissive_map = utility_load_texture_scalar(Black);
+  out->emissive_map = utility_load_texture_scalar(White);
   vec3_swizzle(out->albedo_base, 1.0f);
-  vec3_swizzle(out->metalness_base, 0.0f);
-  vec3_swizzle(out->roughness_base, 1.0f);
+  out->metalness_base = 0.0f;
+  out->roughness_base = 1.0f;
+  vec3_swizzle(out->emissive_base, 0.0f);
   return 0;
 }
 
@@ -32,8 +33,9 @@ int material_initialize(Material *out, const MaterialDesc *desc) {
   if (!desc->emissive_map_path || !(out->emissive_map = utility_load_image(GL_TEXTURE_2D, desc->emissive_map_path)))
     out->emissive_map = 0;
   vec3_dup(out->albedo_base, desc->albedo_base);
-  vec3_dup(out->metalness_base, desc->metalness_base);
-  vec3_dup(out->roughness_base, desc->roughness_base);
+  out->metalness_base = desc->metalness_base;
+  out->roughness_base = desc->roughness_base;
+  vec3_dup(out->emissive_base, desc->emissive_base);
   return 0;
 }
 
@@ -91,7 +93,7 @@ void material_gui(Material* material, int *material_idx, const MaterialDesc* mat
     ImGui::Separator();
     ImGui::Text("Roughness");
     ImGui::Indent();
-    ImGui::SliderFloat("Base", &material->roughness_base[0],  0.0f, 1.0f);
+    ImGui::SliderFloat("Base", &material->roughness_base,  0.0f, 1.0f);
     if (mat_defs[*material_idx].material.roughness_map) {
       texture_map_toggle_gui("Texture", &material->roughness_map, &mat_defs[*material_idx].material.roughness_map);
     }
@@ -103,7 +105,7 @@ void material_gui(Material* material, int *material_idx, const MaterialDesc* mat
     ImGui::Separator();
     ImGui::Text("Metalness");
     ImGui::Indent();
-    ImGui::SliderFloat("Base", &material->metalness_base[0],  0.0f, 1.0f);
+    ImGui::SliderFloat("Base", &material->metalness_base,  0.0f, 1.0f);
     if (mat_defs[*material_idx].material.metalness_map) {
       texture_map_toggle_gui("Texture", &material->metalness_map, &mat_defs[*material_idx].material.metalness_map);
     }
@@ -121,15 +123,16 @@ void material_gui(Material* material, int *material_idx, const MaterialDesc* mat
     ImGui::PopID();
     ImGui::EndGroup();
   }
-  if (mat_defs[*material_idx].material.emissive_map) {
-    ImGui::BeginGroup();
-      ImGui::PushID("Emissive");
-      ImGui::Separator();
-      ImGui::Text("Emissive");
-      ImGui::Indent();
+  ImGui::BeginGroup();
+    ImGui::PushID("Emissive");
+    ImGui::Separator();
+    ImGui::Text("Emissive");
+    ImGui::Indent();
+    ImGui::ColorEdit3("Base", material->emissive_base);
+    if (mat_defs[*material_idx].material.emissive_map) {
       texture_map_toggle_gui("Emissive", &material->emissive_map, &mat_defs[*material_idx].material.emissive_map);
-      ImGui::Unindent();
-      ImGui::PopID();
-    ImGui::EndGroup();
-  }
+    }
+    ImGui::Unindent();
+    ImGui::PopID();
+  ImGui::EndGroup();
 }

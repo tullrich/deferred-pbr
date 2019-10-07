@@ -9,7 +9,7 @@ uniform sampler2D GBuffer_Albedo;
 uniform sampler2D GBuffer_Roughness;
 uniform sampler2D GBuffer_Metalness;
 uniform sampler2D GBuffer_Depth;
-uniform samplerCube EnvCubemap;
+uniform samplerCube EnvDiffuse;
 
 uniform vec3 AmbientTerm;
 uniform vec4 MainLightPosition;
@@ -20,10 +20,26 @@ uniform mat4x4 InvProjection;
 
 out vec4 outColor;
 
-// Schlick-Frensel curve approximation
-vec3 Fresnel(vec3 f0, float cosTheta)
+struct Material
 {
-    return mix(f0, vec3(1.0), pow(1.01 - cosTheta, 5.0));
+	vec3 Albedo;
+	vec3 Emissive;
+	float Roughness;
+	float Metalness;
+	float Occlusion;
+};
+
+// Schlick-Frensel curve approximation
+vec3 FresnelSchlick(vec3 F0, float cosTheta)
+{
+    return mix(F0, vec3(1.0), pow(1.01 - cosTheta, 5.0));
+}
+
+// Schlick-Frensel approximation with added roughness lerp for ambient IBL
+// See: https://seblagarde.wordpress.com/2011/08/17/hello-world/
+vec3 FresnelSchlickWithRoughness(vec3 F0, float cosTheta, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 // Reconstruct view space position from depth
@@ -39,6 +55,7 @@ vec3 ViewPositionFromDepth(vec2 texcoord, float depth)
   return positionVS.xyz / positionVS.w;
 }
 
+// NDF
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a      = roughness*roughness;
@@ -53,6 +70,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
     return num / denom;
 }
 
+// G
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
@@ -63,6 +81,8 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 
     return num / denom;
 }
+
+// F
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
@@ -73,7 +93,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-// simple phong specular calculation with normalization
+// Simple phong specular calculation with normalization
 vec3 PhongSpecular(vec3 V, vec3 L, vec3 N, vec3 specular, float roughness)
 {
     vec3 R = reflect(-L, N);
@@ -85,35 +105,21 @@ vec3 PhongSpecular(vec3 V, vec3 L, vec3 N, vec3 specular, float roughness)
 // Full Cook-Torrence BRDF
 vec3 CookTorrenceSpecularBRDF(vec3 F, vec3 N, vec3 V, vec3 H, vec3 L, float roughness)
 {
-  float NDF = DistributionGGX(N, H, roughness);
+  float D = DistributionGGX(N, H, roughness);
   float G   = GeometrySmith(N, V, L, roughness);
 
-  vec3 numerator    = NDF * G * F;
+  vec3 numerator    = D * G * F;
   float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
   vec3 specular     = numerator / max(denominator, 0.001);
 
   return specular;
 }
 
-void main()
+// PBR Direct lighting
+vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
 {
-  // Surface Properties
-	vec4 albedoAO = texture(GBuffer_Albedo, Texcoord);
-  vec3 albedo = pow(albedoAO.rgb, vec3(2.2)); // Convert gamme color space to linear
-	vec3 N = normalize(texture(GBuffer_Normal, Texcoord).xyz);
-	float metalness = texture(GBuffer_Metalness, Texcoord).r;
-	float roughness = texture(GBuffer_Roughness, Texcoord).r;
-  float occlusion = albedoAO.w;
-	float depth = texture(GBuffer_Depth, Texcoord).x;
-  vec3 position = ViewPositionFromDepth(Texcoord, depth);
-	vec4 worldN = InvView * vec4(N, 0);
- 	vec3 envAmbientColor = texture(EnvCubemap, worldN.xyz).xyz;
-
   // Direction to light in viewspace
-  vec3 L = normalize(MainLightPosition.xyz - position * MainLightPosition.w);
-
-  // Direction to eye in viewspace
-  vec3 V = normalize(-position);
+  vec3 L = normalize(MainLightPosition.xyz - P * MainLightPosition.w);
 
   // Half-Vector between light and eye in viewspace
   vec3 H = normalize(L + V);
@@ -124,23 +130,74 @@ void main()
   // cos(angle) between surface half vector and eye
   float HdV = max(0.001, dot(H, V));
 
-  vec3 radiance = MainLightColor * MainLightIntensity;
-  vec3 F0 = mix(vec3(0.04f), albedo, metalness);
-
   // Cook Torrence Terms
-  vec3 F = Fresnel(F0, HdV);
+  vec3 F = FresnelSchlick(F0, HdV);
   vec3 kD =  vec3(1.0) - F;
-  vec3 specBrdf = CookTorrenceSpecularBRDF(F, N, V, H, L, roughness);
 
+  // BRDF
+  vec3 specBrdf = CookTorrenceSpecularBRDF(F, N, V, H, L, m.Roughness);
+	vec3 diffuseBrdf = kD * (m.Albedo / PI) * (1.0 - m.Metalness); // Lambert diffuse
+
+  // L
+  vec3 radiance = MainLightColor * MainLightIntensity;
+  return (specBrdf + diffuseBrdf) * radiance * NdL;
+}
+
+// PBR IBL from Env map
+vec3 IBLAmbientRadiance(vec3 N, vec3 V, Material m, vec3 F0)
+{
+	vec4 worldN = InvView * vec4(N, 0);	// World normal
+	vec3 irradiance = texture(EnvDiffuse, worldN.xyz).xyz;
+
+  // cos(angle) between surface normal and eye
+  float NdV = max(0.001, dot(N, V));
+
+	vec3 kS = FresnelSchlickWithRoughness(F0, NdV, m.Roughness);
+	vec3 kD = 1.0 - kS;
+
+	vec3 diffuseBrdf = kD * m.Albedo * (1.0 - m.Metalness); // Lambert diffuse
+	//TODO: IBL Specular
+
+	return diffuseBrdf * irradiance * m.Occlusion; // IBL ambient
+}
+
+void main()
+{
+  // Sample G-Buffer
+	vec4 albedoAO = texture(GBuffer_Albedo, Texcoord);
+	vec4 emissiveRough = texture(GBuffer_Roughness, Texcoord);
+	vec3 N = normalize(texture(GBuffer_Normal, Texcoord).xyz);
+	float metal = texture(GBuffer_Metalness, Texcoord).r;
+	float D = texture(GBuffer_Depth, Texcoord).x;
+
+	// Setup surface material
+	Material m;
+	m.Albedo = pow(albedoAO.rgb, vec3(2.2)); // Gamme to linear
+	m.Emissive = pow(emissiveRough.xyz, vec3(2.2));
+	m.Roughness = emissiveRough.w;
+	m.Metalness = metal;
+	m.Occlusion = albedoAO.w;
+
+	// Recompute viewspace position from UV + depth
+  vec3 P = ViewPositionFromDepth(Texcoord, D);
+
+  // Direction to eye in viewspace
+  vec3 V = normalize(-P);
+
+	// Lerp between Dia-electric = 0.04f to Metal = albedo
+  vec3 F0 = mix(vec3(0.04f), m.Albedo, m.Metalness);
+
+  // Lighting
   vec3 result = vec3(0.0);
-  result += specBrdf * radiance * NdL; // cook-torrence specular
-  result += kD * (albedo / PI * (1.0 - metalness)) * radiance * NdL;  // lambert diffuse
-  result += albedo * AmbientTerm * occlusion; // IBL ambient
+  result += DirectRadiance(P, N, V, m, F0);
+  result += IBLAmbientRadiance(N, V, m, F0);
+  result += m.Emissive * 4.0;
 
   // Linear back to gamma space via Reinhard tonemapping
   result = result / (result + vec3(1.0));
   result = pow(result, vec3(1.0/2.2));
 
+	// Shader output
 	outColor = vec4(result, 1.0);
-	gl_FragDepth = depth;
+	gl_FragDepth = D;
 }

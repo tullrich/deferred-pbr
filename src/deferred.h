@@ -42,6 +42,7 @@ typedef struct
 	GLint metalness_map_loc;
 	GLint roughness_map_loc;
 	GLint ao_map_loc;
+	GLint emissive_map_loc;
 
 	GLint modelview_loc;
 	GLint invTModelview_loc;
@@ -49,6 +50,7 @@ typedef struct
 	GLint albedo_base_loc;
 	GLint roughness_base_loc;
 	GLint metalness_base_loc;
+	GLint emissive_base_loc;
 } SurfaceShader;
 
 typedef struct
@@ -71,7 +73,7 @@ typedef struct
 		};
 		GLint gbuffer_locs[GBUFFER_ATTACHMENTS_COUNT];
 	};
-	GLint env_map_loc;
+	GLint env_diffuse_map_loc;
 
 	// shader vars
 	GLint ambient_term_loc;
