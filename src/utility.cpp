@@ -11,6 +11,10 @@ void utility_report_gl_err(const char * file, const char * func, int line) {
 	}
 }
 
+void utility_gl_debug_cb(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
+	printf("GL Error: %s", message);
+}
+
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size) {
 	FILE *fd;
 	int ret = 1;
@@ -69,19 +73,20 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 	sources[i] = file_contents + skip_len;
 	lengths[i] = (GLint)(file_len - skip_len);
 
-	GLuint shader = glCreateShader(shader_type);
-	glShaderSource(shader, i+1, sources, lengths);
-	glCompileShader(shader);
+	GLuint shader;
+	GL_WRAP(shader = glCreateShader(shader_type));
+	GL_WRAP(glShaderSource(shader, i+1, sources, lengths));
+	GL_WRAP(glCompileShader(shader));
 	free(file_contents);
 
 	GLint compiled_result;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled_result);
+	GL_WRAP(glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled_result));
 	if (compiled_result != GL_TRUE) {
 		GLsizei log_length = 0;
 		GLchar message[1024];
-		glGetShaderInfoLog(shader, 1024, &log_length, message);
+		GL_WRAP(glGetShaderInfoLog(shader, 1024, &log_length, message));
 		printf("Shader '%s' Compile Error: %s\n", filename, message);
-		glDeleteShader(shader);
+		GL_WRAP(glDeleteShader(shader));
 		return 0;
 	}
 
@@ -89,14 +94,14 @@ GLuint utility_create_shader(const char *filename, GLenum shader_type, const cha
 }
 
 GLuint utility_link_program(GLuint program) {
-	glLinkProgram(program);
+	GL_WRAP(glLinkProgram(program));
 
 	GLint program_linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
+	GL_WRAP(glGetProgramiv(program, GL_LINK_STATUS, &program_linked));
 	if (program_linked != GL_TRUE) {
 		GLsizei log_length = 0;
 		GLchar message[1024];
-		glGetProgramInfoLog(program, 1024, &log_length, message);
+		GL_WRAP(glGetProgramInfoLog(program, 1024, &log_length, message));
 		printf("Shader Link Error: %s\n", message);
 		return 1;
 	}
@@ -115,146 +120,153 @@ GLuint utility_create_program_defines(const char *vert_filename, const char *fra
 
 	GLint frag_shader;
 	if (!(frag_shader = utility_create_shader(frag_filename, GL_FRAGMENT_SHADER, defines, defines_count))) {
-		glDeleteShader(vert_shader);
+		GL_WRAP(glDeleteShader(vert_shader));
 		return 0;
 	}
 
-	GLuint program = glCreateProgram();
-	glAttachShader(program, vert_shader);
-	glAttachShader(program, frag_shader);
+	GLuint program;
+	GL_WRAP(program = glCreateProgram());
+	GL_WRAP(glAttachShader(program, vert_shader));
+	GL_WRAP(glAttachShader(program, frag_shader));
 	if (utility_link_program(program)) {
-		glDeleteProgram(program);
+		GL_WRAP(glDeleteProgram(program));
 		program = 0;
 	}
 
-	glDeleteShader(vert_shader);
-	glDeleteShader(frag_shader);
+	GL_WRAP(glDeleteShader(vert_shader));
+	GL_WRAP(glDeleteShader(frag_shader));
 
 	printf("Loaded Program -- Vertex: '%s' Fragment: '%s' Defines: %i\n", vert_filename, frag_filename, defines_count);
 	return program;
 }
 
-GLuint utility_load_texture_scalar(const vec4 value) {
+GLuint utility_load_texture_constant(const vec4 value) {
 	GLuint texture_id;
-	glGenTextures(1, &texture_id);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_FLOAT, value);
+	GL_WRAP(glGenTextures(1, &texture_id));
+	GL_WRAP(glBindTexture(GL_TEXTURE_2D, texture_id));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT));
+	GL_WRAP(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_FLOAT, value));
 	return texture_id;
 }
 
 GLuint utility_load_texture_unknown() {
 	GLuint texture_id;
-	glGenTextures(1, &texture_id);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	GL_WRAP(glGenTextures(1, &texture_id));
+	GL_WRAP(glBindTexture(GL_TEXTURE_2D, texture_id));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT));
 	unsigned char pixel[] = {
 		0, 255, 0, 255,
 		255, 0, 0, 255,
 		0, 0, 255, 255,
 		0, 0, 0, 255 };
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+	GL_WRAP(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel));
 	return texture_id;
 }
 
 void utility_draw_cube(GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc, float min, float max) {
-	glBegin(GL_QUADS);
-		// back face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, -1, 0, 0, 1);
-		glVertexAttrib3f(normal_loc, 0, 0, -1);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, min, min, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, min, max, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, max, max, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, max, min, min);
+	GL_WRAP(
+		glBegin(GL_QUADS);
+			// back face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, -1, 0, 0, 1);
+			glVertexAttrib3f(normal_loc, 0, 0, -1);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, min, min, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, min, max, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, max, max, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, max, min, min);
 
-		// front face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
-		glVertexAttrib3f(normal_loc, 0, 0, 1);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, max, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, min, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, min, min, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, max, min, max);
+			// front face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
+			glVertexAttrib3f(normal_loc, 0, 0, 1);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, max, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, min, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, min, min, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, max, min, max);
 
-		// right face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 0, 0, 1, 1);
-		glVertexAttrib3f(normal_loc, -1, 0, 0);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, min, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, min, max, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, min, min, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, min, min, max);
+			// right face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 0, 0, 1, 1);
+			glVertexAttrib3f(normal_loc, -1, 0, 0);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, min, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, min, max, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, min, min, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, min, min, max);
 
-		// left face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 0, 0, -1, 1);
-		glVertexAttrib3f(normal_loc, 1, 0, 0);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, max, max, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, max, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, max, min, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, max, min, min);
+			// left face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 0, 0, -1, 1);
+			glVertexAttrib3f(normal_loc, 1, 0, 0);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, max, max, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, max, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, max, min, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, max, min, min);
 
-		// bottom face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
-		glVertexAttrib3f(normal_loc, 0, -1, 0);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, min, min, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, max, min, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, max, min, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, min, min, max);
+			// bottom face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
+			glVertexAttrib3f(normal_loc, 0, -1, 0);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, min, min, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, max, min, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, max, min, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, min, min, max);
 
-		// top face
-		if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
-		glVertexAttrib3f(normal_loc, 0, 1, 0);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
-		glVertexAttrib3f(pos_loc, min, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
-		glVertexAttrib3f(pos_loc, max, max, max);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
-		glVertexAttrib3f(pos_loc, max, max, min);
-		if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
-		glVertexAttrib3f(pos_loc, min, max, min);
-	glEnd();
+			// top face
+			if (tangent_loc >= 0) glVertexAttrib4f(tangent_loc, 1, 0, 0, 1);
+			glVertexAttrib3f(normal_loc, 0, 1, 0);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 0);
+			glVertexAttrib3f(pos_loc, min, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 0);
+			glVertexAttrib3f(pos_loc, max, max, max);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 1, 1);
+			glVertexAttrib3f(pos_loc, max, max, min);
+			if (texcoord_loc >= 0) glVertexAttrib2f(texcoord_loc, 0, 1);
+			glVertexAttrib3f(pos_loc, min, max, min);
+		glEnd();
+	);
 }
 
 void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
-	glBegin(GL_QUADS);
-		glVertexAttrib2f(texcoord_loc, 1.0f, 0.0f); glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
-		glVertexAttrib2f(texcoord_loc, 1.0f, 1.0f); glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
-		glVertexAttrib2f(texcoord_loc, 0.0f, 1.0f); glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
-		glVertexAttrib2f(texcoord_loc, 0.0f, 0.0f); glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
-	glEnd();
+	GL_WRAP(
+		glBegin(GL_QUADS);
+			glVertexAttrib2f(texcoord_loc, 1.0f, 0.0f); glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
+			glVertexAttrib2f(texcoord_loc, 1.0f, 1.0f); glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
+			glVertexAttrib2f(texcoord_loc, 0.0f, 1.0f); glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
+			glVertexAttrib2f(texcoord_loc, 0.0f, 0.0f); glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
+		glEnd();
+	);
 }
 
 void utility_draw_fullscreen_quad2(GLint texcoord_loc, GLint pos_loc) {
-	glBegin( GL_QUADS );
-		glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
-		glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
-		glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
-		glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
-	glEnd();
+	GL_WRAP(
+		glBegin(GL_QUADS);
+			glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
+			glVertexAttrib2f(pos_loc, 1.0f, 1.0f);
+			glVertexAttrib2f(pos_loc, -1.0f, 1.0f);
+			glVertexAttrib2f(pos_loc, -1.0f, -1.0f);
+		glEnd()
+	);
 }
 
 static GLint components_to_gl_format(int components) {
@@ -276,7 +288,7 @@ static const GLenum gl_cubemap_targets[] = {
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
 };
 
-GLuint utility_load_image(GLenum target, const char *filepath) {
+GLuint utility_load_texture(GLenum target, const char *filepath) {
 	int width, height;
 	int components;
 	unsigned char* data;
@@ -295,18 +307,18 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 		return 0;
 	}
 
-	glGenTextures(1, &texture_id);
-	glBindTexture(target, texture_id);
+	GL_WRAP(glGenTextures(1, &texture_id));
+	GL_WRAP(glBindTexture(target, texture_id));
 
-	glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 
-	glTexImage2D(target, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+	GL_WRAP(glTexImage2D(target, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data));
 	stbi_image_free(data);
 
-	glGenerateMipmap(target);
+	GL_WRAP(glGenerateMipmap(target));
 
 	printf("Loaded Image -- '%s' Width: %i Height %i Components %i\n", filepath, width, height, components);
 
@@ -315,8 +327,8 @@ GLuint utility_load_image(GLenum target, const char *filepath) {
 
 GLuint utility_load_cubemap(const char* const* filepaths) {
 	GLuint texture_id;
-	glGenTextures(1, &texture_id);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);
+	GL_WRAP(glGenTextures(1, &texture_id));
+	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id));
 
 	int width, height;
 	int components;
@@ -325,27 +337,27 @@ GLuint utility_load_cubemap(const char* const* filepaths) {
 	stbi_set_flip_vertically_on_load(0);
 	for (int i = 0; i < 6; i++) {
 		if(!(data = stbi_load(filepaths[i], &width, &height, &components, 0))) {
-			glDeleteTextures(1, &texture_id);
+			GL_WRAP(glDeleteTextures(1, &texture_id));
 			printf("Error loading stb image '%s' with error: %s\n", filepaths[i], stbi_failure_reason());
 			return 0;
 		}
 
 		if ((format = components_to_gl_format(components)) == 0) {
 			printf("Unsupported image format '%s', with %i channels.\n", filepaths[i], components);
-			glDeleteTextures(1, &texture_id);
+			GL_WRAP(glDeleteTextures(1, &texture_id));
 			stbi_image_free(data);
 			return 0;
 		}
 
-		glTexImage2D(gl_cubemap_targets[i], 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		GL_WRAP(glTexImage2D(gl_cubemap_targets[i], 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data));
 		stbi_image_free(data);
 	}
 
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE))
+	GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+	GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+	GL_WRAP(glGenerateMipmap(GL_TEXTURE_CUBE_MAP));
 
 	printf("Loaded Cubemap -- '%s' Width: %i Height %i Components %i\n", filepaths[0], width, height, components);
 	return texture_id;
@@ -354,7 +366,7 @@ GLuint utility_load_cubemap(const char* const* filepaths) {
 void utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b) {
 	//uint32_t c = 0x606060;
 	//glClearColor((c&0xff)/255.0f, (c>>8&0xff)/255.0f, (c>>16&0xff)/255.0f, 1.0f);
-	glClearColor(r/255.0f, g/255.0f, b/255.0f, 1.0f);
+	GL_WRAP(glClearColor(r/255.0f, g/255.0f, b/255.0f, 1.0f));
 }
 
 float utility_secs_since_launch() {

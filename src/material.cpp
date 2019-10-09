@@ -5,12 +5,12 @@ static const vec4 Normal_Z_Up = { 0.5f, 0.5f, 1.0f, 0.0f };
 
 int material_initialize_default(Material *out) {
   memset(out, 0, sizeof(Material));
-  out->albedo_map = utility_load_texture_scalar(White);
-  out->normal_map = utility_load_texture_scalar(Normal_Z_Up);
-  out->metalness_map = utility_load_texture_scalar(White);
-  out->roughness_map = utility_load_texture_scalar(White);
-  out->ao_map = utility_load_texture_scalar(White);
-  out->emissive_map = utility_load_texture_scalar(White);
+  out->albedo_map = utility_load_texture_constant(White);
+  out->normal_map = utility_load_texture_constant(Normal_Z_Up);
+  out->metalness_map = utility_load_texture_constant(White);
+  out->roughness_map = utility_load_texture_constant(White);
+  out->ao_map = utility_load_texture_constant(White);
+  out->emissive_map = utility_load_texture_constant(White);
   vec3_swizzle(out->albedo_base, 1.0f);
   out->metalness_base = 0.0f;
   out->roughness_base = 1.0f;
@@ -20,17 +20,19 @@ int material_initialize_default(Material *out) {
 
 int material_initialize(Material *out, const MaterialDesc *desc) {
   memset(out, 0, sizeof(Material));
-  if (!desc->albedo_map_path || !(out->albedo_map = utility_load_image(GL_TEXTURE_2D, desc->albedo_map_path)))
+
+  if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture(GL_TEXTURE_2D, desc->albedo_map_path)))
+  // if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture_dds("images/test.dds")))
     out->albedo_map = 0;
-  if (!desc->normal_map_path || !(out->normal_map = utility_load_image(GL_TEXTURE_2D, desc->normal_map_path)))
+  if (!desc->normal_map_path || !(out->normal_map = utility_load_texture(GL_TEXTURE_2D, desc->normal_map_path)))
     out->normal_map= 0;
-  if (!desc->metalness_map_path || !(out->metalness_map = utility_load_image(GL_TEXTURE_2D, desc->metalness_map_path)))
+  if (!desc->metalness_map_path || !(out->metalness_map = utility_load_texture(GL_TEXTURE_2D, desc->metalness_map_path)))
     out->metalness_map = 0;
-  if (!desc->roughness_map_path || !(out->roughness_map = utility_load_image(GL_TEXTURE_2D, desc->roughness_map_path)))
+  if (!desc->roughness_map_path || !(out->roughness_map = utility_load_texture(GL_TEXTURE_2D, desc->roughness_map_path)))
     out->roughness_map = 0;
-  if (!desc->ao_map_path || !(out->ao_map = utility_load_image(GL_TEXTURE_2D, desc->ao_map_path)))
+  if (!desc->ao_map_path || !(out->ao_map = utility_load_texture(GL_TEXTURE_2D, desc->ao_map_path)))
     out->ao_map = 0;
-  if (!desc->emissive_map_path || !(out->emissive_map = utility_load_image(GL_TEXTURE_2D, desc->emissive_map_path)))
+  if (!desc->emissive_map_path || !(out->emissive_map = utility_load_texture(GL_TEXTURE_2D, desc->emissive_map_path)))
     out->emissive_map = 0;
   vec3_dup(out->albedo_base, desc->albedo_base);
   out->metalness_base = desc->metalness_base;

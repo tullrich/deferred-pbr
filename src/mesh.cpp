@@ -133,50 +133,50 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 
 void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc) {
 	assert(mesh->vertices && pos_loc >= 0);
-	glEnableVertexAttribArray(pos_loc);
-	glVertexAttribPointer(pos_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->vertices);
+	GL_WRAP(glEnableVertexAttribArray(pos_loc));
+	GL_WRAP(glVertexAttribPointer(pos_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->vertices));
 	if (normal_loc >= 0) {
 		if (mesh->normals) {
-			glEnableVertexAttribArray(normal_loc);
-			glVertexAttribPointer(normal_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->normals);
+			GL_WRAP(glEnableVertexAttribArray(normal_loc));
+			GL_WRAP(glVertexAttribPointer(normal_loc, 3, GL_FLOAT, GL_FALSE, 0, mesh->normals));
 		} else {
-			glDisableVertexAttribArray(normal_loc);
-			glVertexAttrib4f(normal_loc, 0.f, 0.f, 0.f, 0.f);
+			GL_WRAP(glDisableVertexAttribArray(normal_loc));
+			GL_WRAP(glVertexAttrib4f(normal_loc, 0.f, 0.f, 0.f, 0.f));
 		}
 	}
 	if (tangent_loc >= 0) {
 		if (mesh->tangents) {
-			glEnableVertexAttribArray(tangent_loc);
-			glVertexAttribPointer(tangent_loc, 4, GL_FLOAT, GL_FALSE, 0, mesh->tangents);
+			GL_WRAP(glEnableVertexAttribArray(tangent_loc));
+			GL_WRAP(glVertexAttribPointer(tangent_loc, 4, GL_FLOAT, GL_FALSE, 0, mesh->tangents));
 		}
 		else {
-			glDisableVertexAttribArray(tangent_loc);
-			glVertexAttrib4f(tangent_loc, 0.f, 0.f, 0.f, 0.f);
+			GL_WRAP(glDisableVertexAttribArray(tangent_loc));
+			GL_WRAP(glVertexAttrib4f(tangent_loc, 0.f, 0.f, 0.f, 0.f));
 		}
 	}
 	if (texcoord_loc >= 0) {
 		if (mesh->texcoords) {
-			glEnableVertexAttribArray(texcoord_loc);
-			glVertexAttribPointer(texcoord_loc, 2, GL_FLOAT, GL_FALSE, 0, mesh->texcoords);
+			GL_WRAP(glEnableVertexAttribArray(texcoord_loc));
+			GL_WRAP(glVertexAttribPointer(texcoord_loc, 2, GL_FLOAT, GL_FALSE, 0, mesh->texcoords));
 		}
 		else {
-			glDisableVertexAttribArray(texcoord_loc);
-			glVertexAttrib4f(texcoord_loc, 0.f, 0.f, 0.f, 0.f);
+			GL_WRAP(glDisableVertexAttribArray(texcoord_loc));
+			GL_WRAP(glVertexAttrib4f(texcoord_loc, 0.f, 0.f, 0.f, 0.f));
 		}
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	GL_WRAP(glBindBuffer(GL_ARRAY_BUFFER, 0));
+	GL_WRAP(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 
 	if (mesh->indices) {
-		glDrawElements(mesh->mode, mesh->index_count, GL_UNSIGNED_INT, mesh->indices);
+		GL_WRAP(glDrawElements(mesh->mode, mesh->index_count, GL_UNSIGNED_INT, mesh->indices));
 	} else {
-		glDrawArrays(mesh->mode, 0, mesh->vertex_count);
+		GL_WRAP(glDrawArrays(mesh->mode, 0, mesh->vertex_count));
 	}
 
-	glDisableVertexAttribArray(pos_loc);
-	if (normal_loc >= 0) glDisableVertexAttribArray(normal_loc);
-	if (tangent_loc >= 0) glDisableVertexAttribArray(tangent_loc);
-	if (texcoord_loc >= 0) glDisableVertexAttribArray(texcoord_loc);
+	GL_WRAP(glDisableVertexAttribArray(pos_loc));
+	if (normal_loc >= 0) GL_WRAP(glDisableVertexAttribArray(normal_loc));
+	if (tangent_loc >= 0) GL_WRAP(glDisableVertexAttribArray(tangent_loc));
+	if (texcoord_loc >= 0) GL_WRAP(glDisableVertexAttribArray(texcoord_loc));
 }
 
 void mesh_free(Mesh *out_mesh) {

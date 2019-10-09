@@ -2,7 +2,9 @@
 #include "common.h"
 
 void utility_report_gl_err(const char * file, const char * func, int line);
+void utility_gl_debug_cb(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam);
 #define GL_CHECK_ERROR() utility_report_gl_err(__FILE__,__FUNCTION__,__LINE__)
+#define GL_WRAP(stmt) do { stmt; GL_CHECK_ERROR(); } while(0);
 
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size);
 GLuint utility_create_shader(const char *filename, GLenum shader_type, const char** defines, int defines_count);

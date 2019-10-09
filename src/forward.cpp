@@ -1,20 +1,22 @@
 #include "forward.h"
 
 static void draw_quad(const ParticleShader* shader, const vec3 translation, const vec3 rot, const vec3 scale, const vec4 color) {
-	glBegin(GL_QUADS);
-		if (shader->trans_loc >= 0) glVertexAttrib3f(shader->trans_loc, translation[0], translation[1], translation[2]);
-		if (shader->rot_loc >= 0) glVertexAttrib3f(shader->rot_loc, rot[0], rot[1], rot[2]);
-		if (shader->scale_loc >= 0) glVertexAttrib3f(shader->scale_loc, scale[0], scale[1], scale[2]);
-		if (shader->color_loc >= 0) glVertexAttrib4f(shader->color_loc, color[0], color[1], color[2], color[3]);
-		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 0);
-		glVertexAttrib3f(shader->vert_loc, 0.5f, -0.5f, 0.0f);
-		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 1.0f);
-		glVertexAttrib3f(shader->vert_loc, 0.5f, 0.5f, 0.0f);
-		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 1.0f);
-		glVertexAttrib3f(shader->vert_loc, -0.5f, 0.5f, 0.0f);
-		if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 0);
-		glVertexAttrib3f(shader->vert_loc, -0.5f, -0.5f, 0.0f);
-	glEnd();
+	GL_WRAP(
+		glBegin(GL_QUADS);
+			if (shader->trans_loc >= 0) glVertexAttrib3f(shader->trans_loc, translation[0], translation[1], translation[2]);
+			if (shader->rot_loc >= 0) glVertexAttrib3f(shader->rot_loc, rot[0], rot[1], rot[2]);
+			if (shader->scale_loc >= 0) glVertexAttrib3f(shader->scale_loc, scale[0], scale[1], scale[2]);
+			if (shader->color_loc >= 0) glVertexAttrib4f(shader->color_loc, color[0], color[1], color[2], color[3]);
+			if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 0);
+			glVertexAttrib3f(shader->vert_loc, 0.5f, -0.5f, 0.0f);
+			if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 1, 1.0f);
+			glVertexAttrib3f(shader->vert_loc, 0.5f, 0.5f, 0.0f);
+			if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 1.0f);
+			glVertexAttrib3f(shader->vert_loc, -0.5f, 0.5f, 0.0f);
+			if (shader->uv_loc >= 0) glVertexAttrib2f(shader->uv_loc, 0, 0);
+			glVertexAttrib3f(shader->vert_loc, -0.5f, -0.5f, 0.0f);
+		glEnd();
+	);
 }
 
 static void calculate_billboard_euler(vec3 euler, mat4x4 model, const Scene *s) {
@@ -46,25 +48,25 @@ static int load_particle_shader(ParticleShader* shader, const char* vert, const 
 		printf("Unable to load shader [%s. %s]\n", vert, frag);
 		return 1;
 	}
-	glBindAttribLocation(shader->program, 0, "vert");
-	glBindAttribLocation(shader->program, 1, "translation");
-	glBindAttribLocation(shader->program, 2, "rotation");
-	glBindAttribLocation(shader->program, 3, "scale");
-	glBindAttribLocation(shader->program, 4, "texcoord");
-	glBindAttribLocation(shader->program, 5, "color");
+	GL_WRAP(glBindAttribLocation(shader->program, 0, "vert"));
+	GL_WRAP(glBindAttribLocation(shader->program, 1, "translation"));
+	GL_WRAP(glBindAttribLocation(shader->program, 2, "rotation"));
+	GL_WRAP(glBindAttribLocation(shader->program, 3, "scale"));
+	GL_WRAP(glBindAttribLocation(shader->program, 4, "texcoord"));
+	GL_WRAP(glBindAttribLocation(shader->program, 5, "color"));
 	if (utility_link_program(shader->program)) {
 		printf( "Unable to load shader\n" );
 		return 1;
 	}
-	shader->vert_loc = glGetAttribLocation(shader->program, "vert");
-	shader->trans_loc = glGetAttribLocation(shader->program, "translation");
-	shader->rot_loc = glGetAttribLocation(shader->program, "rotation");
-	shader->scale_loc = glGetAttribLocation(shader->program, "scale");
-	shader->uv_loc = glGetAttribLocation(shader->program, "texcoord");
-	shader->color_loc = glGetAttribLocation(shader->program, "color");
-	shader->modelviewproj_loc = glGetUniformLocation(shader->program, "ModelViewProj");
-	shader->texture_loc = glGetUniformLocation(shader->program, "Texture");
-	shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth");
+	GL_WRAP(shader->vert_loc = glGetAttribLocation(shader->program, "vert"));
+	GL_WRAP(shader->trans_loc = glGetAttribLocation(shader->program, "translation"));
+	GL_WRAP(shader->rot_loc = glGetAttribLocation(shader->program, "rotation"));
+	GL_WRAP(shader->scale_loc = glGetAttribLocation(shader->program, "scale"));
+	GL_WRAP(shader->uv_loc = glGetAttribLocation(shader->program, "texcoord"));
+	GL_WRAP(shader->color_loc = glGetAttribLocation(shader->program, "color"));
+	GL_WRAP(shader->modelviewproj_loc = glGetUniformLocation(shader->program, "ModelViewProj"));
+	GL_WRAP(shader->texture_loc = glGetUniformLocation(shader->program, "Texture"));
+	GL_WRAP(shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth"));
 	return 0;
 }
 
@@ -72,10 +74,10 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, floa
 		const ParticleShader* shader = &f->particle_shader_textured;
 
 		// bind shader
-		glUseProgram(shader->program);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha blend
+		GL_WRAP(glUseProgram(shader->program));
+		GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+		GL_WRAP(glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+		GL_WRAP(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); // alpha blend
 
 		mat4x4 model;
 		mat4x4_identity(model);
@@ -84,12 +86,12 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, floa
 		// bind model-view-projection matrix
 		mat4x4 mvp;
 		mat4x4_mul(mvp, s->camera.viewProj, model);
-		glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp);
+		GL_WRAP(glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp));
 
 		// bind texture
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glUniform1i(shader->texture_loc, 0);
+		GL_WRAP(glActiveTexture(GL_TEXTURE0));
+		GL_WRAP(glBindTexture(GL_TEXTURE_2D, texture));
+		GL_WRAP(glUniform1i(shader->texture_loc, 0));
 
 		// calculate billboard factor
 		vec3 rot;
@@ -120,7 +122,7 @@ int forward_initialize(Forward* f) {
 		return 1;
 	}
 
-	if ((f->light_icon = utility_load_image(GL_TEXTURE_2D, "icons/lightbulb.png")) < 0) {
+	if ((f->light_icon = utility_load_texture(GL_TEXTURE_2D, "icons/lightbulb.png")) < 0) {
 		return 1;
 	}
 
@@ -129,12 +131,12 @@ int forward_initialize(Forward* f) {
 
 void forward_render(Forward* f, Scene *s) {
 	// bind default backbuffer
-	glDepthMask(GL_FALSE);
+	GL_WRAP(glDepthMask(GL_FALSE));
 
 	// setup render state
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-	glBlendEquation(GL_FUNC_ADD);
+	GL_WRAP(glDisable(GL_CULL_FACE));
+	GL_WRAP(glEnable(GL_BLEND));
+	GL_WRAP(glBlendEquation(GL_FUNC_ADD));
 
 	// draw emitters
 	for (int i = 0; i < SCENE_EMITTERS_MAX, s->emitters[i]; i++) {
@@ -157,16 +159,16 @@ void forward_render(Forward* f, Scene *s) {
 		}
 
 		// bind particle program
-		glUseProgram(shader->program);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT);
+		GL_WRAP(glUseProgram(shader->program));
+		GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+		GL_WRAP(glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
 
 		// depth sort and select blend mode
 		if (desc->depth_sort_alpha_blend) {
 			particle_emitter_sort(emitter, s->camera.pos);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha blend
+			GL_WRAP(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); // alpha blend
 		} else {
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive blend
+			GL_WRAP(glBlendFunc(GL_SRC_ALPHA, GL_ONE)); // additive blend
 		}
 
 		// calculate model matrix
@@ -176,20 +178,20 @@ void forward_render(Forward* f, Scene *s) {
 		// bind model-view-projection matrix
 		mat4x4 mvp;
 		mat4x4_mul(mvp, s->camera.viewProj, model);
-		glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp);
+		GL_WRAP(glUniformMatrix4fv(shader->modelviewproj_loc, 1, GL_FALSE, (const GLfloat*)mvp));
 
 		// bind depth texture for 'soft' particles
 		if (desc->soft && f->g_buffer && shader->gbuffer_depth_loc != -1) {
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, f->g_buffer->depth_render_buffer);
-			glUniform1i(shader->gbuffer_depth_loc, 0);
+			GL_WRAP(glActiveTexture(GL_TEXTURE0));
+			GL_WRAP(glBindTexture(GL_TEXTURE_2D, f->g_buffer->depth_render_buffer));
+			GL_WRAP(glUniform1i(shader->gbuffer_depth_loc, 0));
 		}
 
 		// bind texture
 		if (shader->texture_loc >= 0 && desc->texture >= 0) {
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, desc->texture);
-			glUniform1i(shader->texture_loc, 1);
+			GL_WRAP(glActiveTexture(GL_TEXTURE1));
+			GL_WRAP(glBindTexture(GL_TEXTURE_2D, desc->texture));
+			GL_WRAP(glUniform1i(shader->texture_loc, 1));
 		}
 
 		// calc optional billboarding euler angles
@@ -221,7 +223,5 @@ void forward_render(Forward* f, Scene *s) {
 	// Draw main light icon
 	draw_billboard(f, f->light_icon, s->light->position, 2.0f, s);
 
-	glDepthMask(GL_TRUE);
-
-	GL_CHECK_ERROR();
+	GL_WRAP(glDepthMask(GL_TRUE));
 }

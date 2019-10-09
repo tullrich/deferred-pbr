@@ -174,7 +174,7 @@ static ParticleEmitterDesc gEmitterDescs[] = {
 
 static int initialize_particle_rendering() {
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTextures); i++) {
-		if ((gParticleTextures[i].texture = utility_load_image(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
+		if ((gParticleTextures[i].texture = utility_load_texture(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
 			return 1;
 		}
 	}
@@ -321,7 +321,6 @@ static int initialize() {
 		return err;
 	}
 
-	GL_CHECK_ERROR();
 	printf("<-- Initialization complete -->\n");
 	return 0;
 }
@@ -360,7 +359,7 @@ static int frame() {
 
 	// clear backbuffer
 	utility_set_clear_color(0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// render
 	deferred_render(&gDeferred, &gScene);
@@ -482,6 +481,8 @@ int main(int argc, char* argv[]) {
   SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
   SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
   SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
   // init platform window
 	SDL_Window*	window;
@@ -495,6 +496,10 @@ int main(int argc, char* argv[]) {
 	SDL_GL_SetSwapInterval(1); // Enable vsync
 	glewExperimental = 1;
 	glewInit();
+
+	if (GLEW_EXT_texture_compression_s3tc) {
+		printf("texture_compression_s3tc found\n");
+	}
 
 	// init Imgui
   IMGUI_CHECKVERSION();
