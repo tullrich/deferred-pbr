@@ -1,6 +1,8 @@
 #include "utility.h"
 #include "scene.h"
+
 #include "imgui/ImGuizmo.h"
+#include "gli/gli.hpp"
 
 void utility_report_gl_err(const char * file, const char * func, int line) {
 	GLenum e;
@@ -393,4 +395,66 @@ void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj) {
 		&manip_mat[0][0]
 	);
 	vec3_dup(out, manip_mat[3]);
+}
+
+GLuint utility_load_texture_dds(const char* filepath) {
+	gli::texture Texture = gli::load(filepath);
+	if (Texture.empty()) {
+		return 0;
+	}
+
+	gli::gl GL(gli::gl::PROFILE_ES30);
+	gli::gl::format format = GL.translate(Texture.format(), Texture.swizzles());
+	GLenum target = GL.translate(Texture.target());
+	assert(Texture.extent().z == 1 && Texture.target() == gli::TARGET_2D);
+
+	GLuint texture_id = 0;
+	GL_WRAP(glGenTextures(1, &texture_id));
+	GL_WRAP(glBindTexture(target, texture_id));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0));
+	GL_WRAP(glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, (GLint)Texture.levels() - 1));
+	GL_WRAP(glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, &format.Swizzles[0]));
+
+	glm::tvec3<GLsizei> extent = Texture.extent();
+  GLsizei face_total = Texture.layers() * Texture.faces();
+	GL_WRAP(glTexStorage2D(target, Texture.levels(), format.Internal, extent.x, Texture.target() == gli::TARGET_2D ? extent.y : face_total));
+
+	printf("DDS %i: Extents: <%i, %i, %i> Faces: %i Levels: %i\n", texture_id, extent.x, extent.y, extent.z, Texture.faces(), Texture.levels());
+
+  for (std::size_t face = 0; face < Texture.faces(); face++) {
+		for (std::size_t level = 0; level < Texture.levels(); level++) {
+			GLenum face_target = gli::is_target_cube(Texture.target()) ? (GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) : target;
+		  glm::tvec3<GLsizei> level_extent = Texture.extent(level);
+			printf("\tFace: %i Mip: %i Extents: <%i, %i, %i> Format: %#010x\n", face, level, level_extent.x, level_extent.y, level_extent.z, format.Internal);
+			if (gli::is_compressed(Texture.format())) {
+				printf("\t\tCompressed Size: %i\n", Texture.size(level));
+				GL_WRAP(glCompressedTexSubImage2D(
+					face_target, level,
+					0, 0,
+					level_extent.x, level_extent.y,
+					format.Internal, Texture.size(level),
+					Texture.data(0, face, level)
+				));
+			} else {
+				GL_WRAP(glTexImage2D(
+		 			face_target, level,
+		 			0, 0,
+		 			level_extent.x, level_extent.y,
+		 			format.External, format.Type,
+		 			Texture.data(0, face, level)
+				));
+			}
+		}
+	}
+
+	if (Texture.levels() <= 1) {
+		GL_WRAP(glGenerateMipmap(target));
+	}
+	GL_WRAP(glBindTexture(target, 0));
+
+	return texture_id;
 }

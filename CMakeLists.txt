@@ -2,6 +2,7 @@ cmake_minimum_required( VERSION 2.6 )
 
 # define the path of our additional CMake modules
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/" )
+set( OpenGL_GL_PREFERENCE "LEGACY" )
 
 project( Deferred )
 
@@ -9,6 +10,7 @@ find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
 find_package( FreeImage REQUIRED )
+find_package( GLI REQUIRED )
 
 add_subdirectory( thirdparty/stb )
 
@@ -82,6 +84,7 @@ include_directories(
 	${GLEW_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
 	${FREEIMAGE_INCLUDE_PATH}
+	${GLI_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
@@ -92,4 +95,5 @@ target_link_libraries(Deferred
 	${GLEW_LIBRARIES}
 	${STB_LIBRARIES}
 	${FREEIMAGE_LIBRARIES}
+	${GLI_LIBRARY_DIR}
 )
