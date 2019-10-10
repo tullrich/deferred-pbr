@@ -11,7 +11,6 @@
 #include <GL/glew.h>
 
 #include "stb_image.h"
-#include "FreeImage.h"
 #include "tinyobj_loader_c/tinyobj_loader_c.h"
 #include "imgui/imgui.h"
 

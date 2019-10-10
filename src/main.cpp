@@ -2,7 +2,6 @@
 #include "deferred.h"
 #include "forward.h"
 #include "scene.h"
-#include "ibl.h"
 
 #include "imgui/imgui_custom_theme.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -210,7 +209,6 @@ static int initialize_materials() {
 static int initialize_skyboxes() {
 	int ret;
 	for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
-		//ibl_compute_irradiance_map(gSkyboxes[i].low_paths);
 		if ((ret = skybox_load(&gSkyboxes[i].skybox, &gSkyboxes[i]))) {
 			return ret;
 		}
@@ -496,10 +494,6 @@ int main(int argc, char* argv[]) {
 	SDL_GL_SetSwapInterval(1); // Enable vsync
 	glewExperimental = 1;
 	glewInit();
-
-	if (GLEW_EXT_texture_compression_s3tc) {
-		printf("texture_compression_s3tc found\n");
-	}
 
 	// init Imgui
   IMGUI_CHECKVERSION();

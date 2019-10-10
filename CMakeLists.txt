@@ -2,6 +2,7 @@ cmake_minimum_required( VERSION 2.6 )
 
 # define the path of our additional CMake modules
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/" )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin" )
 set( OpenGL_GL_PREFERENCE "LEGACY" )
 
 project( Deferred )
@@ -9,10 +10,10 @@ project( Deferred )
 find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
-find_package( FreeImage REQUIRED )
 find_package( GLI REQUIRED )
 
 add_subdirectory( thirdparty/stb )
+add_subdirectory( tools/ibl-baker )
 
 if ( NOT MSVC )
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin/")
@@ -34,8 +35,6 @@ add_executable( Deferred
 	src/particles.cpp
 	src/scene.h
 	src/scene.cpp
-	src/ibl.h
-	src/ibl.cpp
 	src/mesh.h
 	src/mesh.cpp
   src/skybox.h
@@ -83,7 +82,6 @@ include_directories(
 	${OPENGL_INCLUDE_DIR}
 	${GLEW_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
-	${FREEIMAGE_INCLUDE_PATH}
 	${GLI_INCLUDE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
@@ -94,6 +92,5 @@ target_link_libraries(Deferred
 	${OPENGL_LIBRARIES}
 	${GLEW_LIBRARIES}
 	${STB_LIBRARIES}
-	${FREEIMAGE_LIBRARIES}
 	${GLI_LIBRARY_DIR}
 )

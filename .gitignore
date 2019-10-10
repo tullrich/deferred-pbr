@@ -1,4 +1,5 @@
 build/
 bin/Deferred
+bin/IBLBaker
 *.sublime-project
 *.sublime-workspace
