@@ -3,7 +3,7 @@
 
 int skybox_load(Skybox *out_skybox, const SkyboxDesc *desc)
 {
-	if(!(out_skybox->env_cubemap = utility_load_cubemap(desc->paths))) {
+	if(!(out_skybox->env_cubemap = utility_load_texture_dds(desc->env_path))) {
 		return 1;
 	}
 	if (desc->irr_paths[0]) {

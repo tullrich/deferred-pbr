@@ -17,7 +17,7 @@ static bool prefix(const char *pre, const char *str) {
 }
 
 static void dirToCubeFaces(const char* input_dir, char ** out_paths) {
-		const char* faces[6] = { "posz.jpg", "negz.jpg", "posy.jpg", "negy.jpg", "posx.jpg", "negx.jpg" };
+		const char* faces[6] = { "posx.jpg", "negx.jpg", "posy.jpg", "negy.jpg", "posz.jpg", "negz.jpg" };
 		int input_len = strlen(input_dir);
 		bool append_slash = input_dir[input_len-1] != '/';
 		int face_len = input_len + 8 + ((append_slash) ? 1 : 0);

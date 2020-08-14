@@ -28,26 +28,19 @@ static int mesh_idx = 0;
 static SkyboxDesc gSkyboxes[] = {
 	{
 		.name = "Saint Peters Basilica",
-		.paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica", ".jpg"),
+    .env_path = "images/SaintPetersBasilica/SaintPetersBasilica_Env.dds",
 		.low_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", ".jpg"),
 		.irr_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", "_irradiance.png")
 	},
 	{
 		.name = "San Francisco",
-		.paths = CUBEMAP_FILEPATHS("images/SanFrancisco4", ".jpg"),
+    .env_path = "images/SanFrancisco4/SanFrancisco4_Env.dds",
 		.low_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", ".jpg"),
 		.irr_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", "_irradiance.png")
 	},
 	{
 		.name = "UV Debug",
-		.paths = {
-			"images/uv_map.png",
-			"images/uv_map.png",
-			"images/uv_map.png",
-			"images/uv_map.png",
-			"images/uv_map.png",
-			"images/uv_map.png",
-		}
+    .env_path = "images/UVDebug/UVDebug_Env.dds",
 	}
 };
 

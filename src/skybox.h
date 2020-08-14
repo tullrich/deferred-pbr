@@ -14,7 +14,7 @@ typedef struct
 typedef struct
 {
 	const char* name;
-	const char* paths[6];
+  const char* env_path;
 	const char* low_paths[6];
 	const char* irr_paths[6];
 	Skybox skybox;

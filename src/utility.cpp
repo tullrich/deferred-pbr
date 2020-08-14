@@ -432,16 +432,17 @@ GLuint utility_load_texture_dds(const char* filepath) {
 	GL_WRAP(glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, &format.Swizzles[0]));
 
 	glm::tvec3<GLsizei> extent = Texture.extent();
-  GLsizei face_total = Texture.layers() * Texture.faces();
-	GL_WRAP(glTexStorage2D(target, Texture.levels(), format.Internal, extent.x, Texture.target() == gli::TARGET_2D ? extent.y : face_total));
+  if (!gli::is_target_cube(Texture.target())) {
+	   GL_WRAP(glTexStorage2D(target, Texture.levels(), format.Internal, extent.x, extent.y));
+   }
 
-	printf("DDS %i: Extents: <%i, %i, %i> Faces: %i Levels: %i\n", texture_id, extent.x, extent.y, extent.z, Texture.faces(), Texture.levels());
+	printf("DDS %i: Extents: <%i, %i, %i> Faces: %i Levels: %i IsCube %i\n", texture_id, extent.x, extent.y, extent.z, Texture.faces(), Texture.levels(), gli::is_target_cube(Texture.target()));
 
   for (std::size_t face = 0; face < Texture.faces(); face++) {
 		for (std::size_t level = 0; level < Texture.levels(); level++) {
 			GLenum face_target = gli::is_target_cube(Texture.target()) ? (GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) : target;
 		  glm::tvec3<GLsizei> level_extent = Texture.extent(level);
-			printf("\tFace: %i Mip: %i Extents: <%i, %i, %i> Format: %#010x\n", face, level, level_extent.x, level_extent.y, level_extent.z, format.Internal);
+			printf("\tFace: %i Mip: %i Extents: <%i, %i, %i> Format: %#010x External %#010x\n", face, level, level_extent.x, level_extent.y, level_extent.z, format.Internal, format.External);
 			if (gli::is_compressed(Texture.format())) {
 				printf("\t\tCompressed Size: %i\n", Texture.size(level));
 				GL_WRAP(glCompressedTexSubImage2D(
@@ -454,9 +455,9 @@ GLuint utility_load_texture_dds(const char* filepath) {
 			} else {
 				GL_WRAP(glTexImage2D(
 		 			face_target, level,
-		 			0, 0,
+		 			format.Internal,
 		 			level_extent.x, level_extent.y,
-		 			format.External, format.Type,
+          0, format.External, format.Type,
 		 			Texture.data(0, face, level)
 				));
 			}
