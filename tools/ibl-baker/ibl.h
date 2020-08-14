@@ -1,16 +1,6 @@
 #pragma once
-#include "FreeImage.h"
-#include "linmath.h"
-
-typedef enum
-{
-	CUBEMAP_FRONT,
-	CUBEMAP_BACK,
-	CUBEMAP_TOP,
-	CUBEMAP_BOTTOM,
-	CUBEMAP_LEFT,
-	CUBEMAP_RIGHT
-} CubeMapFaces;
+#include "ibl-baker.h"
+#include "cubemap.h"
 
 // Image-based lighting functions
 typedef struct

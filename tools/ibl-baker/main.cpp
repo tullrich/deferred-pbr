@@ -1,4 +1,5 @@
 #include "ibl.h"
+#include "cubemap.h"
 
 #include <stdio.h>
 #include <cstdlib>
@@ -39,10 +40,6 @@ static int bake_irradiance_map(const char* input_dir, const char* output_file) {
 	printf("Baking irradiance map '%s' from '%s'\n", output_file, input_dir);
 	char *face_paths[6];
 	dirToCubeFaces(input_dir, face_paths);
-	for (int i = 0; i < 6; i++) {
-		printf("\tFace %i %s\n", i, face_paths[i]);
-	}
-
 	int ret = ibl_compute_irradiance_map((const char**)face_paths);
 
 	for (int i = 0; i < 6; i++) {
@@ -57,15 +54,10 @@ static int bake_prefiltered_env_map(const char* input_dir, const char* output_fi
 }
 
 static int merge_cubemap(const char* input_dir, const char* output_file) {
-	printf("Creating cubemap '%s' from files in directory '%s'\n", output_file, input_dir);
+	printf("Merging files in directory '%s' into cubemap '%s'\n", input_dir, output_file);
 	char *face_paths[6];
 	dirToCubeFaces(input_dir, face_paths);
-	for (int i = 0; i < 6; i++) {
-		printf("Face %i %s\n", i, face_paths[i]);
-	}
-
-	int ret = 0;
-
+	int ret = files_to_cubemap((const char**)face_paths, output_file);
 	for (int i = 0; i < 6; i++) {
 		free(face_paths[i]);
 	}

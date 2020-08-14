@@ -2,8 +2,12 @@ find_package( FreeImage REQUIRED )
 
 add_executable( IBLBaker
 	main.cpp
+	ibl-baker.h
+	ibl-baker.cpp
 	ibl.h
 	ibl.cpp
+	cubemap.h
+	cubemap.cpp
 )
 
 if ( NOT MSVC )

@@ -1,34 +1,5 @@
 #include "ibl.h"
 
-#include <stdio.h>
-#include <cstring>
-#include "stb_image.h"
-
-static inline void vec4_zero(vec4 r) {
-	r[0] = r[1] = r[2] = r[3] = 0.0f;
-}
-
-static inline void mat4x4_zero(mat4x4 m) {
-	for (int i=0; i<4; i++)
-		vec4_zero(m[i]);
-}
-
-static FREE_IMAGE_FORMAT getFreeimageFormat(const char *filepath) {
-	FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-	fif = FreeImage_GetFileType(filepath, 0);
-	if (fif == FIF_UNKNOWN)
-	{
-		fif = FreeImage_GetFIFFromFilename(filepath);
-	}
-	if (fif != FIF_UNKNOWN && !FreeImage_FIFSupportsReading(fif))
-	{
-		return FIF_UNKNOWN;
-	}
-
-	return fif;
-}
-
-
 static void ir_face_view_mat4x4(mat4x4 out, CubeMapFaces face) {
 	mat4x4_zero(out);
 	out[3][3] = 1.0f;
