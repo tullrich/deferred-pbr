@@ -1,6 +1,8 @@
 #include "deferred.h"
 
 DEFINE_ENUM(RenderMode, render_mode_strings, ENUM_RenderMode);
+DEFINE_ENUM(SkyboxMode, skybox_mode_strings, ENUM_SkyboxMode);
+DEFINE_ENUM(TonemappingOperator, tonemapping_op_strings, ENUM_TonemappingOperator);
 
 static int load_surface_shader(SurfaceShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
 	if(!(shader->program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
@@ -38,6 +40,36 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	return 0;
 }
 
+static int load_lighting_shader(LightingShader* shader, const char* vert, const char* frag, const char* tonemapping_define) {
+  char buf[512];
+  sprintf(buf, "#define %s\n", tonemapping_define);
+  const char* defines[] = { &buf[0] };
+	if(!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/lighting.frag",
+            defines, 1))) {
+		printf("Unable to load shader\n");
+		return 1;
+	}
+	GL_WRAP(shader->pos_loc = glGetAttribLocation(shader->program, "position"));
+	GL_WRAP(shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord"));
+	GL_WRAP(shader->ambient_term_loc = glGetUniformLocation(shader->program, "AmbientTerm"));
+	GL_WRAP(shader->light_pos_loc = glGetUniformLocation(shader->program, "MainLightPosition"));
+	GL_WRAP(shader->light_color_loc = glGetUniformLocation(shader->program, "MainLightColor"));
+	GL_WRAP(shader->light_intensity_loc = glGetUniformLocation(shader->program, "MainLightIntensity"));
+	GL_WRAP(shader->eye_pos_loc = glGetUniformLocation(shader->program, "EyePosition"));
+
+	GL_WRAP(shader->gbuffer_normal_loc = glGetUniformLocation(shader->program, "GBuffer_Normal"));
+	GL_WRAP(shader->gbuffer_albedo_loc = glGetUniformLocation(shader->program, "GBuffer_Albedo"));
+	GL_WRAP(shader->gbuffer_roughness_loc = glGetUniformLocation(shader->program, "GBuffer_Roughness"));
+	GL_WRAP(shader->gbuffer_metalness_loc = glGetUniformLocation(shader->program, "GBuffer_Metalness"));
+	GL_WRAP(shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth"));
+	GL_WRAP(shader->env_irr_map_loc = glGetUniformLocation(shader->program, "EnvIrrMap"));
+	GL_WRAP(shader->env_prefilter_map_loc = glGetUniformLocation(shader->program, "EnvPrefilterMap"));
+	GL_WRAP(shader->env_brdf_lut_loc = glGetUniformLocation(shader->program, "EnvBrdfLUT"));
+	GL_WRAP(shader->inv_view_loc = glGetUniformLocation(shader->program, "InvView"));
+	GL_WRAP(shader->inv_proj_loc = glGetUniformLocation(shader->program, "InvProjection"));
+  return 0;
+}
+
 static int load_debug_shader(DebugShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
 	if (!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/passthrough.frag", defines, defines_count))) {
 		return 1;
@@ -54,12 +86,20 @@ static int load_debug_shader(DebugShader* shader, const char* vert, const char* 
 int deferred_initialize(Deferred* d) {
 	memset(d, 0, sizeof(Deferred));
 	d->render_mode = RENDER_MODE_SHADED;
+	d->skybox_mode = SKYBOX_MODE_ENV_MAP;
+  d->prefilter_lod = 0.0f;
 
 	// Initialize default material
 	if (material_initialize_default(&d->default_mat)) {
 		printf("Unable to load default material\n");
 		return 1;
 	}
+
+  // initialize the BRDF look-up table
+  if (!(d->brdf_lut_tex = utility_load_texture(GL_TEXTURE_2D, "./environments/ibl_brdf_lut.png"))) {
+		printf("Unable to load ibl_brdf_lut.png\n");
+		return 1;
+  }
 
 	// Initialize the skybox shader
 	if (!(d->skybox_shader.program = utility_create_program("shaders/skybox.vert", "shaders/skybox.frag"))) {
@@ -75,6 +115,7 @@ int deferred_initialize(Deferred* d) {
 	GL_WRAP(d->skybox_shader.pos_loc = glGetAttribLocation(d->skybox_shader.program, "position"));
 	GL_WRAP(d->skybox_shader.texcoord_loc = glGetAttribLocation(d->skybox_shader.program, "texcoord"));
 	GL_WRAP(d->skybox_shader.env_map_loc = glGetUniformLocation(d->skybox_shader.program, "SkyboxCube"));
+	GL_WRAP(d->skybox_shader.lod_loc = glGetUniformLocation(d->skybox_shader.program, "Lod"));
 	GL_WRAP(d->skybox_shader.inv_vp_loc = glGetUniformLocation(d->skybox_shader.program, "InvViewProj"));
 
 	// Initialize box shader
@@ -98,28 +139,15 @@ int deferred_initialize(Deferred* d) {
 		return 1;
 	}
 
-	// Initialize fullscreen quad shader
-	if(!(d->lighting_shader.program = utility_create_program("shaders/passthrough.vert", "shaders/lighting.frag"))) {
-		printf("Unable to load shader\n");
-		return 1;
-	}
+  if(load_lighting_shader(&d->lighting_shader[0], "shaders/mesh.vert", "shaders/mesh.frag", "TONE_MAPPING_REINHARD")) {
+    printf("Unable to load shader\n");
+    return 1;
+  }
 
-	GL_WRAP(d->lighting_shader.pos_loc = glGetAttribLocation(d->lighting_shader.program, "position"));
-	GL_WRAP(d->lighting_shader.texcoord_loc = glGetAttribLocation(d->lighting_shader.program, "texcoord"));
-	GL_WRAP(d->lighting_shader.ambient_term_loc = glGetUniformLocation(d->lighting_shader.program, "AmbientTerm"));
-	GL_WRAP(d->lighting_shader.light_pos_loc = glGetUniformLocation(d->lighting_shader.program, "MainLightPosition"));
-	GL_WRAP(d->lighting_shader.light_color_loc = glGetUniformLocation(d->lighting_shader.program, "MainLightColor"));
-	GL_WRAP(d->lighting_shader.light_intensity_loc = glGetUniformLocation(d->lighting_shader.program, "MainLightIntensity"));
-	GL_WRAP(d->lighting_shader.eye_pos_loc = glGetUniformLocation(d->lighting_shader.program, "EyePosition"));
-
-	GL_WRAP(d->lighting_shader.gbuffer_normal_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Normal"));
-	GL_WRAP(d->lighting_shader.gbuffer_albedo_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Albedo"));
-	GL_WRAP(d->lighting_shader.gbuffer_roughness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Roughness"));
-	GL_WRAP(d->lighting_shader.gbuffer_metalness_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Metalness"));
-	GL_WRAP(d->lighting_shader.gbuffer_depth_loc = glGetUniformLocation(d->lighting_shader.program, "GBuffer_Depth"));
-	GL_WRAP(d->lighting_shader.env_diffuse_map_loc = glGetUniformLocation(d->lighting_shader.program, "EnvDiffuse"));
-	GL_WRAP(d->lighting_shader.inv_view_loc = glGetUniformLocation(d->lighting_shader.program, "InvView"));
-	GL_WRAP(d->lighting_shader.inv_proj_loc = glGetUniformLocation(d->lighting_shader.program, "InvProjection"));
+  if(load_lighting_shader(&d->lighting_shader[1], "shaders/mesh.vert", "shaders/mesh.frag", "TONE_MAPPING_UNCHARTED2")) {
+    printf("Unable to load shader\n");
+    return 1;
+  }
 
 	if(gbuffer_initialize(&d->g_buffer)) {
 		printf("Unable to create g-buffer.\n");
@@ -250,7 +278,9 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 }
 
 static void render_shading(Deferred* d, Scene *s) {
-	GL_WRAP(glUseProgram(d->lighting_shader.program));
+  LightingShader* shader = &d->lighting_shader[(int)d->tonemapping_op];
+
+  GL_WRAP(glUseProgram(shader->program));
 
 	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 	GL_WRAP(glViewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT));
@@ -264,13 +294,23 @@ static void render_shading(Deferred* d, Scene *s) {
 	for (i = 0; i < GBUFFER_ATTACHMENTS_COUNT; i++) {
 		GL_WRAP(glActiveTexture(GL_TEXTURE0 + i));
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->g_buffer.attachments[i]));
-		GL_WRAP(glUniform1i(d->lighting_shader.gbuffer_locs[i], i));
+		GL_WRAP(glUniform1i(shader->gbuffer_locs[i], i));
 	}
 
-	// bind env diffuse map
+	// bind env irradiance map
 	GL_WRAP(glActiveTexture(GL_TEXTURE0+i));
 	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap));
-	GL_WRAP(glUniform1i(d->lighting_shader.env_diffuse_map_loc, i));
+	GL_WRAP(glUniform1i(shader->env_irr_map_loc, i));
+
+	// bind env prefiltered map
+	GL_WRAP(glActiveTexture(GL_TEXTURE0+i+1));
+	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.prefilter_cubemap));
+	GL_WRAP(glUniform1i(shader->env_prefilter_map_loc, i+1));
+
+	// bind the brdf lut
+	GL_WRAP(glActiveTexture(GL_TEXTURE0+i+2));
+	GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->brdf_lut_tex));
+	GL_WRAP(glUniform1i(shader->env_brdf_lut_loc, i+2));
 
 	// light setup
 	vec4 view_light_pos_in;
@@ -281,24 +321,24 @@ static void render_shading(Deferred* d, Scene *s) {
 
 	vec3 ambient_term;
 	vec3_scale(ambient_term, s->ambient_color, s->ambient_intensity);
-	GL_WRAP(glUniform3fv(d->lighting_shader.ambient_term_loc, 1, (const GLfloat*)ambient_term));
-	GL_WRAP(glUniform4fv(d->lighting_shader.light_pos_loc, 1, (const GLfloat*)view_light_pos));
-	GL_WRAP(glUniform3fv(d->lighting_shader.light_color_loc, 1, (const GLfloat*)s->light->color));
-	GL_WRAP(glUniform1f(d->lighting_shader.light_intensity_loc, s->light->intensity));
+	GL_WRAP(glUniform3fv(shader->ambient_term_loc, 1, (const GLfloat*)ambient_term));
+	GL_WRAP(glUniform4fv(shader->light_pos_loc, 1, (const GLfloat*)view_light_pos));
+	GL_WRAP(glUniform3fv(shader->light_color_loc, 1, (const GLfloat*)s->light->color));
+	GL_WRAP(glUniform1f(shader->light_intensity_loc, s->light->intensity));
 
 	// View rotation only
 	mat4x4 view_rot, inv_view_rot;
 	mat4x4_dup(view_rot, s->camera.view);
 	vec3_zero(view_rot[3]);
 	mat4x4_invert(inv_view_rot, view_rot);
-	GL_WRAP(glUniformMatrix4fv(d->lighting_shader.inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view_rot));
+	GL_WRAP(glUniformMatrix4fv(shader->inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view_rot));
 
 	// View rotation only
 	mat4x4 inv_proj;
 	mat4x4_invert(inv_proj, s->camera.proj);
-	GL_WRAP(glUniformMatrix4fv(d->lighting_shader.inv_proj_loc, 1, GL_FALSE, (const GLfloat*)inv_proj));
+	GL_WRAP(glUniformMatrix4fv(shader->inv_proj_loc, 1, GL_FALSE, (const GLfloat*)inv_proj));
 
-	utility_draw_fullscreen_quad(d->lighting_shader.texcoord_loc, d->lighting_shader.pos_loc);
+	utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
 }
 
 static void render_skybox(Deferred *d, Scene *s) {
@@ -311,8 +351,22 @@ static void render_skybox(Deferred *d, Scene *s) {
 
 	// Bind environment map
 	GL_WRAP(glActiveTexture(GL_TEXTURE0));
-	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap));
-	GL_WRAP(glUniform1i(d->skybox_shader.env_map_loc, 0));
+	switch(d->skybox_mode) {
+		case SKYBOX_MODE_ENV_MAP: {
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap));
+      break;
+    }
+		case SKYBOX_MODE_IRR_MAP: {
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap));
+      break;
+    }
+		case SKYBOX_MODE_PREFILTER_MAP: {
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.prefilter_cubemap));
+      break;
+    }
+	}
+  GL_WRAP(glUniform1i(d->skybox_shader.env_map_loc, 0));
+  GL_WRAP(glUniform1f(d->skybox_shader.lod_loc, (d->skybox_mode == SKYBOX_MODE_PREFILTER_MAP) ? d->prefilter_lod : 0.0f));
 
 	mat4x4 view_rot, vp, inv_vp;
 	mat4x4_dup(view_rot, s->camera.view);

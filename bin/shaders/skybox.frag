@@ -3,10 +3,11 @@
 in vec3 TexDir;
 
 uniform samplerCube SkyboxCube;
+uniform float Lod;
 
 out vec4 outColor;
 
 void main()
 {
-	outColor = vec4(texture(SkyboxCube, TexDir).xyz, 1);
+	outColor = vec4(textureLod(SkyboxCube, TexDir, Lod).xyz, 1);
 }

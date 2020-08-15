@@ -1,6 +1,7 @@
 #version 130
 
 #define PI 3.1415926
+#define GAMMA 2.2
 
 in vec2 Texcoord;
 
@@ -9,7 +10,9 @@ uniform sampler2D GBuffer_Albedo;
 uniform sampler2D GBuffer_Roughness;
 uniform sampler2D GBuffer_Metalness;
 uniform sampler2D GBuffer_Depth;
-uniform samplerCube EnvDiffuse;
+uniform samplerCube EnvIrrMap;
+uniform samplerCube EnvPrefilterMap;
+uniform sampler2D EnvBrdfLUT;
 
 uniform vec3 AmbientTerm;
 uniform vec4 MainLightPosition;
@@ -20,6 +23,7 @@ uniform mat4x4 InvProjection;
 
 out vec4 outColor;
 
+
 struct Material
 {
 	vec3 Albedo;
@@ -28,6 +32,25 @@ struct Material
 	float Metalness;
 	float Occlusion;
 };
+
+vec3 Uncharted2ToneMapping(vec3 color)
+{
+  color *= 2;  // Hardcoded Exposure Adjustment
+	float A = 0.15;
+	float B = 0.50;
+	float C = 0.10;
+	float D = 0.20;
+	float E = 0.02;
+	float F = 0.30;
+	float W = 11.2;
+	float exposure = 2.;
+	color *= exposure;
+	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+	color /= white;
+	color = pow(color, vec3(1. / GAMMA));
+	return color;
+}
 
 // Schlick-Frensel curve approximation
 vec3 FresnelSchlick(vec3 F0, float cosTheta)
@@ -106,7 +129,7 @@ vec3 PhongSpecular(vec3 V, vec3 L, vec3 N, vec3 specular, float roughness)
 vec3 CookTorrenceSpecularBRDF(vec3 F, vec3 N, vec3 V, vec3 H, vec3 L, float roughness)
 {
   float D = DistributionGGX(N, H, roughness);
-  float G   = GeometrySmith(N, V, L, roughness);
+  float G = GeometrySmith(N, V, L, roughness);
 
   vec3 numerator    = D * G * F;
   float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
@@ -146,19 +169,25 @@ vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
 // PBR IBL from Env map
 vec3 IBLAmbientRadiance(vec3 N, vec3 V, Material m, vec3 F0)
 {
-	vec4 worldN = InvView * vec4(N, 0);	// World normal
-	vec3 irradiance = texture(EnvDiffuse, worldN.xyz).xyz;
+	vec3 worldN = (InvView * vec4(N, 0)).xyz;	// World normal
+	vec3 worldV = (InvView * vec4(V, 0)).xyz;	// World view
+	vec3 irradiance = pow(texture(EnvIrrMap, worldN).xyz, vec3(GAMMA));
 
   // cos(angle) between surface normal and eye
-  float NdV = max(0.001, dot(N, V));
-
+  float NdV = max(0.001, dot(worldN, worldV));
 	vec3 kS = FresnelSchlickWithRoughness(F0, NdV, m.Roughness);
 	vec3 kD = 1.0 - kS;
 
-	vec3 diffuseBrdf = kD * m.Albedo * (1.0 - m.Metalness); // Lambert diffuse
-	//TODO: IBL Specular
+	vec3 diffuseBrdf = m.Albedo * (1.0 - m.Metalness); // Lambert diffuse
+  vec3 diffuse = kD * diffuseBrdf * irradiance;
 
-	return diffuseBrdf * irradiance * m.Occlusion; // IBL ambient
+  const float MAX_REFLECTION_LOD = 6.0;
+  vec3 R = reflect(-worldV, worldN);
+  vec2 envBRDF  = texture(EnvBrdfLUT, vec2(NdV, m.Roughness)).rg;
+  vec3 prefilteredColor = pow(textureLod(EnvPrefilterMap, R,  m.Roughness * MAX_REFLECTION_LOD).rgb, vec3(GAMMA));
+  vec3 specular = prefilteredColor * (kS * envBRDF.x + envBRDF.y);
+
+	return (diffuse + specular) * m.Occlusion; // IBL ambient
 }
 
 void main()
@@ -172,8 +201,8 @@ void main()
 
 	// Setup surface material
 	Material m;
-	m.Albedo = pow(albedoAO.rgb, vec3(2.2)); // Gamme to linear
-	m.Emissive = pow(emissiveRough.xyz, vec3(2.2));
+	m.Albedo = pow(albedoAO.rgb, vec3(GAMMA)); // Gamme to linear
+	m.Emissive = pow(emissiveRough.xyz, vec3(GAMMA));
 	m.Roughness = emissiveRough.w;
 	m.Metalness = metal;
 	m.Occlusion = albedoAO.w;
@@ -193,9 +222,14 @@ void main()
   result += IBLAmbientRadiance(N, V, m, F0);
   result += m.Emissive * 4.0;
 
-  // Linear back to gamma space via Reinhard tonemapping
+  // Linear back to gamma space via the selected tonemapping operator
+#ifdef TONE_MAPPING_REINHARD
   result = result / (result + vec3(1.0));
-  result = pow(result, vec3(1.0/2.2));
+  result = pow(result, vec3(1.0/GAMMA));
+#endif
+#ifdef TONE_MAPPING_UNCHARTED2
+  result = Uncharted2ToneMapping(result);
+#endif
 
 	// Shader output
 	outColor = vec4(result, 1.0);

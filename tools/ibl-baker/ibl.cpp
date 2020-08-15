@@ -1,4 +1,5 @@
 #include "ibl.h"
+#include "cubemap.h"
 
 static void ir_face_view_mat4x4(mat4x4 out, CubeMapFaces face) {
 	mat4x4_zero(out);
@@ -23,7 +24,7 @@ static void dir_for_fragment(vec3 out, int face, float u, float v, IrradianceCom
 	vec3_norm(out, out);
 }
 
-static void sample_cubemap(vec3 out, const vec3 dir, FIBITMAP **cubemap, unsigned int width, unsigned int height ) {
+static void sample_cubemap(vec3 out, const vec3 dir, gli::texture_cube& cubemap, unsigned int width, unsigned int height ) {
 	const int axes[6][3] = {
 		{ 2, 0, 1 }, // CUBEMAP_FRONT +z
 		{ 2, 0, 1 }, // CUBEMAP_BACK -z
@@ -57,11 +58,10 @@ static void sample_cubemap(vec3 out, const vec3 dir, FIBITMAP **cubemap, unsigne
 	float u = (1.0f + sign[0]*dir[axis[1]]/fabsf(dir[axis[0]]))/2.0f;
 	float v = (1.0f + sign[1]*dir[axis[2]]/fabsf(dir[axis[0]]))/2.0f;
 
-	RGBQUAD value;
-	FreeImage_GetPixelColor(cubemap[face], (unsigned int)(u*width), (unsigned int)(v*height), &value);
-	out[0] = value.rgbRed / 255.0f;
-	out[1] = value.rgbGreen / 255.0f;
-	out[2] = value.rgbBlue / 255.0f;
+  glm::u8vec3 value = cubemap.load<glm::u8vec3>(gli::extent2d((int)(u * width), (int)(v * height)), face, 0);
+	out[0] = value.r / 255.0f;
+	out[1] = value.g / 255.0f;
+	out[2] = value.b / 255.0f;
 }
 
 static float area_element(float x, float y) {
@@ -126,66 +126,17 @@ static void compute_irradiance_fragment(vec3 out, int face, float u, float v, Ir
 #endif
 }
 
-static int build_irradiance_out_filepath(char* out_filepath, size_t out_len, const char* filepath) {
-	strncpy(out_filepath, filepath, out_len);
-	if (out_filepath[out_len-1]) {
-		return 1;  // no enough space
-	}
-
-	char* ext = strchr(out_filepath, '.');
-	if (!ext) {
-		return 1;  // no extension
-	}
-	strncpy(ext, "_irradiance.png", out_len - (size_t)(ext-out_filepath));
-	return (out_filepath[out_len-1]) ? 1:0;
-}
-
 // convolve radiance map to an irradiance map and write out
-int ibl_compute_irradiance_map(const char** filepaths) {
-	int width, height;
-	FIBITMAP *data[6] = { NULL };
-	FIBITMAP *out_data[6] = { NULL };
-	char out_filepath[512];
+int ibl_compute_irradiance_map(gli::texture_cube& env_map, const char* output_path) {
+	int width = 128;//env_map.extent().x;
+	int height = 128;//env_map.extent().y;
 
-	// Load cubemap
-	int ret = 0;
-	for (int i = 0; i < 6; i++) {
-		int img_width, img_height, components;
-
-		FREE_IMAGE_FORMAT format = getFreeimageFormat(filepaths[i]);
-		if (format == FIF_UNKNOWN || !(data[i] = FreeImage_Load(format, filepaths[i], 0))) {
-			printf("Error loading stb image '%s' with error: %s\n", filepaths[i], stbi_failure_reason());
-			ret = 1;
-			goto free_and_exit;
-		}
-
-		img_width = FreeImage_GetWidth(data[i]);
-		img_height = FreeImage_GetHeight(data[i]);
-		components = FreeImage_GetBPP(data[i])/8;
-
-		if (i == 0) {
-			width = img_width;
-			height = img_height;
-			if (!width || !height || components != 3) {
-				printf("Bad cubemap face size/components'%s': size <%i,%i> components %i\n", filepaths[i], width, height, components);
-				ret = 1;
-				goto free_and_exit;
-			}
-		} else {
-			if (img_width != width && img_height != height) {
-				printf("Cubemap face size/components mismatch '%s'\n", filepaths[i]);
-				ret = 1;
-				goto free_and_exit;
-			}
-		}
-
-		// Allocate out image
-		out_data[i] =  FreeImage_Allocate(width, height, 24);
-	}
+	// Allocate output buffer
+	gli::texture_cube irr_map(gli::FORMAT_RGB8_UNORM_PACK8, gli::extent2d(width, height), 1);
 
 	// Prepare input
 	IrradianceCompute ir;
-	ir.cubemap = data;
+	ir.cubemap = env_map;
 	ir.height = height;
 	ir.width = width;
 	mat4x4 proj;
@@ -201,34 +152,22 @@ int ibl_compute_irradiance_map(const char** filepaths) {
 
 	// Convolve step
 	for (int i = 0; i < 6; i++) {
-		FIBITMAP* out_img = out_data[i];
 		for (int v = 0; v < height; v++) {
 			for (int u = 0; u < width; u++) {
 				vec3 irr;
 				compute_irradiance_fragment(irr, i, 2.0f*(u+0.5f)/(float)width - 1.0f, 2.0f*(v+0.5f)/(float)height - 1.0f, &ir);
-				RGBQUAD value;
-				value.rgbRed = (char)(255 * irr[0]);
-				value.rgbGreen = (char)(255 * irr[1]);
-				value.rgbBlue = (char)(255 * irr[2]);
-				FreeImage_SetPixelColor(out_img, u, v, &value);
+        irr_map.store(gli::extent2d(u, v), i, 0, glm::u8vec3((char)(255 * irr[0]), (char)(255 * irr[1]), (char)(255 * irr[2])));
 			}
 			printf("Convolved pixel: %f\n", 100.0f * (v+1)/(float)height);
 		}
-
-		// Write output
-		if (build_irradiance_out_filepath(out_filepath, 512, filepaths[i]) ||
-			!FreeImage_Save(FIF_PNG, out_img, out_filepath, 0)) {
-			printf("Error writing irradiance map for file '%s'\n", filepaths[i]);
-			ret = 1;
-			goto free_and_exit;
-		}
-		printf("Wrote irradiance map '%s'\n", out_filepath);
 	}
 
-free_and_exit:
-	for (int i = 0; i < 6; i++) {
-		FreeImage_Unload(data[i]);
-		FreeImage_Unload(out_data[i]);
+	// Write output
+  if (save_cubemap(irr_map, output_path)) {
+		printf("Error writing irradiance map for file '%s'\n", output_path);
+		return 1;
 	}
-	return ret;
+
+	printf("Wrote irradiance map '%s'\n", output_path);
+	return 0;
 }

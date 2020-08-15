@@ -14,6 +14,19 @@
 
 DECLARE_ENUM(RenderMode, render_mode_strings, ENUM_RenderMode);
 
+#define ENUM_SkyboxMode(D)					                 \
+	D(SKYBOX_MODE_ENV_MAP, 		      "Env Map")		 	   \
+	D(SKYBOX_MODE_IRR_MAP, 		      "Irradiance Map")  \
+	D(SKYBOX_MODE_PREFILTER_MAP, 		"Prefilter Map")
+
+DECLARE_ENUM(SkyboxMode, skybox_mode_strings, ENUM_SkyboxMode);
+
+#define ENUM_TonemappingOperator(D)						   \
+	D(TONEMAPPING_OP_REINHARD, 		"Reinhard")		   \
+	D(TONEMAPPING_OP_UNCHARTED2, 		"Uncharted 2")
+
+DECLARE_ENUM(TonemappingOperator, tonemapping_op_strings, ENUM_TonemappingOperator);
+
 typedef struct
 {
 	GLuint program;
@@ -23,6 +36,7 @@ typedef struct
 	GLint texcoord_loc;
 
 	GLint env_map_loc;
+	GLint lod_loc;
 
 	GLint inv_vp_loc;
 } SkyboxShader;
@@ -73,7 +87,9 @@ typedef struct
 		};
 		GLint gbuffer_locs[GBUFFER_ATTACHMENTS_COUNT];
 	};
-	GLint env_diffuse_map_loc;
+	GLint env_irr_map_loc;
+	GLint env_prefilter_map_loc;
+  GLint env_brdf_lut_loc;
 
 	// shader vars
 	GLint ambient_term_loc;
@@ -103,12 +119,16 @@ typedef struct
 typedef struct
 {
 	RenderMode render_mode;
+  SkyboxMode skybox_mode;
+  TonemappingOperator tonemapping_op;
+  float prefilter_lod;
 	SkyboxShader skybox_shader;
 	SurfaceShader surf_shader[2];
-	LightingShader lighting_shader;
+	LightingShader lighting_shader[2];
 	DebugShader debug_shader[3];
 	Material default_mat;
 	GBuffer g_buffer;
+  GLuint brdf_lut_tex;
 } Deferred;
 
 int deferred_initialize(Deferred* d);

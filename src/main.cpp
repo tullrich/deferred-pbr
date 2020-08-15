@@ -8,7 +8,7 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/ImGuizmo.h"
 
-#define SPHERE_SCENE 1
+// #define SPHERE_SCENE
 
 static Scene gScene;
 static Deferred gDeferred;
@@ -28,25 +28,25 @@ static int mesh_idx = 0;
 static SkyboxDesc gSkyboxes[] = {
 	{
 		.name = "Saint Peters Basilica",
-    .env_path = "images/SaintPetersBasilica/SaintPetersBasilica_Env.dds",
-		.low_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", ".jpg"),
-		.irr_paths = CUBEMAP_FILEPATHS("images/SaintPetersBasilica_low", "_irradiance.png")
+    .env_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Env_512.dds",
+    .irr_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Irr.dds",
+    .prefilter_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Prefilter.dds"
 	},
 	{
 		.name = "San Francisco",
-    .env_path = "images/SanFrancisco4/SanFrancisco4_Env.dds",
-		.low_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", ".jpg"),
-		.irr_paths = CUBEMAP_FILEPATHS("images/SanFrancisco4_low", "_irradiance.png")
+    .env_path = "environments/SanFrancisco4/SanFrancisco4_Env_512.dds",
+    .irr_path = "environments/SanFrancisco4/SanFrancisco4_Irr.dds",
+    .prefilter_path = "environments/SanFrancisco4/SanFrancisco4_Prefilter.dds"
 	},
 	{
 		.name = "UV Debug",
-    .env_path = "images/UVDebug/UVDebug_Env.dds",
+    .env_path = "environments/UVDebug/UVDebug_Env.dds",
 	}
 };
 
 static MeshDesc gMeshes[] = {
+  { .name = "Sphere" },
 	{ .name = "Box" },
-	{ .name = "Sphere" },
 	{ .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
 	{ .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
 	{ .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
@@ -56,22 +56,40 @@ static MeshDesc gMeshes[] = {
 
 static MaterialDesc gMaterials[] = {
 	{
+		.name = "Mirror",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 0.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
+	},
+	{
 		.name = "Sci-Fi Cube",
-		.albedo_map_path = "images/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
-		.normal_map_path = "images/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
-		.metalness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
-		.roughness_map_path = "images/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
-		.emissive_map_path = "images/SciFiCube/Sci_Wall_Panel_01_emissive.png",
+		.albedo_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
+		.normal_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
+		.metalness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
+		.roughness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
+		.emissive_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_emissive.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 1.0f,
 		.roughness_base = 1.0f,
 		.emissive_base = { 1.0f, 1.0f, 1.0f }
 	},
 	{
+		.name = "Gold",
+		.albedo_map_path = "materials/Gold/lightgold_albedo.png",
+		.normal_map_path = "materials/Gold/lightgold_normal-dx.png",
+		.metalness_map_path = "materials/Gold/lightgold_metallic.png",
+		.roughness_map_path = "materials/Gold/lightgold_roughness.png",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f }
+	},
+	{
 		.name = "Medievil",
-		.albedo_map_path = "images/Medievil/Medievil Stonework - Color Map.png",
-		.normal_map_path = "images/Medievil/Medievil Stonework - (Normal Map).png",
-		.ao_map_path = "images/Medievil/Medievil Stonework - AO Map.png",
+		.albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
+		.normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
+		.ao_map_path = "materials/Medievil/Medievil Stonework - AO Map.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 0.0f,
 		.roughness_base = 1.0f,
@@ -79,8 +97,8 @@ static MaterialDesc gMaterials[] = {
 	},
 	{
 		.name = "Moorish Lattice",
-		.albedo_map_path = "images/MoorishLattice/moorish_lattice_diffuse.png",
-		.normal_map_path = "images/MoorishLattice/moorish_lattice_normal.png",
+		.albedo_map_path = "materials/MoorishLattice/moorish_lattice_diffuse.png",
+		.normal_map_path = "materials/MoorishLattice/moorish_lattice_normal.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 0.0f,
 		.roughness_base = 1.0f,
@@ -88,8 +106,8 @@ static MaterialDesc gMaterials[] = {
 	},
 	{
 		.name = "Terracotta",
-		.albedo_map_path = "images/Terracotta/terracotta_diffuse.png",
-		.normal_map_path = "images/Terracotta/terracotta_normal.png",
+		.albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
+		.normal_map_path = "materials/Terracotta/terracotta_normal.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 0.0f,
 		.roughness_base = 1.0f,
@@ -97,7 +115,7 @@ static MaterialDesc gMaterials[] = {
 	},
 	{
 		.name = "UV Debug",
-		.albedo_map_path = "images/uv_map.png",
+		.albedo_map_path = "uv_map.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 0.0f,
 		.roughness_base = 1.0f,
@@ -106,11 +124,11 @@ static MaterialDesc gMaterials[] = {
 };
 
 static ParticleEmitterTextureDesc gParticleTextures[] = {
-	{ .name = "Flare", .path = "images/particles/flare.png" },
-	{ .name = "Particle", .path = "images/particles/particle.png"},
-	{ .name = "Smoke", .path = "images/particles/smoke.png" },
-	{ .name = "Divine", .path = "images/particles/divine.png" },
-	{ .name = "UV Debug", .path = "images/uv_map.png" }
+	{ .name = "Flare", .path = "particles/flare.png" },
+	{ .name = "Particle", .path = "particles/particle.png"},
+	{ .name = "Smoke", .path = "particles/smoke.png" },
+	{ .name = "Divine", .path = "particles/divine.png" },
+	{ .name = "UV Debug", .path = "uv_map.png" }
 };
 
 static ParticleEmitterDesc gEmitterDescs[] = {
@@ -179,8 +197,8 @@ static int initialize_particle_rendering() {
 }
 
 static int initialize_meshes() {
-	mesh_make_box(&gMeshes[0].mesh, 5.0f);
-	mesh_sphere_tessellate(&gMeshes[1].mesh, 2.5f, 100, 100);
+	mesh_sphere_tessellate(&gMeshes[0].mesh, 2.5f, 100, 100);
+	mesh_make_box(&gMeshes[1].mesh, 5.0f);
 	for (int i = 2; i < (STATIC_ELEMENT_COUNT(gMeshes) - 1); i++) {
 		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path, gMeshes[i].base_scale)) {
 			return 1;
@@ -236,7 +254,7 @@ static int init_scene() {
 	gEmitter.muted = true; // start muted
 
 #ifndef SPHERE_SCENE
-	printf("Creating single model scene\n")
+	printf("Creating single model scene\n");
 	model_initialize(&gModel, &gMeshes[mesh_idx].mesh, &gMaterials[material_idx].material);
 	gScene.models[0] = &gModel;
 	gScene.emitters[0] = &gEmitter;
@@ -245,7 +263,6 @@ static int init_scene() {
 #define SPHERE_COLUMNS 7
 #define SPHERE_SPACING 8.0F
 	printf("Creating %ix%i spheres scene\n", SPHERE_ROWS, SPHERE_COLUMNS);
-	mesh_idx = 1;
 	material_idx = 0;
 	for (int i = 0; i < SPHERE_ROWS; i++) {
 		for (int j = 0; j < SPHERE_COLUMNS; j++) {
@@ -367,6 +384,10 @@ static int frame() {
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
 	}
 	if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Combo("Skybox Render Mode", (int*)&gDeferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);
+    if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
+  		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
+    }
 		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
 			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
 				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
@@ -382,6 +403,9 @@ static int frame() {
 		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
 		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
 	}
+	if (ImGui::CollapsingHeader("Post Processing", ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
+  }
 	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::PushID("light");
 		bool show_light_manipulator = (show_manipulator == 1);

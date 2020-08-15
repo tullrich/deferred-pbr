@@ -5,6 +5,7 @@
 
 #include "linmath.h"
 #include "FreeImage.h"
+#include "gli/gli.hpp"
 #include "stb_image.h"
 
 static inline void vec4_zero(vec4 r) {

@@ -7,8 +7,8 @@ typedef struct
 {
 	mat4x4 inv_proj;
 	mat4x4 inv_viewproj[6];
-	FIBITMAP **cubemap;
+	gli::texture_cube cubemap;
 	unsigned int height, width;
 } IrradianceCompute;
 
-int ibl_compute_irradiance_map(const char** filepaths);
+int ibl_compute_irradiance_map(gli::texture_cube& env_map, const char* output_path);

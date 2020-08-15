@@ -16,51 +16,34 @@ static bool prefix(const char *pre, const char *str) {
   return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-static void dirToCubeFaces(const char* input_dir, char ** out_paths) {
-		const char* faces[6] = { "posx.jpg", "negx.jpg", "posy.jpg", "negy.jpg", "posz.jpg", "negz.jpg" };
-		int input_len = strlen(input_dir);
-		bool append_slash = input_dir[input_len-1] != '/';
-		int face_len = input_len + 8 + ((append_slash) ? 1 : 0);
-		for (int i = 0; i < 6; i++) {
-			char* face_path = (char*)malloc(face_len);
-			strcpy(face_path, input_dir);
-			if (append_slash) {
-				strcat(face_path, "/");
-			}
-			strcat(face_path, faces[i]);
-			out_paths[i] = face_path;
-		}
-}
-
 static void print_usage() {
   printf("Usage: IBLBaker --mode=<irradiance|prefiltered|cubemap> <input_file> <output_file>\n");
 }
 
-static int bake_irradiance_map(const char* input_dir, const char* output_file) {
-	printf("Baking irradiance map '%s' from '%s'\n", output_file, input_dir);
-	char *face_paths[6];
-	dirToCubeFaces(input_dir, face_paths);
-	int ret = ibl_compute_irradiance_map((const char**)face_paths);
-
-	for (int i = 0; i < 6; i++) {
-		free(face_paths[i]);
-	}
-	return ret;
+static int bake_irradiance_map(const char* input_file, const char* output_file) {
+	printf("Baking irradiance map '%s' from '%s'\n", output_file, input_file);
+  gli::texture_cube env_map = load_cubemap(input_file);
+  printf("loaded env cubemap successfully\n");
+	return ibl_compute_irradiance_map(env_map, output_file);
 }
 
-static int bake_prefiltered_env_map(const char* input_dir, const char* output_file) {
-	printf("Baking prefiltered env map '%s' from '%s'\n", output_file, input_dir);
+static int bake_prefiltered_env_map(const char* input_file, const char* output_file) {
+	printf("Baking prefiltered env map '%s' from '%s'\n", output_file, input_file);
 	return 0;
 }
 
 static int merge_cubemap(const char* input_dir, const char* output_file) {
 	printf("Merging files in directory '%s' into cubemap '%s'\n", input_dir, output_file);
-	char *face_paths[6];
-	dirToCubeFaces(input_dir, face_paths);
-	int ret = files_to_cubemap((const char**)face_paths, output_file);
-	for (int i = 0; i < 6; i++) {
-		free(face_paths[i]);
+	FIBITMAP *faces[6] = { NULL };
+	if (load_dir_as_faces(input_dir, "jpg", faces)) {
+    if (load_dir_as_faces(input_dir, "png", faces)) {
+  		printf("Error reading input files '%s'\n", input_dir);
+  		return 1;
+  	}
 	}
+  gli::texture_cube cubemap = convert_faces_to_cubemap(faces);
+	int ret = save_cubemap(cubemap, output_file);
+  free_dir_faces(faces);
 	return ret;
 }
 
