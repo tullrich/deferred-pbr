@@ -53,18 +53,20 @@ typedef struct
 
 	GLint albedo_map_loc;
 	GLint normal_map_loc;
+	GLint height_map_loc;
 	GLint metalness_map_loc;
 	GLint roughness_map_loc;
 	GLint ao_map_loc;
 	GLint emissive_map_loc;
 
-	GLint modelview_loc;
-	GLint invTModelview_loc;
-	GLint view_loc;
+  GLint view_pos_loc;
+	GLint model_view_loc;
+	GLint model_view_proj_loc;
 	GLint albedo_base_loc;
 	GLint roughness_base_loc;
 	GLint metalness_base_loc;
 	GLint emissive_base_loc;
+	GLint height_scale_loc;
 } SurfaceShader;
 
 typedef struct

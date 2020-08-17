@@ -19,6 +19,9 @@ out vec2 Texcoord;
 out vec3 Tangent;
 out vec3 Bitangent;
 #endif
+#ifdef USE_HEIGHT_MAP
+out vec3 FragModelPos;
+#endif
 
 void main()
 {
@@ -32,6 +35,10 @@ void main()
 	Tangent = tangent.xyz;
 	Bitangent = cross(normal, tangent.xyz)*tangent.w;
 #endif // USE_NORMAL_MAP
+
+#ifdef USE_HEIGHT_MAP
+  FragModelPos = position;
+#endif
 
 	gl_Position = ModelViewProj * vec4(position, 1.0);
 }

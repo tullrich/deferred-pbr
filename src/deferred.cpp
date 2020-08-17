@@ -25,14 +25,17 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	GL_WRAP(shader->normal_loc = glGetAttribLocation(shader->program, "normal"));
 	GL_WRAP(shader->tangent_loc = glGetAttribLocation(shader->program, "tangent"));
 	GL_WRAP(shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord"));
-	GL_WRAP(shader->invTModelview_loc = glGetUniformLocation(shader->program, "invTModelView"));
-	GL_WRAP(shader->view_loc = glGetUniformLocation(shader->program, "ModelViewProj"));
+	GL_WRAP(shader->view_pos_loc = glGetUniformLocation(shader->program, "ViewPos"));
+	GL_WRAP(shader->model_view_loc = glGetUniformLocation(shader->program, "ModelView"));
+	GL_WRAP(shader->model_view_proj_loc = glGetUniformLocation(shader->program, "ModelViewProj"));
 	GL_WRAP(shader->albedo_base_loc = glGetUniformLocation(shader->program, "AlbedoBase"));
 	GL_WRAP(shader->metalness_base_loc = glGetUniformLocation(shader->program, "MetalnessBase"));
 	GL_WRAP(shader->roughness_base_loc = glGetUniformLocation(shader->program, "RoughnessBase"));
 	GL_WRAP(shader->emissive_base_loc = glGetUniformLocation(shader->program, "EmissiveBase"));
 	GL_WRAP(shader->albedo_map_loc = glGetUniformLocation(shader->program, "AlbedoMap"));
 	GL_WRAP(shader->normal_map_loc = glGetUniformLocation(shader->program, "NormalMap"));
+	GL_WRAP(shader->height_map_loc = glGetUniformLocation(shader->program, "HeightMap"));
+	GL_WRAP(shader->height_scale_loc = glGetUniformLocation(shader->program, "HeightScale"));
 	GL_WRAP(shader->metalness_map_loc = glGetUniformLocation(shader->program, "MetalnessMap"));
 	GL_WRAP(shader->roughness_map_loc = glGetUniformLocation(shader->program, "RoughnessMap"));
 	GL_WRAP(shader->ao_map_loc = glGetUniformLocation(shader->program, "AOMap"));
@@ -122,6 +125,7 @@ int deferred_initialize(Deferred* d) {
 	const char* uv_surf_shader_defines[] ={
 		"#define MESH_VERTEX_UV1\n",
 		"#define USE_NORMAL_MAP\n",
+		"#define USE_HEIGHT_MAP\n",
 		"#define USE_ALBEDO_MAP\n",
 		"#define USE_ROUGHNESS_MAP\n",
 		"#define USE_METALNESS_MAP\n",
@@ -211,41 +215,50 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 	}
 	GL_WRAP(glUniform1i(shader->normal_map_loc, 1));
 
-	// bind metalness map
+	// bind height map
 	GL_WRAP(glActiveTexture(GL_TEXTURE2));
+	if (model->material.height_map) {
+		GL_WRAP(glBindTexture(GL_TEXTURE_2D, model->material.height_map));
+	} else {
+		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->default_mat.height_map));
+	}
+	GL_WRAP(glUniform1i(shader->height_map_loc, 2));
+
+	// bind metalness map
+	GL_WRAP(glActiveTexture(GL_TEXTURE3));
 	if (model->material.metalness_map) {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, model->material.metalness_map));
 	} else {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->default_mat.metalness_map));
 	}
-	GL_WRAP(glUniform1i(shader->metalness_map_loc, 2));
+	GL_WRAP(glUniform1i(shader->metalness_map_loc, 3));
 
 	// bind roughness map
-	GL_WRAP(glActiveTexture(GL_TEXTURE3));
+	GL_WRAP(glActiveTexture(GL_TEXTURE4));
 	if (model->material.roughness_map) {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, model->material.roughness_map));
 	} else {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->default_mat.roughness_map));
 	}
-	GL_WRAP(glUniform1i(shader->roughness_map_loc, 3));
+	GL_WRAP(glUniform1i(shader->roughness_map_loc, 4));
 
-	// bind normal map
-	GL_WRAP(glActiveTexture(GL_TEXTURE4));
+	// bind ao map
+	GL_WRAP(glActiveTexture(GL_TEXTURE5));
 	if (model->material.ao_map) {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, model->material.ao_map));
 	} else {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->default_mat.ao_map));
 	}
-	GL_WRAP(glUniform1i(shader->ao_map_loc, 4));
+	GL_WRAP(glUniform1i(shader->ao_map_loc, 5));
 
-	// bind normal map
-	GL_WRAP(glActiveTexture(GL_TEXTURE5));
+	// bind emissive map
+	GL_WRAP(glActiveTexture(GL_TEXTURE6));
 	if (model->material.emissive_map) {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, model->material.emissive_map));
 	} else {
 		GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->default_mat.emissive_map));
 	}
-	GL_WRAP(glUniform1i(shader->emissive_map_loc, 5));
+	GL_WRAP(glUniform1i(shader->emissive_map_loc, 6));
 
 	// calc model matrix
 	mat4x4 m;
@@ -258,17 +271,27 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 	vec3_sub(m[3], m[3], model->mesh.bounds.center);
 	vec3_add(m[3], m[3], model->position);
 
-	// bind inverse transpose model-view matrix
-	mat4x4 mv, inv_mv, invT_mv;
+	// bind model-view matrix
+	mat4x4 mv;
 	mat4x4_mul(mv, s->camera.view, m);
-	mat4x4_invert(inv_mv, mv);
-	mat4x4_transpose(invT_mv, inv_mv);
-	GL_WRAP(glUniformMatrix4fv(shader->invTModelview_loc, 1, GL_FALSE, (const GLfloat*)invT_mv));
+	GL_WRAP(glUniformMatrix4fv(shader->model_view_loc, 1, GL_FALSE, (const GLfloat*)mv));
+
+  // bind the direction to camera in model space position
+	mat4x4 invMv;
+  vec4 origin = { 0.0f, 0.0f, 0.0f, 1.0f };
+  vec4 view_pos;
+  mat4x4_invert(invMv, mv);
+	mat4x4_mul_vec4(view_pos, invMv, origin);
+	GL_WRAP(glUniform3fv(shader->view_pos_loc, 1, (const GLfloat*)view_pos));
 
 	// bind model-view-projection matrix
 	mat4x4 mvp;
 	mat4x4_mul(mvp, s->camera.viewProj, m);
-	GL_WRAP(glUniformMatrix4fv(shader->view_loc, 1, GL_FALSE, (const GLfloat*)mvp));
+	GL_WRAP(glUniformMatrix4fv(shader->model_view_proj_loc, 1, GL_FALSE, (const GLfloat*)mvp));
+
+  // bind the height map scale factor
+  float height_scale = (model->material.height_map) ? model->material.height_map_scale : 0.0f;
+	GL_WRAP(glUniform1fv(shader->height_scale_loc, 1, (const GLfloat*)&height_scale));
 
 	mesh_draw(&model->mesh,
 			  shader->texcoord_loc,

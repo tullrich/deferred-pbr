@@ -271,7 +271,7 @@ void utility_draw_fullscreen_quad2(GLint texcoord_loc, GLint pos_loc) {
 
 static GLint components_to_gl_format(int components) {
 	switch( components ) {
-		case 1: return GL_ALPHA;
+		case 1: return GL_RED;
 		case 3: return GL_RGB;
 		case 4: return GL_RGBA;
 		default: return 0;

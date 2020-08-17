@@ -22,8 +22,8 @@ static ParticleEmitter gEmitter;
 static int rotate_cam = 0;
 static int show_manipulator = 0;
 static int skybox_idx = 0;
-static int material_idx = 0;
-static int mesh_idx = 0;
+static int mesh_idx = 1;
+static int material_idx = 3;
 
 static SkyboxDesc gSkyboxes[] = {
 	{
@@ -66,13 +66,15 @@ static MaterialDesc gMaterials[] = {
 		.name = "Sci-Fi Cube",
 		.albedo_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
 		.normal_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
+		.height_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_height.png",
 		.metalness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
 		.roughness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
 		.emissive_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_emissive.png",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 1.0f,
 		.roughness_base = 1.0f,
-		.emissive_base = { 1.0f, 1.0f, 1.0f }
+		.emissive_base = { 1.0f, 1.0f, 1.0f },
+    .height_map_scale = 0.015f
 	},
 	{
 		.name = "Gold",
@@ -86,6 +88,62 @@ static MaterialDesc gMaterials[] = {
 		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	},
 	{
+		.name = "Metal Ventilation",
+		.albedo_map_path = "materials/MetalVentilation/metal-ventilation1-albedo.png",
+		.normal_map_path = "materials/MetalVentilation/metal-ventilation1-normal-dx.png",
+		.height_map_path = "materials/MetalVentilation/metal-ventilation1-height.png",
+		.metalness_map_path = "materials/MetalVentilation/metal-ventilation1-metallic.png",
+		.roughness_map_path = "materials/MetalVentilation/metal-ventilation1-roughness.png",
+		.ao_map_path = "materials/MetalVentilation/metal-ventilation1-ao.png",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
+	},
+  {
+		.name = "Harsh Brick",
+		.albedo_map_path = "materials/HarshBricks/harshbricks-albedo.png",
+		.normal_map_path = "materials/HarshBricks/harshbricks-normal.png",
+		.height_map_path = "materials/HarshBricks/harshbricks-height5-16.png",
+		.metalness_map_path = "materials/HarshBricks/harshbricks-metalness.png",
+		.roughness_map_path = "materials/HarshBricks/harshbricks-roughness.png",
+		.ao_map_path = "materials/HarshBricks/harshbricks-ao2.png",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
+	},
+  {
+		.name = "Wrinkled Paper",
+		.albedo_map_path = "materials/WrinkledPaper/wrinkled-paper-albedo.png",
+		.normal_map_path = "materials/WrinkledPaper/wrinkled-paper-normal-dx.png",
+		.height_map_path = "materials/WrinkledPaper/wrinkled-paper-height.png",
+		.metalness_map_path = "materials/WrinkledPaper/wrinkled-paper-metalness.png",
+		.roughness_map_path = "materials/WrinkledPaper/wrinkled-paper-roughness.png",
+		.ao_map_path = "materials/WrinkledPaper/wrinkled-paper-ao.png",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
+	},
+  {
+		.name = "Snow Covered Path",
+		.albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
+		.normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
+		.height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
+		.metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
+		.roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
+		.ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
+		.albedo_base = { 1.0f, 1.0f, 1.0f },
+		.metalness_base = 1.0f,
+		.roughness_base = 1.0f,
+		.emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
+	},
+	{
 		.name = "Medievil",
 		.albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
 		.normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
@@ -93,7 +151,8 @@ static MaterialDesc gMaterials[] = {
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 0.0f,
 		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
+		.emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 1.0f
 	},
 	{
 		.name = "Moorish Lattice",

@@ -7,6 +7,7 @@ int material_initialize_default(Material *out) {
   memset(out, 0, sizeof(Material));
   out->albedo_map = utility_load_texture_constant(White);
   out->normal_map = utility_load_texture_constant(Normal_Z_Up);
+  out->height_map = utility_load_texture_constant(White);
   out->metalness_map = utility_load_texture_constant(White);
   out->roughness_map = utility_load_texture_constant(White);
   out->ao_map = utility_load_texture_constant(White);
@@ -15,6 +16,7 @@ int material_initialize_default(Material *out) {
   out->metalness_base = 0.0f;
   out->roughness_base = 1.0f;
   vec3_swizzle(out->emissive_base, 0.0f);
+  out->height_map_scale = 0.0f;
   return 0;
 }
 
@@ -22,10 +24,11 @@ int material_initialize(Material *out, const MaterialDesc *desc) {
   memset(out, 0, sizeof(Material));
 
   if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture(GL_TEXTURE_2D, desc->albedo_map_path)))
-  // if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture_dds("images/test.dds")))
     out->albedo_map = 0;
   if (!desc->normal_map_path || !(out->normal_map = utility_load_texture(GL_TEXTURE_2D, desc->normal_map_path)))
     out->normal_map= 0;
+  if (!desc->height_map_path || !(out->height_map = utility_load_texture(GL_TEXTURE_2D, desc->height_map_path)))
+    out->height_map = 0;
   if (!desc->metalness_map_path || !(out->metalness_map = utility_load_texture(GL_TEXTURE_2D, desc->metalness_map_path)))
     out->metalness_map = 0;
   if (!desc->roughness_map_path || !(out->roughness_map = utility_load_texture(GL_TEXTURE_2D, desc->roughness_map_path)))
@@ -38,6 +41,7 @@ int material_initialize(Material *out, const MaterialDesc *desc) {
   out->metalness_base = desc->metalness_base;
   out->roughness_base = desc->roughness_base;
   vec3_dup(out->emissive_base, desc->emissive_base);
+  out->height_map_scale = desc->height_map_scale;
   return 0;
 }
 
@@ -86,6 +90,20 @@ void material_gui(Material* material, int *material_idx, const MaterialDesc* mat
       ImGui::Text("Normal");
       ImGui::Indent();
       texture_map_toggle_gui("Texture", &material->normal_map, &mat_defs[*material_idx].material.normal_map);
+      ImGui::Unindent();
+      ImGui::PopID();
+    ImGui::EndGroup();
+  }
+  if (mat_defs[*material_idx].material.height_map) {
+    ImGui::BeginGroup();
+      ImGui::PushID("Height");
+      ImGui::Separator();
+      ImGui::Text("Height");
+      ImGui::Indent();
+      texture_map_toggle_gui("Texture", &material->height_map, &mat_defs[*material_idx].material.height_map);
+      if (mat_defs[*material_idx].material.height_map) {
+        ImGui::SliderFloat("Height Scale", &material->height_map_scale,  0.0f, 0.1f);
+      }
       ImGui::Unindent();
       ImGui::PopID();
     ImGui::EndGroup();
