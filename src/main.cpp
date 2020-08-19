@@ -10,6 +10,7 @@
 
 // #define SPHERE_SCENE
 
+static SDL_Window* gWindow;
 static Scene gScene;
 static Deferred gDeferred;
 static Forward gForward;
@@ -241,8 +242,51 @@ static ParticleEmitterDesc gEmitterDescs[] = {
 	}
 };
 
+static void update_loading_screen(const char* stage, const char* asset, int index, int total) {
+  // pump events
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) { }
+
+	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+	utility_set_clear_color(0, 0, 0);
+	GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDL2_NewFrame(gWindow);
+  ImGui::NewFrame();
+
+	GL_WRAP(glEnable(GL_BLEND));
+	GL_WRAP(glBlendEquation(GL_FUNC_ADD));
+	GL_WRAP(glBlendFunc(GL_ONE, GL_ONE));
+
+  ImGui::SetNextWindowPosCenter();
+	ImGui::SetNextWindowSize(ImVec2(400, 100));
+	ImGui::Begin("PBR Renderer - Loading", 0,
+    ImGuiWindowFlags_NoScrollbar
+    | ImGuiWindowFlags_NoCollapse
+    | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoResize
+  );
+    if (total > 0) {
+      ImGui::Text("%s...    %s (%i / %i)", stage, asset, index, total);
+    } else {
+      ImGui::Text("%s...", stage);
+    }
+    ImGui::ProgressBar((float)index / (float)total, ImVec2(-1, 8), " ");
+  ImGui::End();
+
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+  // swap
+  SDL_GL_SwapWindow(gWindow);
+  GL_CHECK_ERROR();
+}
+
 static int initialize_particle_rendering() {
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gParticleTextures); i++) {
+  int count = STATIC_ELEMENT_COUNT(gParticleTextures);
+	for (int i = 0; i < count; i++) {
+    update_loading_screen("Initializing particle", gParticleTextures[i].name, i, count);
 		if ((gParticleTextures[i].texture = utility_load_texture(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
 			return 1;
 		}
@@ -256,9 +300,13 @@ static int initialize_particle_rendering() {
 }
 
 static int initialize_meshes() {
+	int count = STATIC_ELEMENT_COUNT(gMeshes);
+  update_loading_screen("Initializing mesh", "sphere", 0, count-1);
 	mesh_sphere_tessellate(&gMeshes[0].mesh, 2.5f, 100, 100);
+  update_loading_screen("Initializing mesh", "box", 1, count-1);
 	mesh_make_box(&gMeshes[1].mesh, 5.0f);
-	for (int i = 2; i < (STATIC_ELEMENT_COUNT(gMeshes) - 1); i++) {
+	for (int i = 2; i < (count - 1); i++) {
+    update_loading_screen("Initializing mesh", gMeshes[i].name, i, count-1);
 		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path, gMeshes[i].base_scale)) {
 			return 1;
 		}
@@ -267,8 +315,9 @@ static int initialize_meshes() {
 }
 
 static int initialize_materials() {
-	int ret;
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gMaterials); i++) {
+	int ret, count = STATIC_ELEMENT_COUNT(gMaterials);
+	for (int i = 0; i < count; i++) {
+    update_loading_screen("Initializing material", gMaterials[i].name, i, count);
 		if ((ret = material_initialize(&gMaterials[i].material, &gMaterials[i]))) {
 			return ret;
 		}
@@ -277,8 +326,9 @@ static int initialize_materials() {
 }
 
 static int initialize_skyboxes() {
-	int ret;
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
+	int ret, count = STATIC_ELEMENT_COUNT(gSkyboxes);
+	for (int i = 0; i < count; i++) {
+    update_loading_screen("Initializing skybox", gSkyboxes[i].name, i, count);
 		if ((ret = skybox_load(&gSkyboxes[i].skybox, &gSkyboxes[i]))) {
 			return ret;
 		}
@@ -292,6 +342,7 @@ static int init_scene() {
 	// Setup camera
 	gScene.camera.boomLen = 30.0f;
 	gScene.camera.fovy = 72.0f;
+  gScene.camera.rot[0] = gScene.camera.rot[1] = -30.0f;
 
 	// Setup ambient light
 	vec3_dup(gScene.ambient_color, White);
@@ -302,7 +353,7 @@ static int init_scene() {
 
 	// Setup main directional light
 	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
-	light_initialize_directional(&gLight, lightPos, White, 3.0f);
+	light_initialize_point(&gLight, lightPos, White, 3.0f);
 	gScene.light = &gLight;
 
 	// Setup particle system
@@ -346,13 +397,15 @@ static int init_scene() {
 static int initialize() {
 	int err = 0;
 
-	printf("<-- Initializing deferred renderer... -->\n");
+  update_loading_screen("Initializing renderer...", "", 0, 0);
+
+	printf("<-- Initializing deferred renderer... -->");
 	if (err = deferred_initialize(&gDeferred)) {
 		printf("Deferred renderer init failed\n");
 		return err;
 	}
 
-	printf("<-- Initializing forward renderer... -->\n");
+	printf("<-- Initializing forward renderer... -->");
 	if (err = forward_initialize(&gForward)) {
 		printf("Forward renderer init failed\n");
 		return err;
@@ -430,7 +483,7 @@ static int frame() {
 
 	// render
 	deferred_render(&gDeferred, &gScene);
-	forward_render(&gForward, &gScene);
+	// forward_render(&gForward, &gScene);
 
   ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
@@ -581,14 +634,13 @@ int main(int argc, char* argv[]) {
 	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
   // init platform window
-	SDL_Window*	window;
-  if(!(window = SDL_CreateWindow("PBR Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+  if(!(gWindow = SDL_CreateWindow("PBR Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
 		, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
       return 1;
   }
 
 	// init gl
-	SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+	SDL_GLContext glcontext = SDL_GL_CreateContext(gWindow);
 	SDL_GL_SetSwapInterval(1); // Enable vsync
 	glewExperimental = 1;
 	glewInit();
@@ -596,7 +648,7 @@ int main(int argc, char* argv[]) {
 	// init Imgui
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGui_ImplSDL2_InitForOpenGL(window, glcontext);
+  ImGui_ImplSDL2_InitForOpenGL(gWindow, glcontext);
   ImGui_ImplOpenGL3_Init("#version 130");
 	StyleImguiCustom();
 
@@ -604,7 +656,7 @@ int main(int argc, char* argv[]) {
 	srand((unsigned)time(0));
 
  	// clear window during load
-	SDL_GL_SwapWindow(window);
+	SDL_GL_SwapWindow(gWindow);
 
 	// main init
 	if(initialize()) {
@@ -628,12 +680,12 @@ int main(int argc, char* argv[]) {
 				switch (event.type) {
 				case SDL_MOUSEBUTTONDOWN:
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						SDL_SetWindowGrab(window, SDL_TRUE);
+						SDL_SetWindowGrab(gWindow, SDL_TRUE);
 					}
 					break;
 				case SDL_MOUSEBUTTONUP:
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						SDL_SetWindowGrab(window, SDL_FALSE);
+						SDL_SetWindowGrab(gWindow, SDL_FALSE);
 					}
 					break;
 				case SDL_MOUSEMOTION:
@@ -657,7 +709,7 @@ int main(int argc, char* argv[]) {
 		}
 
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame(window);
+    ImGui_ImplSDL2_NewFrame(gWindow);
     ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
 
@@ -672,7 +724,7 @@ int main(int argc, char* argv[]) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// swap
-		SDL_GL_SwapWindow(window);
+		SDL_GL_SwapWindow(gWindow);
 		GL_CHECK_ERROR();
 	}
 
@@ -681,7 +733,7 @@ int main(int argc, char* argv[]) {
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
 	SDL_GL_DeleteContext(glcontext);
-	SDL_DestroyWindow(window);
+	SDL_DestroyWindow(gWindow);
 	SDL_Quit();
 	return 0;
 }

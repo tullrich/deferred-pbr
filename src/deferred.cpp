@@ -91,6 +91,7 @@ int deferred_initialize(Deferred* d) {
 	d->render_mode = RENDER_MODE_SHADED;
 	d->skybox_mode = SKYBOX_MODE_ENV_MAP;
   d->prefilter_lod = 0.0f;
+  d->tonemapping_op = TONEMAPPING_OP_UNCHARTED2;
 
 	// Initialize default material
 	if (material_initialize_default(&d->default_mat)) {
