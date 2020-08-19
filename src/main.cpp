@@ -433,58 +433,63 @@ static int frame() {
 	forward_render(&gForward, &gScene);
 
   ImGui::SetNextWindowPos(ImVec2(0, 0));
-	ImGui::SetNextWindowSize(ImVec2(WINDOW_WIDTH - VIEWPORT_WIDTH, WINDOW_HEIGHT));
-	ImGui::Begin("PBR Renderer", 0,
+	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
+	ImGui::Begin("Renderer Options", 0,
     ImGuiWindowFlags_NoScrollbar
     | ImGuiWindowFlags_NoCollapse
     | ImGuiWindowFlags_NoMove
     | ImGuiWindowFlags_NoResize
   );
-
-  ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-  if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
-  {
-    if (ImGui::BeginTabItem("Rendering")) {
-  		ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
-      ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
-  		ImGui::Separator();
-      if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-    		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
-    		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
-    		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
-      }
-      if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Combo("Skybox Render Mode", (int*)&gDeferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);
-        if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
-      		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
-        }
-    		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
-    			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
-    				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
-    					skybox_idx = i;
-    					gScene.skybox = gSkyboxes[i].skybox;
-    				}
-    				if ((skybox_idx == i)) {
-    					ImGui::SetItemDefaultFocus();
-    				}
-    			}
-    			ImGui::EndCombo();
-    		}
-    		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
-    		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
-      }
-    	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-    		ImGui::PushID("light");
-    		bool show_light_manipulator = (show_manipulator == 1);
-    		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
-    			show_manipulator = (show_light_manipulator) ? 1 : 0;
-    		}
-    		light_gui(&gLight);
-    		ImGui::PopID();
-    	}
-      ImGui::EndTabItem();
+	ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
+  ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
+	ImGui::Separator();
+  if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
+		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
+		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
+  }
+  if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::Combo("Skybox Render Mode", (int*)&gDeferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);
+    if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
+  		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
     }
-    if (ImGui::BeginTabItem("Model"))
+		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
+			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
+				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
+					skybox_idx = i;
+					gScene.skybox = gSkyboxes[i].skybox;
+				}
+				if ((skybox_idx == i)) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
+		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
+  }
+	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::PushID("light");
+		bool show_light_manipulator = (show_manipulator == 1);
+		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
+			show_manipulator = (show_light_manipulator) ? 1 : 0;
+		}
+		light_gui(&gLight);
+		ImGui::PopID();
+	}
+	ImGui::End();
+
+  ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH + VIEWPORT_WIDTH, 0));
+	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
+	ImGui::Begin("Model", 0,
+    ImGuiWindowFlags_NoScrollbar
+    | ImGuiWindowFlags_NoCollapse
+    | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoResize
+  );
+  if (ImGui::BeginTabBar("MyTabBar", ImGuiTabBarFlags_None))
+  {
+    if (ImGui::BeginTabItem("Model Options"))
     {
       if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
     		ImGui::PushID("model");
@@ -577,7 +582,7 @@ int main(int argc, char* argv[]) {
 
   // init platform window
 	SDL_Window*	window;
-  if(!(window = SDL_CreateWindow("Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
+  if(!(window = SDL_CreateWindow("PBR Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED
 		, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL))) {
       return 1;
   }
@@ -662,7 +667,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		// render ImGui
-		ImGui::ShowDemoWindow();
+		// ImGui::ShowDemoWindow();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
