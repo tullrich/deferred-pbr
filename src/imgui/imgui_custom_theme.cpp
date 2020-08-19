@@ -3,11 +3,19 @@
 
 void StyleImguiCustom(ImGuiStyle* dst) {
   ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
-  style->FrameRounding = 4.0f;
-  style->GrabRounding = 4.0f;
+  style->FrameRounding = 0.0f;
+  style->GrabRounding = 0.0f;
+  style->WindowRounding = 0.0f;
+  style->ScrollbarRounding = 0.0f;
+  style->TabRounding = 0.0f;
+  style->ItemSpacing = ImVec2(8, 7);
+  style->WindowBorderSize = 0.0f;
+  style->ColorButtonPosition = ImGuiDir_Left;
+  style->FramePadding = ImVec2(8, 7);
+  style->WindowTitleAlign = ImVec2(.5, .5);
 
 	ImFontConfig config;
-	ImGui::GetIO().Fonts->AddFontFromFileTTF("./fonts/Ruda-Bold.ttf", 15.0f, &config);
+	ImGui::GetIO().Fonts->AddFontFromFileTTF("./fonts/OpenSans-SemiBold.ttf", 17.0f, &config);
 
   ImVec4* colors = style->Colors;
   colors[ImGuiCol_Text] = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);

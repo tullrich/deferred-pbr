@@ -153,7 +153,7 @@ int deferred_initialize(Deferred* d) {
     return 1;
   }
 
-	if(gbuffer_initialize(&d->g_buffer)) {
+	if(gbuffer_initialize(&d->g_buffer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT)) {
 		printf("Unable to create g-buffer.\n");
 		return 1;
 	}
@@ -306,7 +306,7 @@ static void render_shading(Deferred* d, Scene *s) {
   GL_WRAP(glUseProgram(shader->program));
 
 	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-	GL_WRAP(glViewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT));
+	GL_WRAP(glViewport(VIEWPORT_X_OFFSET, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 
 	GL_WRAP(glEnable(GL_BLEND));
 	GL_WRAP(glBlendEquation(GL_FUNC_ADD));
@@ -368,7 +368,7 @@ static void render_skybox(Deferred *d, Scene *s) {
 	GL_WRAP(glUseProgram(d->skybox_shader.program));
 
 	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-	GL_WRAP(glViewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT));
+	GL_WRAP(glViewport(VIEWPORT_X_OFFSET, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 
 	GL_WRAP(glDisable(GL_BLEND));
 
@@ -415,7 +415,7 @@ static void render_debug(Deferred *d, Scene *s) {
 
 	GL_WRAP(glUseProgram(d->debug_shader[program_idx].program));
 	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-	GL_WRAP(glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT));
+	GL_WRAP(glViewport(VIEWPORT_X_OFFSET, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 	GL_WRAP(glDisable(GL_BLEND));
 
 	GL_WRAP(glActiveTexture(GL_TEXTURE0));

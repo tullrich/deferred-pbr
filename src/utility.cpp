@@ -398,7 +398,7 @@ void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj) {
 	mat4x4_identity(manip_mat);
 	vec3_dup(manip_mat[3], out);
 	ImGuizmo::Enable(true);
-	ImGuizmo::SetRect(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
+	ImGuizmo::SetRect((float)VIEWPORT_X_OFFSET, 0.0f, (float)VIEWPORT_WIDTH, (float)VIEWPORT_HEIGHT);
 	ImGuizmo::Manipulate(
 		&view[0][0],
 		&proj[0][0],

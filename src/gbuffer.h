@@ -8,6 +8,9 @@ typedef struct
 	// frame buffer
 	GLuint fbo;
 
+  // pixel dimensions
+  int width, height;
+
 	// attachments
 	union
 	{
@@ -24,5 +27,5 @@ typedef struct
 } GBuffer;
 
 
-int gbuffer_initialize(GBuffer *g_buffer);
+int gbuffer_initialize(GBuffer *g_buffer, int width, int height);
 void gbuffer_bind(GBuffer *g_buffer);

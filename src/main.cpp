@@ -22,8 +22,8 @@ static ParticleEmitter gEmitter;
 static int rotate_cam = 0;
 static int show_manipulator = 0;
 static int skybox_idx = 0;
-static int mesh_idx = 1;
-static int material_idx = 3;
+static int mesh_idx = 0;
+static int material_idx = 0;
 
 static SkyboxDesc gSkyboxes[] = {
 	{
@@ -407,7 +407,7 @@ static void update_scene(float dt) {
 	vec3_negate_in_place(gScene.camera.view[3]);
 
 	// calculate view-projection matrix
-	mat4x4_perspective(gScene.camera.proj, gScene.camera.fovy * (float)M_PI/180.0f, (float)WINDOW_WIDTH/(float)WINDOW_HEIGHT, Z_NEAR, Z_FAR);
+	mat4x4_perspective(gScene.camera.proj, gScene.camera.fovy * (float)M_PI/180.0f, (float)VIEWPORT_WIDTH/(float)VIEWPORT_HEIGHT, Z_NEAR, Z_FAR);
 	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
 
 	// update emitter
@@ -432,105 +432,122 @@ static int frame() {
 	deferred_render(&gDeferred, &gScene);
 	forward_render(&gForward, &gScene);
 
-	ImGui::SetNextWindowSize(ImVec2( 200, 100 ), ImGuiCond_FirstUseEver);
-	ImGui::Begin("Controls", 0);
+  ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::SetNextWindowSize(ImVec2(WINDOW_WIDTH - VIEWPORT_WIDTH, WINDOW_HEIGHT));
+	ImGui::Begin("PBR Renderer", 0,
+    ImGuiWindowFlags_NoScrollbar
+    | ImGuiWindowFlags_NoCollapse
+    | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoResize
+  );
 
-	if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
-		ImGui::Separator();
-		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
-		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
-		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
-	}
-	if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::Combo("Skybox Render Mode", (int*)&gDeferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);
-    if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
-  		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
-    }
-		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
-			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
-				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
-					skybox_idx = i;
-					gScene.skybox = gSkyboxes[i].skybox;
-				}
-				if ((skybox_idx == i)) {
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
-		}
-		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
-		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
-	}
-	if (ImGui::CollapsingHeader("Post Processing", ImGuiTreeNodeFlags_DefaultOpen)) {
-    ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
-  }
-	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::PushID("light");
-		bool show_light_manipulator = (show_manipulator == 1);
-		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
-			show_manipulator = (show_light_manipulator) ? 1 : 0;
-		}
-		light_gui(&gLight);
-		ImGui::PopID();
-	}
-	if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::PushID("model");
-		bool show_model_manipulator = (show_manipulator == 2);
-		if (ImGui::Checkbox("Show Manipulator", &show_model_manipulator)) {
-			show_manipulator = (show_model_manipulator) ? 2 : 0;
-		}
-		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0)) {
-      for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
-        if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i))) {
-					mesh_idx = i;
-					gModel.mesh = gMeshes[i].mesh;
-				}
-        if ((mesh_idx == i)) {
-          ImGui::SetItemDefaultFocus();
-				}
+  ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+  if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+  {
+    if (ImGui::BeginTabItem("Rendering")) {
+  		ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
+      ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
+  		ImGui::Separator();
+      if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+    		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
+    		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
+    		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
       }
-      ImGui::EndCombo();
+      if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Combo("Skybox Render Mode", (int*)&gDeferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);
+        if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
+      		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
+        }
+    		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
+    			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
+    				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
+    					skybox_idx = i;
+    					gScene.skybox = gSkyboxes[i].skybox;
+    				}
+    				if ((skybox_idx == i)) {
+    					ImGui::SetItemDefaultFocus();
+    				}
+    			}
+    			ImGui::EndCombo();
+    		}
+    		ImGui::ColorEdit3("Ambient Color", gScene.ambient_color);
+    		ImGui::SliderFloat("Ambient Intensity", &gScene.ambient_intensity, 0, 6.0f);
+      }
+    	if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+    		ImGui::PushID("light");
+    		bool show_light_manipulator = (show_manipulator == 1);
+    		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
+    			show_manipulator = (show_light_manipulator) ? 1 : 0;
+    		}
+    		light_gui(&gLight);
+    		ImGui::PopID();
+    	}
+      ImGui::EndTabItem();
     }
-		ImGui::InputFloat3("Position", gModel.position);
-		ImGui::SliderFloat("Rotation (Deg)", &gModel.rot[1], 0.0f, 360.0f, "%.0f");
-		ImGui::SliderFloat("Scale", &gModel.scale, .01f, 25.0f );
-#ifdef SPHERE_SCENE
-		if (ImGui::Button("Refresh Scene")) {
-			for (int i = 0; i < SPHERE_ROWS; i++) {
-				for (int j = 0; j < SPHERE_COLUMNS; j++) {
-					Model *m = gScene.models[i * SPHERE_COLUMNS + j];
-					m->scale = gModel.scale;
-					m->mesh = gModel.mesh;
-					m->material = gModel.material;
-    			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
-    			m->material.metalness_base = i/((float)SPHERE_ROWS);
-				}
-			}
-		}
-#endif
-		ImGui::PopID();
-	}
-	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-		material_gui(&gModel.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
-	}
-	if ( ImGui::CollapsingHeader("Emitter", 0)) {
-		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT(gParticleTextures));
-		if (ImGui::Button("Flare")) {
-			gEmitterDesc = gEmitterDescs[0];
-			particle_emitter_refresh(&gEmitter);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Particle")) {
-			gEmitterDesc = gEmitterDescs[1];
-			particle_emitter_refresh(&gEmitter);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Smoke")) {
-			gEmitterDesc = gEmitterDescs[2];
-			particle_emitter_refresh(&gEmitter);
-		}
-	}
+    if (ImGui::BeginTabItem("Model"))
+    {
+      if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
+    		ImGui::PushID("model");
+    		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0)) {
+          for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
+            if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i))) {
+    					mesh_idx = i;
+    					gModel.mesh = gMeshes[i].mesh;
+    				}
+            if ((mesh_idx == i)) {
+              ImGui::SetItemDefaultFocus();
+    				}
+          }
+          ImGui::EndCombo();
+        }
+    		ImGui::SliderFloat("Rotation (Deg)", &gModel.rot[1], 0.0f, 360.0f, "%.0f");
+    		ImGui::SliderFloat("Scale", &gModel.scale, .01f, 25.0f );
+        bool show_model_manipulator = (show_manipulator == 2);
+        if (ImGui::Checkbox("Show Manipulator", &show_model_manipulator)) {
+          show_manipulator = (show_model_manipulator) ? 2 : 0;
+        }
+    #ifdef SPHERE_SCENE
+    		if (ImGui::Button("Refresh Scene")) {
+    			for (int i = 0; i < SPHERE_ROWS; i++) {
+    				for (int j = 0; j < SPHERE_COLUMNS; j++) {
+    					Model *m = gScene.models[i * SPHERE_COLUMNS + j];
+    					m->scale = gModel.scale;
+    					m->mesh = gModel.mesh;
+    					m->material = gModel.material;
+        			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
+        			m->material.metalness_base = i/((float)SPHERE_ROWS);
+    				}
+    			}
+    		}
+    #endif
+    		ImGui::PopID();
+    	}
+    	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+    		material_gui(&gModel.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
+    	}
+      ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Emitter"))
+    {
+  		if (ImGui::Button("Flare")) {
+  			gEmitterDesc = gEmitterDescs[0];
+  			particle_emitter_refresh(&gEmitter);
+  		}
+  		ImGui::SameLine();
+  		if (ImGui::Button("Particle")) {
+  			gEmitterDesc = gEmitterDescs[1];
+  			particle_emitter_refresh(&gEmitter);
+  		}
+  		ImGui::SameLine();
+  		if (ImGui::Button("Smoke")) {
+  			gEmitterDesc = gEmitterDescs[2];
+  			particle_emitter_refresh(&gEmitter);
+  		}
+  		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT(gParticleTextures));
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+  }
 	ImGui::End();
 
 	// render translation gizmo
@@ -645,7 +662,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		// render ImGui
-		// ImGui::ShowDemoWindow();
+		ImGui::ShowDemoWindow();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

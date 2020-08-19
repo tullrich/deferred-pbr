@@ -162,6 +162,9 @@ extern const quat Quat_Identity;
 
 #define WINDOW_WIDTH 1424
 #define WINDOW_HEIGHT 1000
+#define VIEWPORT_WIDTH 1000
+#define VIEWPORT_HEIGHT 1000
+#define VIEWPORT_X_OFFSET (WINDOW_WIDTH - VIEWPORT_WIDTH)
 #define Z_NEAR 0.1f
 #define Z_FAR 100.0f
 

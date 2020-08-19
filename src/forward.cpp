@@ -76,7 +76,7 @@ static void draw_billboard(Forward* f, GLuint texture, const vec3 position, floa
 		// bind shader
 		GL_WRAP(glUseProgram(shader->program));
 		GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-		GL_WRAP(glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+  	GL_WRAP(glViewport(VIEWPORT_X_OFFSET, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 		GL_WRAP(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); // alpha blend
 
 		mat4x4 model;
@@ -161,7 +161,7 @@ void forward_render(Forward* f, Scene *s) {
 		// bind particle program
 		GL_WRAP(glUseProgram(shader->program));
 		GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-		GL_WRAP(glViewport(0,0,WINDOW_WIDTH, WINDOW_HEIGHT));
+  	GL_WRAP(glViewport(VIEWPORT_X_OFFSET, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT));
 
 		// depth sort and select blend mode
 		if (desc->depth_sort_alpha_blend) {
