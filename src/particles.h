@@ -2,145 +2,145 @@
 #include "common.h"
 
 #define ENUM_ParticleShadingMode(D)						\
-	D(PARTICLE_SHADING_FLAT, 			"Flat")				\
-	D(PARTICLE_SHADING_TEXTURED, 	"Textured")
+  D(PARTICLE_SHADING_FLAT, 			"Flat")				\
+  D(PARTICLE_SHADING_TEXTURED, 	"Textured")
 
 DECLARE_ENUM(ParticleShadingMode, particle_shading_mode_strings, ENUM_ParticleShadingMode);
 
 #define ENUM_ParticleOrientationMode(D)								\
-	D(PARTICLE_ORIENT_FREE, 					"Free")						\
-	D(PARTICLE_ORIENT_SCREEN_ALIGNED, "Screen Aligned")
+  D(PARTICLE_ORIENT_FREE, 					"Free")						\
+  D(PARTICLE_ORIENT_SCREEN_ALIGNED, "Screen Aligned")
 
 DECLARE_ENUM(ParticleOrientationMode, particle_orient_mode_strings, ENUM_ParticleOrientationMode);
 
 // single particle
 typedef struct
 {
-	// position in emitter local space
-	vec3 pos;
+  // position in emitter local space
+  vec3 pos;
 
-	// xyz-euler angles in emitter local space
-	vec3 rot;
+  // xyz-euler angles in emitter local space
+  vec3 rot;
 
-	// scale in emitter local space
-	vec3 scale;
+  // scale in emitter local space
+  vec3 scale;
 
-	// velocity
-	vec3 velocity;
+  // velocity
+  vec3 velocity;
 
-	// time to live (counts down to zero)
-	float ttl;
+  // time to live (counts down to zero)
+  float ttl;
 
-	// current color
-	vec4 color;
+  // current color
+  vec4 color;
 
-	// color change/second
-	vec4 delta_color;
+  // color change/second
+  vec4 delta_color;
 
-	// scale change/second
-	vec3 delta_scale;
+  // scale change/second
+  vec3 delta_scale;
 } Particle;
 
 // definition of a particle emitter
 typedef struct
 {
-	// max living particles at once
-	int max;
+  // max living particles at once
+  int max;
 
-	// spawn rate in particles/second
-	float spawn_rate;
+  // spawn rate in particles/second
+  float spawn_rate;
 
-	// starting rgba
-	vec4 start_color;
+  // starting rgba
+  vec4 start_color;
 
-	// ending rgba
-	vec4 end_color;
+  // ending rgba
+  vec4 end_color;
 
-	// if true, particles will be oriented parallel to the near plane
-	ParticleOrientationMode orient_mode;
+  // if true, particles will be oriented parallel to the near plane
+  ParticleOrientationMode orient_mode;
 
-	// speed of the particles
-	float speed;
+  // speed of the particles
+  float speed;
 
-	// speed variance
-	float speed_variance;
+  // speed variance
+  float speed_variance;
 
-	// amount of time each particle lives
-	float life_time;
+  // amount of time each particle lives
+  float life_time;
 
-	// life time variance
-	float life_time_variance;
+  // life time variance
+  float life_time_variance;
 
-	// The number of particles to spawn when bursting
-	int burst_count;
+  // The number of particles to spawn when bursting
+  int burst_count;
 
-	// particle shading mode
-	ParticleShadingMode shading_mode;
+  // particle shading mode
+  ParticleShadingMode shading_mode;
 
-	// particle texture used if render_mode is set to PARTICLE_SHADING_TEXTURED
-	GLuint texture;
+  // particle texture used if render_mode is set to PARTICLE_SHADING_TEXTURED
+  GLuint texture;
 
-	// starting scale of the particles
-	float start_scale;
+  // starting scale of the particles
+  float start_scale;
 
-	// ending scale of the particles
-	float end_scale;
+  // ending scale of the particles
+  float end_scale;
 
-	// if true, this emitter uses depth sorting and renders with alpha blending
-	int depth_sort_alpha_blend;
+  // if true, this emitter uses depth sorting and renders with alpha blending
+  int depth_sort_alpha_blend;
 
-	// if true, renders this as 'soft' particles
-	int soft;
+  // if true, renders this as 'soft' particles
+  int soft;
 
-	// if true, particle velocity is modified by gravity
-	int simulate_gravity;
+  // if true, particle velocity is modified by gravity
+  int simulate_gravity;
 
-	// emitter cone axis
-	vec3 emit_cone_axis;
+  // emitter cone axis
+  vec3 emit_cone_axis;
 } ParticleEmitterDesc;
 
 // small easily swappable data structure for depth sorting
 typedef struct
 {
-	// depth from camera for sorting purposes
-	float depth;
+  // depth from camera for sorting purposes
+  float depth;
 
-	// index into particles
-	int index;
+  // index into particles
+  int index;
 } SortRecord;
 
 // instance of a ParticleEmitterDesc
 typedef struct
 {
-	// definition that created this system
-	const ParticleEmitterDesc* desc;
+  // definition that created this system
+  const ParticleEmitterDesc* desc;
 
-	// buffer of particle
-	Particle* particles;
+  // buffer of particle
+  Particle* particles;
 
-	// doubly indirected sort record
-	SortRecord* sort_records;
+  // doubly indirected sort record
+  SortRecord* sort_records;
 
-	// current count of living particles
-	int count;
+  // current count of living particles
+  int count;
 
-	// max living particles at once
-	int max;
+  // max living particles at once
+  int max;
 
-	// position in world space
-	vec3 pos;
+  // position in world space
+  vec3 pos;
 
-	// orientation in world space
-	quat rot;
+  // orientation in world space
+  quat rot;
 
-	// uniform scale in world space
-	float scale;
+  // uniform scale in world space
+  float scale;
 
-	// time remaining until next emission
-	float time_till_spawn;
+  // time remaining until next emission
+  float time_till_spawn;
 
-	// stops automatic spawning when set
-	int muted;
+  // stops automatic spawning when set
+  int muted;
 } ParticleEmitter;
 
 void particle_update(Particle* part, float dt);
@@ -158,9 +158,9 @@ void particle_emitter_sort(ParticleEmitter* emitter, const vec3 cam_position);
 
 typedef struct
 {
-	const char* name;
-	const char* path;
-	GLuint texture;
+  const char* name;
+  const char* path;
+  GLuint texture;
 } ParticleEmitterTextureDesc;
 
 void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);

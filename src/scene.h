@@ -12,26 +12,26 @@
 
 typedef struct
 {
-	// camera position
-	vec3 pos;
+  // camera position
+  vec3 pos;
 
-	// xyz-euler orientation
-	vec3 rot;
+  // xyz-euler orientation
+  vec3 rot;
 
-	// camera boom length
-	float boomLen;
+  // camera boom length
+  float boomLen;
 
-	// camera field of view
-	float fovy;
+  // camera field of view
+  float fovy;
 
-	// view matrix
-	mat4x4 view;
+  // view matrix
+  mat4x4 view;
 
-	// projection matrix
-	mat4x4 proj;
+  // projection matrix
+  mat4x4 proj;
 
-	// view-projection matrix
-	mat4x4 viewProj;
+  // view-projection matrix
+  mat4x4 viewProj;
 } Camera;
 
 void camera_update(Camera* camera, float dt, int auto_rotate);
@@ -40,44 +40,44 @@ void camera_up(const Camera* camera, vec3 out);
 
 typedef struct
 {
-	// Model translation
-	vec3 position;
+  // Model translation
+  vec3 position;
 
-	// Model euler angle rotation
-	vec3 rot;
+  // Model euler angle rotation
+  vec3 rot;
 
-	// Model uniform scale
-	float scale;
+  // Model uniform scale
+  float scale;
 
-	// The geometry to render
-	const Mesh* mesh;
+  // The geometry to render
+  const Mesh* mesh;
 
-	// The material to render with
-	Material material;
+  // The material to render with
+  Material material;
 } Model;
 
 void model_initialize(Model *out, const Mesh *mesh, const Material *mat);
 
 typedef struct
 {
-	// Main camera values
-	Camera camera;
+  // Main camera values
+  Camera camera;
 
-	// Scene skybox
-	Skybox* skybox;
+  // Scene skybox
+  Skybox* skybox;
 
-	// The global ambient light
-	vec3 ambient_color;
+  // The global ambient light
+  vec3 ambient_color;
 
-	// The intensity of the ambient light
-	float ambient_intensity;
+  // The intensity of the ambient light
+  float ambient_intensity;
 
-	// Main light
-	Light* light;
+  // Main light
+  Light* light;
 
-	// Models to render
-	Model* models[SCENE_MODELS_MAX];
+  // Models to render
+  Model* models[SCENE_MODELS_MAX];
 
-	// Particle emitters to render
-	ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
+  // Particle emitters to render
+  ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
 } Scene;

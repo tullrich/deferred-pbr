@@ -19,22 +19,22 @@ void utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b);
 
 typedef enum
 {
-	CUBEMAP_FRONT,
-	CUBEMAP_BACK,
-	CUBEMAP_TOP,
-	CUBEMAP_BOTTOM,
-	CUBEMAP_LEFT,
-	CUBEMAP_RIGHT
+  CUBEMAP_FRONT,
+  CUBEMAP_BACK,
+  CUBEMAP_TOP,
+  CUBEMAP_BOTTOM,
+  CUBEMAP_LEFT,
+  CUBEMAP_RIGHT
 } CubeMapFaces;
 
 #define CUBEMAP_FILEPATHS(folder, suffix) {							\
-		folder "/posz" suffix,															\
-		folder "/negz" suffix,															\
-		folder "/posy" suffix,															\
-		folder "/negy" suffix,															\
-		folder "/posx" suffix,															\
-		folder "/negx" suffix																\
-	}
+    folder "/posz" suffix,															\
+    folder "/negz" suffix,															\
+    folder "/posy" suffix,															\
+    folder "/negy" suffix,															\
+    folder "/posx" suffix,															\
+    folder "/negx" suffix																\
+  }
 
 GLuint utility_load_texture_constant(const vec4 value);
 GLuint utility_load_texture_unknown();

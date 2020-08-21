@@ -5,25 +5,25 @@
 
 typedef struct
 {
-	// frame buffer
-	GLuint fbo;
+  // frame buffer
+  GLuint fbo;
 
   // pixel dimensions
   int width, height;
 
-	// attachments
-	union
-	{
-		struct
-		{
-			GLuint normal_render_buffer;
-			GLuint albedo_render_buffer;
-			GLuint roughness_render_buffer;
-			GLuint metalness_render_buffer;
-			GLuint depth_render_buffer;
-		};
-		GLint attachments[GBUFFER_ATTACHMENTS_COUNT];
-	};
+  // attachments
+  union
+  {
+    struct
+    {
+      GLuint normal_render_buffer;
+      GLuint albedo_render_buffer;
+      GLuint roughness_render_buffer;
+      GLuint metalness_render_buffer;
+      GLuint depth_render_buffer;
+    };
+    GLint attachments[GBUFFER_ATTACHMENTS_COUNT];
+  };
 } GBuffer;
 
 

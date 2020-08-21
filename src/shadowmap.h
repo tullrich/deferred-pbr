@@ -4,25 +4,25 @@
 
 typedef struct
 {
-	GLuint program;
+  GLuint program;
 
-	// shader vars
-	GLint pos_loc;
-	GLint model_view_loc;
-	GLint model_view_proj_loc;
+  // shader vars
+  GLint pos_loc;
+  GLint model_view_loc;
+  GLint model_view_proj_loc;
 } DepthRenderShader;
 
 struct ShadowDebugShader
 {
-	GLuint program;
+  GLuint program;
 
-	// shader vars
-	GLint pos_loc;
-	GLint texcoord_loc;
-	GLint render_map_loc;
-	GLint depth_map_loc;
-	GLint z_near_loc;
-	GLint z_far_loc;
+  // shader vars
+  GLint pos_loc;
+  GLint texcoord_loc;
+  GLint render_map_loc;
+  GLint depth_map_loc;
+  GLint z_near_loc;
+  GLint z_far_loc;
 };
 
 struct ShadowMap
@@ -30,8 +30,8 @@ struct ShadowMap
   // pixel dimensions
   int width, height;
 
-	// frame buffer
-	GLuint fbo;
+  // frame buffer
+  GLuint fbo;
 
   // depth texture attachment
   GLuint depth_buffer;

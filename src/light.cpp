@@ -23,7 +23,7 @@ void light_initialize_directional(Light *out, const vec3 pos, const vec3 color, 
 }
 
 void light_gui(Light *light) {
-	if (ImGui::Combo("Type", (int*)&light->type, light_type_strings, light_type_strings_count)) {
+  if (ImGui::Combo("Type", (int*)&light->type, light_type_strings, light_type_strings_count)) {
     switch (light->type) {
     case LIGHT_TYPE_POINT: light->position[3] = 1.0f; break;
     case LIGHT_TYPE_DIRECTIONAL: light->position[3] = 0.0f; break;

@@ -129,13 +129,13 @@ void material_gui(Material* material) {
   ImGui::EndGroup();
   if (desc->material.ao_map) {
     ImGui::BeginGroup();
-    ImGui::PushID("AO");
-    ImGui::Separator();
-    ImGui::Text("AO");
-    ImGui::Indent();
-    texture_map_toggle_gui("Texture", &material->ao_map, desc->material.ao_map);
-    ImGui::Unindent();
-    ImGui::PopID();
+      ImGui::PushID("AO");
+      ImGui::Separator();
+      ImGui::Text("AO");
+      ImGui::Indent();
+      texture_map_toggle_gui("Texture", &material->ao_map, desc->material.ao_map);
+      ImGui::Unindent();
+      ImGui::PopID();
     ImGui::EndGroup();
   }
   ImGui::BeginGroup();

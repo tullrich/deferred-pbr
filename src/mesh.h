@@ -4,51 +4,51 @@
 // Bounds of mesh
 typedef struct
 {
-	vec3 center;
-	vec3 extents; // half of the size of the Bounds
+  vec3 center;
+  vec3 extents; // half of the size of the Bounds
 } Bounds;
 
 // Directy set the center and extents
 static inline void bounds_set(Bounds *b, vec3 center, vec3 extents) {
-	vec3_dup(b->center, center);
-	vec3_dup(b->extents, extents);
+  vec3_dup(b->center, center);
+  vec3_dup(b->extents, extents);
 }
 
 static inline Bounds bounds_from_min_max(vec3 min, vec3 max) {
-	Bounds b;
-	for (int i = 0; i < 3; i++) {
-		b.extents[i] = (max[i]-min[i])/2.0f;
-		b.center[i] = min[i] + b.extents[i];
-	}
-	return b;
+  Bounds b;
+  for (int i = 0; i < 3; i++) {
+    b.extents[i] = (max[i]-min[i])/2.0f;
+    b.center[i] = min[i] + b.extents[i];
+  }
+  return b;
 }
 
 struct MeshDesc;
 
 struct Mesh
 {
-	float *vertices;
-	float *normals;
-	float *tangents;
-	float *texcoords;
-	unsigned int *indices;
+  float *vertices;
+  float *normals;
+  float *tangents;
+  float *texcoords;
+  unsigned int *indices;
 
-	GLenum mode;
-	unsigned int vertex_count;
-	unsigned int index_count;
+  GLenum mode;
+  unsigned int vertex_count;
+  unsigned int index_count;
 
-	Bounds bounds;
-	float base_scale;
+  Bounds bounds;
+  float base_scale;
 
   const MeshDesc* desc;
 };
 
 struct MeshDesc
 {
-	const char* name;
-	const char* path;
-	float base_scale;
-	Mesh mesh;
+  const char* name;
+  const char* path;
+  float base_scale;
+  Mesh mesh;
 };
 
 void mesh_make_box(Mesh *out_mesh, float side_len);
