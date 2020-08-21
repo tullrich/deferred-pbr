@@ -161,8 +161,11 @@ vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
   vec3 specBrdf = CookTorrenceSpecularBRDF(F, N, V, H, L, m.Roughness);
 	vec3 diffuseBrdf = kD * (m.Albedo / PI) * (1.0 - m.Metalness); // Lambert diffuse
 
+  // Point light attenuation
+  float A = mix(1.0f, 20.0 / dot(MainLightPosition.xyz - P, MainLightPosition.xyz - P), MainLightPosition.w);
+
   // L
-  vec3 radiance = MainLightColor * MainLightIntensity;
+  vec3 radiance = A * MainLightColor * MainLightIntensity;
   return (specBrdf + diffuseBrdf) * radiance * NdL;
 }
 
