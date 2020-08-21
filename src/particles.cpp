@@ -1,4 +1,5 @@
 #include "particles.h"
+#include "assets.h"
 
 #define PARTICLE_GRAVITY -9.81f
 
@@ -200,6 +201,20 @@ static int get_particle_texture_index(GLuint texId, const ParticleEmitterTexture
 }
 
 void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
+  if (ImGui::Button("Flare")) {
+    *desc = gEmitterDescs[0];
+    particle_emitter_refresh(emitter);
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Particle")) {
+    *desc = gEmitterDescs[1];
+    particle_emitter_refresh(emitter);
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Smoke")) {
+    *desc = gEmitterDescs[2];
+    particle_emitter_refresh(emitter);
+  }
 	if ( ImGui::Button("Refresh") ) {
 		particle_emitter_refresh(emitter);
 	}
@@ -208,18 +223,14 @@ void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, c
 
 	ImGui::Combo( "Shading Mode", ( int* )&desc->shading_mode, particle_shading_mode_strings, particle_shading_mode_strings_count );
 
-	if ( desc->shading_mode == PARTICLE_SHADING_TEXTURED ) {
+	if (desc->shading_mode == PARTICLE_SHADING_TEXTURED ) {
 		int texture_idx = get_particle_texture_index(desc->texture, tex_defs, tex_defs_count);
-		if (ImGui::BeginCombo("Texture", tex_defs[texture_idx].name, 0))
-    {
-      for (int i = 0; i < tex_defs_count; i++)
-      {
-        if (ImGui::Selectable(tex_defs[i].name, (texture_idx == i)))
-				{
+		if (ImGui::BeginCombo("Texture", tex_defs[texture_idx].name, 0)) {
+      for (int i = 0; i < tex_defs_count; i++) {
+        if (ImGui::Selectable(tex_defs[i].name, (texture_idx == i))) {
 					desc->texture = tex_defs[i].texture;
 				}
-        if ((texture_idx == i))
-				{
+        if ((texture_idx == i)) {
           ImGui::SetItemDefaultFocus();
 				}
       }

@@ -8,6 +8,7 @@ void light_initialize_point(Light *out, const vec3 pos, const vec3 color, float 
   vec3_dup(out->position, pos);
   out->position[3] = 1.0f;
   vec3_dup(out->color, color);
+  quat_identity(out->rot);
   out->intensity = intensity;
 }
 
@@ -17,6 +18,7 @@ void light_initialize_directional(Light *out, const vec3 pos, const vec3 color, 
   vec3_dup(out->position, pos);
   out->position[3] = 0.0f;
   vec3_dup(out->color, color);
+  quat_identity(out->rot);
   out->intensity = intensity;
 }
 

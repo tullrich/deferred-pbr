@@ -16,9 +16,18 @@
 
 #include "linmath.h"
 
+static inline void vec2_set(vec3 r, float x, float y) {
+	r[0] = x; r[1] = y;
+}
 static inline void vec2_dup(vec2 r, vec2 const v) {
 	for (int i=0; i<2; ++i)
 		r[i] = v[i];
+}
+static inline void vec2_print(vec2 const v) {
+  printf("<%f, %f>\n", v[0], v[1]);
+}
+static inline void vec3_set(vec3 r, float x, float y, float z) {
+	r[0] = x; r[1] = y; r[2] = z;
 }
 static inline void vec3_dup(vec3 r, vec3 const v) {
 	for(int i=0; i<3; ++i)
@@ -38,6 +47,12 @@ static inline float vec3_angle(vec3 a, vec3 b) {
 	float cosAngle = vec3_mul_inner(a, b);
 	return acosf(cosAngle);
 }
+static inline void vec3_print(vec3 const v) {
+  printf("<%f, %f, %f>\n", v[0], v[1], v[2]);
+}
+static inline void vec4_set(vec3 r, float x, float y, float z, float w) {
+	r[0] = x; r[1] = y; r[2] = z; r[3] = w;
+}
 static inline void vec4_dup(vec4 r, vec4 const v) {
 	for(int i=0; i<4; ++i)
 		r[i] = v[i];
@@ -56,11 +71,29 @@ static inline void vec4_rgba(vec4 out, unsigned char r, unsigned char g, unsigne
 	out[0] = r/255.0f; out[1] = g/255.0f;
 	out[2] = b/255.0f; out[3] = a/255.0f;
 }
+static inline void vec4_print(vec4 const v) {
+  printf("<%f, %f, %f, %f>\n", v[0], v[1], v[2], v[3]);
+}
 static inline void quat_dup(quat r, quat const v) {
 	for(int i=0; i<4; ++i)
 		r[i] = v[i];
 }
-static inline void quat_to_axis_angle(float* angle, vec3 axis, quat const q) {
+
+static inline void quat_from_euler(quat out, const vec3 euler) {
+  quat_identity(out);
+  vec3 axis;
+  quat xrot, yrot, zrot;
+  axis[0] = 1.0f; axis[1] = axis[2] = 0.0f;
+  quat_rotate(xrot, euler[0], axis);
+  axis[1] = 1.0f; axis[0] = axis[2] = 0.0f;
+  quat_rotate(yrot, euler[1], axis);
+  axis[2] = 1.0f; axis[0] = axis[1] = 0.0f;
+  quat_rotate(zrot, euler[2], axis);
+  quat tmp;
+  quat_mul(tmp, xrot, yrot);
+  quat_mul(out, tmp, zrot);
+}
+static inline void quat_to_axis_angle(float* angle, vec3 axis, const quat q) {
 	*angle = acosf(q[3]) * 2.0f;
 	float sin_half_angle = sqrtf(1.0f-q[3]*q[3]);
 	for(int i=0; i<3; ++i) {
@@ -77,6 +110,9 @@ static inline void quat_rotation_between(quat out, const vec3 a, const vec3 b) {
 	rot[3] = sqrtf(vec3_len2(a)* vec3_len2(b)) + vec3_mul_inner(a, b);
 	quat_norm(out, rot);
 }
+static inline void quat_print(const quat q) {
+  printf("<%f, %f, %f, %f>\n", q[0], q[1], q[2], q[3]);
+}
 static inline void mat4x4_printf(mat4x4 m) {
 	printf("[ %f, %f, %f, %f\n", m[0][0], m[0][1], m[0][2], m[0][3]);
 	printf("  %f, %f, %f, %f\n", m[1][0], m[1][1], m[1][2], m[1][3]);
@@ -88,23 +124,29 @@ static inline void mat4x4_zero(mat4x4 m) {
 		vec4_zero(m[i]);
 }
 static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
-	float r31 = m[2][0];
-	 if (r31 == 1.0f) {
-		euler[0] = atan2f(-m[0][1], -m[0][2]);
-   		euler[1] = -(float)M_PI/2.0f;
+	if (m[0][2] == 1.0f) {
+		euler[0] = atan2f(-m[1][0], -m[2][0]);
+ 		euler[1] = -(float)M_PI/2.0f;
 		euler[2] = 0.0f;
-	 } else if (r31 == -1.0f) {
-		euler[0] = atan2f(m[0][1], m[0][2]);
-   		euler[1] = (float)M_PI/2.0f;
+  } else if (m[0][2] == -1.0f) {
+		euler[0] = atan2f(m[1][0], m[2][0]);
+ 		euler[1] = (float)M_PI/2.0f;
 		euler[2] = 0.0f;
-	 } else {
-   		euler[1] = -asinf(r31);
+	} else {
+ 		euler[1] = -asinf(m[0][2]);
 		float cosTheta = cosf(euler[1]);
+		euler[0] = atan2f(m[1][2]/cosTheta,m[2][2]/cosTheta);
+		euler[2] = atan2f(m[0][1]/cosTheta,m[0][0]/cosTheta);
+	}
+}
 
-		euler[0] = atan2f(m[2][1]/cosTheta,m[2][2]/cosTheta);
-		euler[2] = atan2f(m[1][0]/cosTheta,m[0][0]/cosTheta);
-	 }
- }
+static inline void mat4x4_make_transform(mat4x4 r, const quat rotation, const vec3 translation) {
+ mat4x4_identity(r);
+ mat4x4_from_quat(r, rotation);
+ vec3_dup(r[3], translation);
+ r[3][3] = 1.0f;
+}
+
 static inline void mat4x4_make_transform(mat4x4 r, const vec3 scale, const quat rotation, const vec3 translation) {
 	mat4x4_identity(r);
 	mat4x4_from_quat(r, rotation);
@@ -170,7 +212,7 @@ extern const quat Quat_Identity;
 #define Z_FAR 100.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
-#define RAD_TO_DEG(rad) (deg*180.0f/(float)M_PI)
+#define RAD_TO_DEG(rad) (rad*180.0f/(float)M_PI)
 #define DEG_TO_RAD(deg) (deg*(float)M_PI/180.0f)
 #define BOOL_TO_STRING(b) ((b) ? "true" : "false")
 

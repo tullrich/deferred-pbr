@@ -53,6 +53,11 @@ static const float box_texcoords[] = {
 	0, 0, 1, 0, 1, 1, 0, 1
 };
 
+static const float plane_vertices[] = { -0.5f, 0.0f, 0.5f, 0.5f, 0.0f, 0.5f, 0.5f, 0.0f, -0.5f, -0.5f, 0.0f, -0.5f };
+static const float plane_tangents[] = { 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1 };
+static const float plane_normals[] = { 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0 };
+static const float plane_texcoords[] = { 0, 0, 1, 0, 1, 1, 0, 1 };
+
 void mesh_make_box(Mesh *out_mesh, float side_len) {
 	memset(out_mesh, 0, sizeof(Mesh));
 	out_mesh->mode = GL_QUADS;
@@ -129,6 +134,31 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
 			*indices++ = r * sectors + s;
 		}
     }
+}
+
+void mesh_make_quad(Mesh *out_mesh, float size_x, float size_z, float uv_scale) {
+  size_x /= 2.0f;
+  size_z /= 2.0f;
+	memset(out_mesh, 0, sizeof(Mesh));
+	out_mesh->mode = GL_QUADS;
+	out_mesh->vertex_count = 4;
+	out_mesh->index_count = 4;
+  vec3* extents = &out_mesh->bounds.extents;
+  vec3_set(out_mesh->bounds.extents, size_x, .001f, size_z);
+	out_mesh->base_scale = 1.0f;
+	out_mesh->vertices = (float*)malloc(sizeof(plane_vertices));
+	out_mesh->texcoords = (float*)malloc(sizeof(plane_texcoords));
+	for (int i = 0; i < STATIC_ELEMENT_COUNT(plane_vertices)/3; i++) {
+    out_mesh->vertices[i*3] = plane_vertices[i*3] * size_x;
+    out_mesh->vertices[i*3+1] = plane_vertices[i*3+1];
+		out_mesh->vertices[i*3+2] = plane_vertices[i*3+2] * size_z;
+    out_mesh->texcoords[i*2] = plane_texcoords[i*2] * uv_scale;
+    out_mesh->texcoords[i*2+1] = plane_texcoords[i*2+1] * uv_scale;
+	}
+	out_mesh->normals = (float*)malloc(sizeof(plane_normals));
+	memcpy(out_mesh->normals, plane_normals, sizeof(plane_normals));
+	out_mesh->tangents = (float*)malloc(sizeof(plane_tangents));
+	memcpy(out_mesh->tangents, plane_tangents, sizeof(plane_tangents));
 }
 
 void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc) {
@@ -375,18 +405,19 @@ static float* compute_mesh_tangents(const tinyobj_attrib_t *attrib) {
 	return tangents;
 }
 
-int mesh_load_obj(Mesh *out_mesh, const char *filepath, float base_scale) {
+int mesh_load(Mesh *out_mesh, const MeshDesc* desc) {
 	int ret = 0;
 
 	// Read mesh file
 	size_t file_len;
 	char* file_contents;
-	if (utility_buffer_file(filepath, (unsigned char**)&file_contents, &file_len)) {
-		printf("Unable to open mesh file %s.\n", filepath);
+	if (utility_buffer_file(desc->path, (unsigned char**)&file_contents, &file_len)) {
+		printf("Unable to open mesh file %s.\n", desc->path);
 		return 1;
 	}
 
 	memset(out_mesh, 0, sizeof(Mesh));
+  out_mesh->desc = desc;
 
 	// Parse contents
 	tinyobj_attrib_t attrib;
@@ -414,14 +445,14 @@ int mesh_load_obj(Mesh *out_mesh, const char *filepath, float base_scale) {
 
 	// Compute bounds from vertex positions
 	out_mesh->bounds = compute_mesh_bounds(out_mesh);
-	out_mesh->base_scale = (base_scale > 0) ? base_scale : 1.0f;
+	out_mesh->base_scale = (desc->base_scale > 0) ? desc->base_scale : 1.0f;
 
 	// Free tinyobj data
 	tinyobj_shapes_free(shapes, num_shapes);
 	tinyobj_materials_free(materials, num_materials);
 	tinyobj_attrib_free(&attrib);
 
-	printf("Loaded Mesh -- '%s' Vertices: %i UVs: %s\n", filepath, out_mesh->vertex_count, BOOL_TO_STRING(out_mesh->texcoords != NULL));
+	printf("Loaded Mesh -- '%s' Vertices: %i UVs: %s\n", desc->path, out_mesh->vertex_count, BOOL_TO_STRING(out_mesh->texcoords != NULL));
 
 free_file_contents_and_exit:
 	free(file_contents);

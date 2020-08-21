@@ -11,6 +11,7 @@ find_package( SDL2 REQUIRED )
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
 find_package( GLI REQUIRED )
+find_package( FreeImage REQUIRED )
 
 add_subdirectory( thirdparty/stb )
 add_subdirectory( tools/ibl-baker )
@@ -43,6 +44,8 @@ add_executable( Deferred
   src/material.cpp
   src/light.h
   src/light.cpp
+  src/assets.h
+  src/assets.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h
@@ -89,6 +92,7 @@ include_directories(
 	${GLEW_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
 	${GLI_INCLUDE_DIR}
+	${FREEIMAGE_INCLUDE_PATH}
 	${CMAKE_CURRENT_SOURCE_DIR}/thirdparty
 )
 
@@ -99,4 +103,5 @@ target_link_libraries(Deferred
 	${GLEW_LIBRARIES}
 	${STB_LIBRARIES}
 	${GLI_LIBRARY_DIR}
+	${FREEIMAGE_LIBRARIES}
 )

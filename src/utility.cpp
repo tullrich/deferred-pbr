@@ -3,6 +3,7 @@
 
 #include "imgui/ImGuizmo.h"
 #include "gli/gli.hpp"
+#include "FreeImage.h"
 
 void utility_report_gl_err(const char * file, const char * func, int line) {
 	GLenum e;
@@ -364,8 +365,6 @@ GLuint utility_load_cubemap(const char* const* filepaths) {
 }
 
 void utility_set_clear_color(unsigned char r,  unsigned char g, unsigned b) {
-	//uint32_t c = 0x606060;
-	//glClearColor((c&0xff)/255.0f, (c>>8&0xff)/255.0f, (c>>16&0xff)/255.0f, 1.0f);
 	GL_WRAP(glClearColor(r/255.0f, g/255.0f, b/255.0f, 1.0f));
 }
 
@@ -393,10 +392,31 @@ float utility_random_range(float min, float max) {
 	return min + rand() / (float)RAND_MAX * (max - min);
 }
 
-void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj) {
+void utility_rotation_gizmo(quat out_euler, const vec3 pos, const mat4x4 view, const mat4x4 proj) {
+	mat4x4 manip_mat;
+  mat4x4_identity(manip_mat);
+	mat4x4_rotate_Z(manip_mat, manip_mat, DEG_TO_RAD(out_euler[2]));
+	mat4x4_rotate_Y(manip_mat, manip_mat, DEG_TO_RAD(out_euler[1]));
+	mat4x4_rotate_X(manip_mat, manip_mat, DEG_TO_RAD(out_euler[0]));
+	ImGuizmo::Enable(true);
+	ImGuizmo::SetRect((float)VIEWPORT_X_OFFSET, 0.0f, (float)VIEWPORT_WIDTH, (float)VIEWPORT_HEIGHT);
+	ImGuizmo::Manipulate(
+		&view[0][0],
+		&proj[0][0],
+		ImGuizmo::ROTATE,
+		ImGuizmo::LOCAL,
+		&manip_mat[0][0]
+	);
+  mat4x4_to_euler(out_euler, manip_mat);
+  for (int i = 0; i < 3; i++) {
+    out_euler[i] = RAD_TO_DEG(out_euler[i]);
+  }
+}
+
+void utility_translation_gizmo(vec3 out_pos, const mat4x4 view, const mat4x4 proj) {
 	mat4x4 manip_mat;
 	mat4x4_identity(manip_mat);
-	vec3_dup(manip_mat[3], out);
+	vec3_dup(manip_mat[3], out_pos);
 	ImGuizmo::Enable(true);
 	ImGuizmo::SetRect((float)VIEWPORT_X_OFFSET, 0.0f, (float)VIEWPORT_WIDTH, (float)VIEWPORT_HEIGHT);
 	ImGuizmo::Manipulate(
@@ -406,7 +426,7 @@ void utility_translation_gizmo(vec3 out, const mat4x4 view, const mat4x4 proj) {
 		ImGuizmo::LOCAL,
 		&manip_mat[0][0]
 	);
-	vec3_dup(out, manip_mat[3]);
+	vec3_dup(out_pos, manip_mat[3]);
 }
 
 GLuint utility_load_texture_dds(const char* filepath) {
@@ -466,4 +486,23 @@ GLuint utility_load_texture_dds(const char* filepath) {
 	GL_WRAP(glBindTexture(target, 0));
 
 	return texture_id;
+}
+
+int utility_save_screenshot(const char* path, int x_off, int y_off, int width, int height) {
+  // Make the GLubyte array, factor of 3 because it's RBG.
+  GLubyte* pixels = (GLubyte*)malloc(3 * width * height);
+
+  GL_WRAP(glPixelStorei(GL_PACK_ALIGNMENT, 1));
+	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+	GL_WRAP(glReadBuffer(GL_FRONT));
+  GL_WRAP(glReadPixels(x_off, y_off, width, height, GL_BGR, GL_UNSIGNED_BYTE, pixels));
+
+  // Convert to FreeImage format & save to file
+  FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, width, height, 3 * width, 24, 0x0000FF, 0xFF0000, 0x00FF00, false);
+  FreeImage_Save(FIF_PNG, image, path, PNG_DEFAULT);
+
+  // Free resources
+  FreeImage_Unload(image);
+  free(pixels);
+  return 0;
 }

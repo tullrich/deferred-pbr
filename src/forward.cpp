@@ -22,8 +22,8 @@ static void draw_quad(const ParticleShader* shader, const vec3 translation, cons
 static void calculate_billboard_euler(vec3 euler, mat4x4 model, const Scene *s) {
 	vec4 cam_forward, cam_up;
 	cam_forward[3] = cam_up[3] = 0.0f;
-	scene_camera_forward(s, cam_forward);
-	scene_camera_up(s, cam_up);
+	camera_forward(&s->camera, cam_forward);
+	camera_up(&s->camera, cam_up);
 
 	mat4x4 invModel;
 	mat4x4_invert(invModel, model);
@@ -33,13 +33,12 @@ static void calculate_billboard_euler(vec3 euler, mat4x4 model, const Scene *s) 
 	vec4_negate_in_place(model_cam_forward);
 	mat4x4_mul_vec4(model_cam_up, invModel, cam_up);
 
-	mat4x4 lookAt;
-	vec3 zero;
-	vec3_zero(zero);
-	mat4x4_look_at(lookAt, zero, model_cam_forward, model_cam_up);
+	mat4x4 lookAt, invLookAt;
+	mat4x4_look_at(lookAt, Zero, model_cam_forward, model_cam_up);
+  mat4x4_invert(invLookAt, lookAt);
 
 	vec3_zero(euler);
-	mat4x4_to_euler(euler, lookAt);
+	mat4x4_to_euler(euler, invLookAt);
 }
 
 static int load_particle_shader(ParticleShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {

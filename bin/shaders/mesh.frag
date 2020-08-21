@@ -111,9 +111,9 @@ void SurfaceShaderTextured(out SurfaceOut surface)
 	tbn[2] = Normal;
   vec3 viewDir = normalize(transpose(tbn) * (ViewPos - FragModelPos)); // tangent space view dir
   texCoord = MultisampleParallaxMapping(texCoord, viewDir);
-  if (texCoord.x > 1.0 || texCoord.y > 1.0 || texCoord.x < 0.0 || texCoord.y < 0.0) {
-    discard;
-  }
+  // if (texCoord.x > 1.0 || texCoord.y > 1.0 || texCoord.x < 0.0 || texCoord.y < 0.0) {
+  //   discard;
+  // }
 #endif // USE_NORMAL_MAP
 
 	vec3 normal;

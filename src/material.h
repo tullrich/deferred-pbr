@@ -1,6 +1,8 @@
 #pragma once
 
-typedef struct
+struct MaterialDesc;
+
+struct Material
 {
 	vec3 albedo_base;
 	float metalness_base;
@@ -14,10 +16,10 @@ typedef struct
 	GLuint roughness_map;
 	GLuint emissive_map;
 	GLuint ao_map;
+  const MaterialDesc* desc;
+};
 
-} Material;
-
-typedef struct
+struct MaterialDesc
 {
 	const char* name;
 	const char* albedo_map_path;
@@ -33,8 +35,8 @@ typedef struct
 	vec3 emissive_base;
   float height_map_scale;
 	Material material;
-} MaterialDesc;
+};
 
 int material_initialize_default(Material *out);
-int material_initialize(Material *out_material, const MaterialDesc *desc);
-void material_gui(Material* material, int *material_idx, const MaterialDesc* mat_defs, int mat_defs_count);
+int material_load(Material *out_material, const MaterialDesc *desc);
+void material_gui(Material* material);

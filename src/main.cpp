@@ -1,4 +1,5 @@
 #include "common.h"
+#include "assets.h"
 #include "deferred.h"
 #include "forward.h"
 #include "scene.h"
@@ -8,239 +9,17 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/ImGuizmo.h"
 
-// #define SPHERE_SCENE
-
 static SDL_Window* gWindow;
-static Scene gScene;
 static Deferred gDeferred;
 static Forward gForward;
+static Scene gScene;
 
-static Light gLight;
-static Model gModel;
 static ParticleEmitterDesc gEmitterDesc;
-static ParticleEmitter gEmitter;
 
 static int rotate_cam = 0;
 static int show_manipulator = 0;
-static int skybox_idx = 0;
-static int mesh_idx = 0;
-static int material_idx = 0;
-
-static SkyboxDesc gSkyboxes[] = {
-	{
-		.name = "Saint Peters Basilica",
-    .env_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Env_512.dds",
-    .irr_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Irr.dds",
-    .prefilter_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Prefilter.dds"
-	},
-	{
-		.name = "San Francisco",
-    .env_path = "environments/SanFrancisco4/SanFrancisco4_Env_512.dds",
-    .irr_path = "environments/SanFrancisco4/SanFrancisco4_Irr.dds",
-    .prefilter_path = "environments/SanFrancisco4/SanFrancisco4_Prefilter.dds"
-	},
-	{
-		.name = "UV Debug",
-    .env_path = "environments/UVDebug/UVDebug_Env.dds",
-	}
-};
-
-static MeshDesc gMeshes[] = {
-  { .name = "Sphere" },
-	{ .name = "Box" },
-	{ .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
-	{ .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
-	{ .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
-	{ .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj", .base_scale = 50.0f },
-	{ .name = "None" }
-};
-
-static MaterialDesc gMaterials[] = {
-	{
-		.name = "Mirror",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 0.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
-	},
-	{
-		.name = "Sci-Fi Cube",
-		.albedo_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
-		.normal_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_normal.jpeg",
-		.height_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_height.png",
-		.metalness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_metallic_rgb.png",
-		.roughness_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_roughness.jpeg",
-		.emissive_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_emissive.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 1.0f, 1.0f, 1.0f },
-    .height_map_scale = 0.015f
-	},
-	{
-		.name = "Gold",
-		.albedo_map_path = "materials/Gold/lightgold_albedo.png",
-		.normal_map_path = "materials/Gold/lightgold_normal-dx.png",
-		.metalness_map_path = "materials/Gold/lightgold_metallic.png",
-		.roughness_map_path = "materials/Gold/lightgold_roughness.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
-	},
-	{
-		.name = "Metal Ventilation",
-		.albedo_map_path = "materials/MetalVentilation/metal-ventilation1-albedo.png",
-		.normal_map_path = "materials/MetalVentilation/metal-ventilation1-normal-dx.png",
-		.height_map_path = "materials/MetalVentilation/metal-ventilation1-height.png",
-		.metalness_map_path = "materials/MetalVentilation/metal-ventilation1-metallic.png",
-		.roughness_map_path = "materials/MetalVentilation/metal-ventilation1-roughness.png",
-		.ao_map_path = "materials/MetalVentilation/metal-ventilation1-ao.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
-	},
-  {
-		.name = "Harsh Brick",
-		.albedo_map_path = "materials/HarshBricks/harshbricks-albedo.png",
-		.normal_map_path = "materials/HarshBricks/harshbricks-normal.png",
-		.height_map_path = "materials/HarshBricks/harshbricks-height5-16.png",
-		.metalness_map_path = "materials/HarshBricks/harshbricks-metalness.png",
-		.roughness_map_path = "materials/HarshBricks/harshbricks-roughness.png",
-		.ao_map_path = "materials/HarshBricks/harshbricks-ao2.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
-	},
-  {
-		.name = "Wrinkled Paper",
-		.albedo_map_path = "materials/WrinkledPaper/wrinkled-paper-albedo.png",
-		.normal_map_path = "materials/WrinkledPaper/wrinkled-paper-normal-dx.png",
-		.height_map_path = "materials/WrinkledPaper/wrinkled-paper-height.png",
-		.metalness_map_path = "materials/WrinkledPaper/wrinkled-paper-metalness.png",
-		.roughness_map_path = "materials/WrinkledPaper/wrinkled-paper-roughness.png",
-		.ao_map_path = "materials/WrinkledPaper/wrinkled-paper-ao.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
-	},
-  {
-		.name = "Snow Covered Path",
-		.albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
-		.normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
-		.height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
-		.metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
-		.roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
-		.ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 1.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
-	},
-	{
-		.name = "Medievil",
-		.albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
-		.normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
-		.ao_map_path = "materials/Medievil/Medievil Stonework - AO Map.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 0.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 1.0f
-	},
-	{
-		.name = "Moorish Lattice",
-		.albedo_map_path = "materials/MoorishLattice/moorish_lattice_diffuse.png",
-		.normal_map_path = "materials/MoorishLattice/moorish_lattice_normal.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 0.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
-	},
-	{
-		.name = "Terracotta",
-		.albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
-		.normal_map_path = "materials/Terracotta/terracotta_normal.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 0.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
-	},
-	{
-		.name = "UV Debug",
-		.albedo_map_path = "uv_map.png",
-		.albedo_base = { 1.0f, 1.0f, 1.0f },
-		.metalness_base = 0.0f,
-		.roughness_base = 1.0f,
-		.emissive_base = { 0.0f, 0.0f, 0.0f }
-	}
-};
-
-static ParticleEmitterTextureDesc gParticleTextures[] = {
-	{ .name = "Flare", .path = "particles/flare.png" },
-	{ .name = "Particle", .path = "particles/particle.png"},
-	{ .name = "Smoke", .path = "particles/smoke.png" },
-	{ .name = "Divine", .path = "particles/divine.png" },
-	{ .name = "UV Debug", .path = "uv_map.png" }
-};
-
-static ParticleEmitterDesc gEmitterDescs[] = {
-	{
-		.max = 1024,
-		.spawn_rate = 60.0f,
-		.start_color = { Yellow[0], Yellow[1], Yellow[2], Yellow[3] },
-		.end_color = { Red[0], Red[1], Red[2], Red[3] },
-		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
-		.speed = 8.0f, .speed_variance = 5.0f,
-		.life_time = 2.5f, .life_time_variance = 0.5f,
-		.burst_count = 150,
-		.shading_mode = PARTICLE_SHADING_TEXTURED,
-		.start_scale = 1.0f, .end_scale = 0.1f,
-		.depth_sort_alpha_blend = 0,
-		.soft = 0,
-		.simulate_gravity = 0,
-		.emit_cone_axis = { Axis_Right[0], Axis_Right[1], Axis_Right[2] }
-	},
-	{
-		.max = 1024,
-		.spawn_rate = 60.0f,
-		.start_color = { 100/255.0f, 100/255.0f, 1.0f, 1.0f },
-		.end_color = { 1.0f, 1.0f, 1.0f, 0.0f },
-		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
-		.speed = 4.0f, .speed_variance = 1.0f,
-		.life_time = 2.5f, .life_time_variance = 0.5f,
-		.burst_count = 150,
-		.shading_mode = PARTICLE_SHADING_TEXTURED,
-		.start_scale = 0.1f, .end_scale = 0.5,
-		.depth_sort_alpha_blend = 0,
-		.soft = 0,
-		.simulate_gravity = 0,
-		.emit_cone_axis = { Axis_Up[0], Axis_Up[1], Axis_Up[2] }
-	},
-	{
-		.max = 1024,
-		.spawn_rate = 24.0f,
-		.start_color = { Green[0], Green[1], Green[2], 0.4f },
-		.end_color = { 1.0f, 1.0f, 1.0f, 0.0f },
-		.orient_mode = PARTICLE_ORIENT_SCREEN_ALIGNED,
-		.speed = 3.0f, .speed_variance = 0.0f,
-		.life_time = 3.0f, .life_time_variance = 0.0f,
-		.burst_count = 150,
-		.shading_mode = PARTICLE_SHADING_TEXTURED,
-		.start_scale = 2.0f, .end_scale = 4.5f,
-		.depth_sort_alpha_blend = 1,
-		.soft = 0,
-		.simulate_gravity = 0,
-		.emit_cone_axis = { Axis_Up[0], Axis_Up[1], Axis_Up[2] }
-	}
-};
+static float prevFrameTime = 0.0f;
+static float fps = 0.0f;
 
 static void update_loading_screen(const char* stage, const char* asset, int index, int total) {
   // pump events
@@ -254,10 +33,6 @@ static void update_loading_screen(const char* stage, const char* asset, int inde
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplSDL2_NewFrame(gWindow);
   ImGui::NewFrame();
-
-	GL_WRAP(glEnable(GL_BLEND));
-	GL_WRAP(glBlendEquation(GL_FUNC_ADD));
-	GL_WRAP(glBlendFunc(GL_ONE, GL_ONE));
 
   ImGui::SetNextWindowPosCenter();
 	ImGui::SetNextWindowSize(ImVec2(400, 100));
@@ -284,30 +59,30 @@ static void update_loading_screen(const char* stage, const char* asset, int inde
 }
 
 static int initialize_particle_rendering() {
-  int count = STATIC_ELEMENT_COUNT(gParticleTextures);
-	for (int i = 0; i < count; i++) {
-    update_loading_screen("Initializing particle", gParticleTextures[i].name, i, count);
+	for (int i = 0; i < gParticleTexturesCount; i++) {
+    update_loading_screen("Initializing particle", gParticleTextures[i].name, i, gParticleTexturesCount);
 		if ((gParticleTextures[i].texture = utility_load_texture(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
 			return 1;
 		}
 	}
 
-	for (int i = 0; i < STATIC_ELEMENT_COUNT(gEmitterDescs); i++) {
-		int idx = (i < STATIC_ELEMENT_COUNT(gParticleTextures)) ? i : 0;
+	for (int i = 0; i < gEmitterDescsCount; i++) {
+		int idx = (i < gParticleTexturesCount) ? i : 0;
 		gEmitterDescs[i].texture = gParticleTextures[idx].texture;
 	}
 	return 0;
 }
 
 static int initialize_meshes() {
-	int count = STATIC_ELEMENT_COUNT(gMeshes);
-  update_loading_screen("Initializing mesh", "sphere", 0, count-1);
+  update_loading_screen("Initializing mesh", "sphere", 0, gMeshesCount);
 	mesh_sphere_tessellate(&gMeshes[0].mesh, 2.5f, 100, 100);
-  update_loading_screen("Initializing mesh", "box", 1, count-1);
+  gMeshes[0].mesh.desc = &gMeshes[0];
+  update_loading_screen("Initializing mesh", "box", 1, gMeshesCount);
 	mesh_make_box(&gMeshes[1].mesh, 5.0f);
-	for (int i = 2; i < (count - 1); i++) {
-    update_loading_screen("Initializing mesh", gMeshes[i].name, i, count-1);
-		if (mesh_load_obj(&gMeshes[i].mesh, gMeshes[i].path, gMeshes[i].base_scale)) {
+  gMeshes[1].mesh.desc = &gMeshes[1];
+	for (int i = 2; i < (gMeshesCount - 1); i++) {
+    update_loading_screen("Initializing mesh", gMeshes[i].name, i, gMeshesCount);
+		if (mesh_load(&gMeshes[i].mesh, &gMeshes[i])) {
 			return 1;
 		}
 	}
@@ -315,10 +90,10 @@ static int initialize_meshes() {
 }
 
 static int initialize_materials() {
-	int ret, count = STATIC_ELEMENT_COUNT(gMaterials);
-	for (int i = 0; i < count; i++) {
-    update_loading_screen("Initializing material", gMaterials[i].name, i, count);
-		if ((ret = material_initialize(&gMaterials[i].material, &gMaterials[i]))) {
+	int ret;
+	for (int i = 0; i < gMaterialsCount; i++) {
+    update_loading_screen("Initializing material", gMaterials[i].name, i, gMaterialsCount);
+		if ((ret = material_load(&gMaterials[i].material, &gMaterials[i]))) {
 			return ret;
 		}
 	}
@@ -326,9 +101,9 @@ static int initialize_materials() {
 }
 
 static int initialize_skyboxes() {
-	int ret, count = STATIC_ELEMENT_COUNT(gSkyboxes);
-	for (int i = 0; i < count; i++) {
-    update_loading_screen("Initializing skybox", gSkyboxes[i].name, i, count);
+	int ret;
+	for (int i = 0; i < gSkyboxesCount; i++) {
+    update_loading_screen("Initializing skybox", gSkyboxes[i].name, i, gSkyboxesCount);
 		if ((ret = skybox_load(&gSkyboxes[i].skybox, &gSkyboxes[i]))) {
 			return ret;
 		}
@@ -336,7 +111,7 @@ static int initialize_skyboxes() {
 	return 0;
 }
 
-static int init_scene() {
+static int initialize_scene(int sphere_scene) {
 	memset(&gScene, 0, sizeof(Scene));
 
 	// Setup camera
@@ -349,48 +124,53 @@ static int init_scene() {
 	gScene.ambient_intensity = 0.03f;
 
 	// Setup skybox
-	gScene.skybox = gSkyboxes[skybox_idx].skybox;
+	gScene.skybox = &gSkyboxes[0].skybox;
 
 	// Setup main directional light
+	gScene.light = (Light*)malloc(sizeof(Light));
 	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
-	light_initialize_point(&gLight, lightPos, White, 3.0f);
-	gScene.light = &gLight;
+	light_initialize_point(gScene.light, lightPos, White, 3.0f);
 
 	// Setup particle system
-	memset(&gEmitter, 0, sizeof(ParticleEmitter));
+	gScene.emitters[0] = (ParticleEmitter*)malloc(sizeof(ParticleEmitter));
 	memset(&gEmitterDesc, 0, sizeof(ParticleEmitterDesc));
 	gEmitterDesc = gEmitterDescs[0];
-	particle_emitter_initialize(&gEmitter, &gEmitterDesc);
-	gEmitter.muted = true; // start muted
+	particle_emitter_initialize(gScene.emitters[0], &gEmitterDesc);
+	gScene.emitters[0]->muted = true; // start muted
 
-#ifndef SPHERE_SCENE
-	printf("Creating single model scene\n");
-	model_initialize(&gModel, &gMeshes[mesh_idx].mesh, &gMaterials[material_idx].material);
-	gScene.models[0] = &gModel;
-	gScene.emitters[0] = &gEmitter;
-#else
-#define SPHERE_ROWS 7
-#define SPHERE_COLUMNS 7
-#define SPHERE_SPACING 8.0F
-	printf("Creating %ix%i spheres scene\n", SPHERE_ROWS, SPHERE_COLUMNS);
-	material_idx = 0;
-	for (int i = 0; i < SPHERE_ROWS; i++) {
-		for (int j = 0; j < SPHERE_COLUMNS; j++) {
-			Model* m = (Model*)malloc(sizeof(Model));
-			model_initialize(m, &gMeshes[1].mesh, &gMaterials[0].material);
-			m->position[0] = (j-(SPHERE_COLUMNS/2)) * SPHERE_SPACING;
-			m->position[1] = (i-(SPHERE_ROWS/2)) * SPHERE_SPACING;
-			vec3_dup(m->material.albedo_base, White);
-			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
-			m->material.metalness_base = i/((float)SPHERE_ROWS);
-			gScene.models[i * SPHERE_COLUMNS + j] = m;
-		}
+  // Setup model(s)
+  if (!sphere_scene) {
+  	printf("Creating single model scene\n");
+    gScene.models[0] = (Model*)malloc(sizeof(Model));
+  	model_initialize(gScene.models[0], &gMeshes[0].mesh, &gMaterials[0].material);
+  } else {
+    const int kSphereRows = 7;
+    const int kSphereCols = 7;
+    const int kSphereSpacing = 8.0f;
+  	printf("Creating %ix%i spheres scene\n", kSphereRows, kSphereCols);
+  	for (int i = 0; i < kSphereRows; i++) {
+  		for (int j = 0; j < kSphereCols; j++) {
+  			Model* m = (Model*)malloc(sizeof(Model));
+  			model_initialize(m, &gMeshes[0].mesh, &gMaterials[0].material);
+  			m->position[0] = (j-(kSphereCols/2)) * kSphereSpacing;
+  			m->position[1] = (i-(kSphereRows/2)) * kSphereSpacing;
+  			vec3_dup(m->material.albedo_base, White);
+  			m->material.roughness_base = std::max(j/((float)kSphereCols), 0.05f);
+  			m->material.metalness_base = i/((float)kSphereRows);
+      	int center_idx = kSphereRows * kSphereCols / 2;
+        int idx = i * kSphereCols + j;
+        idx = (idx == center_idx || idx == 0) ? center_idx - idx : idx;
+  			gScene.models[idx] = m;
+  		}
+    }
 	}
-	int center_idx = SPHERE_ROWS * SPHERE_COLUMNS / 2;
-	gModel = *gScene.models[center_idx];
-	gScene.models[center_idx] = &gModel;
-#endif
 
+  // Setup floor
+  Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
+  mesh_make_quad(mesh, 100, 100, 5);
+  gScene.models[1] = (Model*)malloc(sizeof(Model));
+	model_initialize(gScene.models[1], mesh, &gMaterials[6].material);
+  vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
 	return 0;
 }
 
@@ -399,13 +179,13 @@ static int initialize() {
 
   update_loading_screen("Initializing renderer...", "", 0, 0);
 
-	printf("<-- Initializing deferred renderer... -->");
+	printf("<-- Initializing deferred renderer... -->\n");
 	if (err = deferred_initialize(&gDeferred)) {
 		printf("Deferred renderer init failed\n");
 		return err;
 	}
 
-	printf("<-- Initializing forward renderer... -->");
+	printf("<-- Initializing forward renderer... -->\n");
 	if (err = forward_initialize(&gForward)) {
 		printf("Forward renderer init failed\n");
 		return err;
@@ -436,7 +216,7 @@ static int initialize() {
 	}
 
 	printf("<-- Initializing scene... -->\n");
-	if (err = init_scene()) {
+	if (err = initialize_scene(false)) {
 		printf("Scene init failed\n");
 		return err;
 	}
@@ -446,32 +226,21 @@ static int initialize() {
 }
 
 static void update_scene(float dt) {
-	if (rotate_cam) {
-		gScene.camera.rot[1] += dt * (float)M_PI/10.0f;
-	}
+  camera_update(&gScene.camera, dt, rotate_cam);
 
-	// calculate view matrix
-	gScene.camera.pos[0] = gScene.camera.pos[1] = 0.0f;
-	gScene.camera.pos[2] = gScene.camera.boomLen;
-	mat4x4_identity(gScene.camera.view);
-	mat4x4_rotate_X(gScene.camera.view, gScene.camera.view, 2.5f * gScene.camera.rot[0]);
-	mat4x4_rotate_Y(gScene.camera.view, gScene.camera.view, 2.5f * -gScene.camera.rot[1]);
-	vec3_dup(gScene.camera.view[3], gScene.camera.pos);
-	vec3_negate_in_place(gScene.camera.view[3]);
-
-	// calculate view-projection matrix
-	mat4x4_perspective(gScene.camera.proj, gScene.camera.fovy * (float)M_PI/180.0f, (float)VIEWPORT_WIDTH/(float)VIEWPORT_HEIGHT, Z_NEAR, Z_FAR);
-	mat4x4_mul(gScene.camera.viewProj, gScene.camera.proj, gScene.camera.view);
-
-	// update emitter
-	particle_emitter_update(&gEmitter, dt);
+	// update emitters
+  for (int i = 0; i < SCENE_EMITTERS_MAX; i++) {
+    if (gScene.emitters[i]) {
+	    particle_emitter_update(gScene.emitters[i], dt);
+    }
+  }
 }
 
 static int frame() {
 	// calc dt
-	static float prevFrameTime = 0.0f;
 	float frameTime = utility_secs_since_launch();
 	float dt = frameTime - prevFrameTime;
+  fps = 1.0f / dt;
 	prevFrameTime = frameTime;
 
 	// update camera and emitters
@@ -483,11 +252,11 @@ static int frame() {
 
 	// render
 	deferred_render(&gDeferred, &gScene);
-	// forward_render(&gForward, &gScene);
+	forward_render(&gForward, &gScene);
 
   ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
-	ImGui::Begin("Renderer Options", 0,
+	ImGui::Begin("Renderer Controls", 0,
     ImGuiWindowFlags_NoScrollbar
     | ImGuiWindowFlags_NoCollapse
     | ImGuiWindowFlags_NoMove
@@ -497,7 +266,7 @@ static int frame() {
   ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
 	ImGui::Separator();
   if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-		ImGui::Checkbox( "Cam Rotate", (bool*)&rotate_cam );
+		ImGui::Checkbox("Cam Rotate", (bool*)&rotate_cam);
 		ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
 		ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
   }
@@ -506,14 +275,11 @@ static int frame() {
     if (gDeferred.skybox_mode == SKYBOX_MODE_PREFILTER_MAP) {
   		ImGui::SliderFloat("LoD", (float*)&gDeferred.prefilter_lod, 0.0f, 10.0f);
     }
-		if (ImGui::BeginCombo("Skybox", gSkyboxes[skybox_idx].name, 0)) {
-			for (int i = 0; i < STATIC_ELEMENT_COUNT(gSkyboxes); i++) {
-				if (ImGui::Selectable(gSkyboxes[i].name, (skybox_idx == i))) {
-					skybox_idx = i;
-					gScene.skybox = gSkyboxes[i].skybox;
-				}
-				if ((skybox_idx == i)) {
-					ImGui::SetItemDefaultFocus();
+    const SkyboxDesc* sd = gScene.skybox->desc;
+		if (ImGui::BeginCombo("Skybox", sd->name, 0)) {
+			for (int i = 0; i < gSkyboxesCount; i++) {
+				if (ImGui::Selectable(gSkyboxes[i].name, (&gSkyboxes[i] == sd))) {
+					gScene.skybox = &gSkyboxes[i].skybox;
 				}
 			}
 			ImGui::EndCombo();
@@ -527,91 +293,95 @@ static int frame() {
 		if (ImGui::Checkbox("Show Manipulator##light", &show_light_manipulator)) {
 			show_manipulator = (show_light_manipulator) ? 1 : 0;
 		}
-		light_gui(&gLight);
+		light_gui(gScene.light);
 		ImGui::PopID();
 	}
+  if (ImGui::Button("Save Screenshot")) {
+    if (!utility_save_screenshot("./test.png", 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)) {
+      printf("Wrote screenshot to './test.png'\n");
+    } else {
+      printf("Error saving screenshot\n");
+    }
+  }
 	ImGui::End();
 
   ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH + VIEWPORT_WIDTH, 0));
 	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
-	ImGui::Begin("Model", 0,
+	ImGui::Begin("Model Controls", 0,
     ImGuiWindowFlags_NoScrollbar
     | ImGuiWindowFlags_NoCollapse
     | ImGuiWindowFlags_NoMove
     | ImGuiWindowFlags_NoResize
   );
-  if (ImGui::BeginTabBar("MyTabBar", ImGuiTabBarFlags_None))
+  if (ImGui::BeginTabBar("ModelTabBar", ImGuiTabBarFlags_None))
   {
-    if (ImGui::BeginTabItem("Model Options"))
+    if (ImGui::BeginTabItem("Model"))
     {
       if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen)) {
     		ImGui::PushID("model");
-    		if (ImGui::BeginCombo("Geometry", gMeshes[mesh_idx].name, 0)) {
-          for (int i = 0; i < STATIC_ELEMENT_COUNT(gMeshes); i++) {
-            if (ImGui::Selectable(gMeshes[i].name, (mesh_idx == i))) {
-    					mesh_idx = i;
-    					gModel.mesh = gMeshes[i].mesh;
-    				}
-            if ((mesh_idx == i)) {
-              ImGui::SetItemDefaultFocus();
+        const MeshDesc* md = gScene.models[0]->mesh->desc;
+    		if (ImGui::BeginCombo("Geometry", md->name, 0)) {
+          for (int i = 0; i < gMeshesCount; i++) {
+            if (ImGui::Selectable(gMeshes[i].name, (&gMeshes[i] == md))) {
+    					gScene.models[0]->mesh = &gMeshes[i].mesh;
     				}
           }
           ImGui::EndCombo();
         }
-    		ImGui::SliderFloat("Rotation (Deg)", &gModel.rot[1], 0.0f, 360.0f, "%.0f");
-    		ImGui::SliderFloat("Scale", &gModel.scale, .01f, 25.0f );
-        bool show_model_manipulator = (show_manipulator == 2);
-        if (ImGui::Checkbox("Show Manipulator", &show_model_manipulator)) {
-          show_manipulator = (show_model_manipulator) ? 2 : 0;
+    		ImGui::SliderFloat("Rotation (Deg)", &gScene.models[0]->rot[1], 0.0f, 360.0f, "%.0f");
+    		ImGui::SliderFloat("Scale", &gScene.models[0]->scale, .01f, 25.0f );
+        bool show_model_trans_manip = (show_manipulator == 2);
+        if (ImGui::Checkbox("Translation Manipulator", &show_model_trans_manip)) {
+          show_manipulator = (show_model_trans_manip) ? 2 : 0;
         }
-    #ifdef SPHERE_SCENE
-    		if (ImGui::Button("Refresh Scene")) {
-    			for (int i = 0; i < SPHERE_ROWS; i++) {
-    				for (int j = 0; j < SPHERE_COLUMNS; j++) {
-    					Model *m = gScene.models[i * SPHERE_COLUMNS + j];
-    					m->scale = gModel.scale;
-    					m->mesh = gModel.mesh;
-    					m->material = gModel.material;
-        			m->material.roughness_base = std::max(j/((float)SPHERE_COLUMNS), 0.05f);
-        			m->material.metalness_base = i/((float)SPHERE_ROWS);
-    				}
-    			}
-    		}
-    #endif
+        bool show_model_rot_manip = (show_manipulator == 3);
+        if (ImGui::Checkbox("Rotation Show Manipulator", &show_model_rot_manip)) {
+          show_manipulator = (show_model_rot_manip) ? 3 : 0;
+        }
     		ImGui::PopID();
     	}
     	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-    		material_gui(&gModel.material, &material_idx, gMaterials, STATIC_ELEMENT_COUNT(gMaterials));
+    		material_gui(&gScene.models[0]->material);
     	}
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Emitter"))
-    {
-  		if (ImGui::Button("Flare")) {
-  			gEmitterDesc = gEmitterDescs[0];
-  			particle_emitter_refresh(&gEmitter);
-  		}
-  		ImGui::SameLine();
-  		if (ImGui::Button("Particle")) {
-  			gEmitterDesc = gEmitterDescs[1];
-  			particle_emitter_refresh(&gEmitter);
-  		}
-  		ImGui::SameLine();
-  		if (ImGui::Button("Smoke")) {
-  			gEmitterDesc = gEmitterDescs[2];
-  			particle_emitter_refresh(&gEmitter);
-  		}
-  		particle_emitter_gui(&gEmitterDesc, &gEmitter, gParticleTextures, STATIC_ELEMENT_COUNT(gParticleTextures));
+    if (ImGui::BeginTabItem("Emitter")) {
+  		particle_emitter_gui(&gEmitterDesc, gScene.emitters[0], gParticleTextures, gParticleTexturesCount);
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
   }
 	ImGui::End();
 
+  ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH + 10, VIEWPORT_HEIGHT - 10), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+  ImGui::SetNextWindowBgAlpha(0.35f);
+	if (ImGui::Begin("FPS", 0,
+    ImGuiWindowFlags_NoScrollbar
+    | ImGuiWindowFlags_NoCollapse
+    | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoResize
+    | ImGuiWindowFlags_NoDecoration
+    | ImGuiWindowFlags_AlwaysAutoResize
+    | ImGuiWindowFlags_NoSavedSettings
+    | ImGuiWindowFlags_NoFocusOnAppearing
+    | ImGuiWindowFlags_NoNav
+  )) {
+    ImGui::Text("FPS: %i", (int)fps);
+  }
+	ImGui::End();
+
 	// render translation gizmo
 	switch (show_manipulator) {
-		case 1: utility_translation_gizmo(gLight.position, gScene.camera.view, gScene.camera.proj); break;
-		case 2: utility_translation_gizmo(gModel.position, gScene.camera.view, gScene.camera.proj); break;
+		case 1: {
+      if (gScene.light->type == LIGHT_TYPE_POINT) {
+        utility_translation_gizmo(gScene.light->position, gScene.camera.view, gScene.camera.proj);
+      } else {
+        utility_rotation_gizmo(gScene.light->rot, gScene.light->position, gScene.camera.view, gScene.camera.proj);
+      }
+      break;
+    }
+		case 2: utility_translation_gizmo(gScene.models[0]->position, gScene.camera.view, gScene.camera.proj); break;
+		case 3: utility_rotation_gizmo(gScene.models[0]->rot, gScene.models[0]->position, gScene.camera.view, gScene.camera.proj); break;
 	}
 
 	return 0;
@@ -630,8 +400,6 @@ int main(int argc, char* argv[]) {
   SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
   SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
   SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
-	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	// SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
   // init platform window
   if(!(gWindow = SDL_CreateWindow("PBR Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED

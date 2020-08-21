@@ -23,7 +23,9 @@ static inline Bounds bounds_from_min_max(vec3 min, vec3 max) {
 	return b;
 }
 
-typedef struct
+struct MeshDesc;
+
+struct Mesh
 {
 	float *vertices;
 	float *normals;
@@ -37,19 +39,21 @@ typedef struct
 
 	Bounds bounds;
 	float base_scale;
-} Mesh;
 
-void mesh_make_box(Mesh *out_mesh, float side_len);
-void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
-void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
-void mesh_free(Mesh *out_mesh);
-int mesh_load_obj(Mesh *out_mesh, const char *filepath, float base_scale = 1.0f);
+  const MeshDesc* desc;
+};
 
-
-typedef struct
+struct MeshDesc
 {
 	const char* name;
 	const char* path;
 	float base_scale;
 	Mesh mesh;
-} MeshDesc;
+};
+
+void mesh_make_box(Mesh *out_mesh, float side_len);
+void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors);
+void mesh_make_quad(Mesh *out_mesh, float size_x, float size_z, float uv_scale);
+void mesh_draw(const Mesh *mesh, GLint texcoord_loc, GLint normal_loc, GLint tangent_loc, GLint pos_loc);
+void mesh_free(Mesh *out_mesh);
+int mesh_load(Mesh *out_mesh, const MeshDesc* desc);

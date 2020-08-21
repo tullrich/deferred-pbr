@@ -1,8 +1,7 @@
 #include "common.h"
 #include "skybox.h"
 
-int skybox_load(Skybox *out_skybox, const SkyboxDesc *desc)
-{
+int skybox_load(Skybox *out_skybox, const SkyboxDesc *desc) {
 	if(!(out_skybox->env_cubemap = utility_load_texture_dds(desc->env_path))) {
 		return 1;
 	}
@@ -20,5 +19,6 @@ int skybox_load(Skybox *out_skybox, const SkyboxDesc *desc)
   } else {
 		out_skybox->prefilter_cubemap = out_skybox->env_cubemap;
 	}
+  out_skybox->desc = desc;
 	return 0;
 }

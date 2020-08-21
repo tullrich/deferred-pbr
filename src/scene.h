@@ -34,6 +34,10 @@ typedef struct
 	mat4x4 viewProj;
 } Camera;
 
+void camera_update(Camera* camera, float dt, int auto_rotate);
+void camera_forward(const Camera* camera, vec3 out);
+void camera_up(const Camera* camera, vec3 out);
+
 typedef struct
 {
 	// Model translation
@@ -46,7 +50,7 @@ typedef struct
 	float scale;
 
 	// The geometry to render
-	Mesh mesh;
+	const Mesh* mesh;
 
 	// The material to render with
 	Material material;
@@ -60,7 +64,7 @@ typedef struct
 	Camera camera;
 
 	// Scene skybox
-	Skybox skybox;
+	Skybox* skybox;
 
 	// The global ambient light
 	vec3 ambient_color;
@@ -77,6 +81,3 @@ typedef struct
 	// Particle emitters to render
 	ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
 } Scene;
-
-void scene_camera_forward(const Scene* s, vec3 out);
-void scene_camera_up(const Scene* s, vec3 out);

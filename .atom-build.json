@@ -1,5 +1,6 @@
 {
   "cmd": "make",
   "args": [ "-j4" ],
-  "cwd": "/home/tim/Projects/Mine/deferred/build"
+  "cwd": "/home/tim/Projects/Mine/deferred/build",
+  "errorMatch": ["(?<file>[\\/0-9a-zA-Z\\._]+):(?<line>\\d+):(?<col>\\d+):\\s+(?<message>.+)"]
 }

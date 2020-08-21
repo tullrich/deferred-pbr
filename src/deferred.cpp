@@ -179,10 +179,10 @@ int deferred_initialize(Deferred* d) {
 }
 
 static void render_geometry(Model* model, Deferred* d, Scene *s) {
-	if (!model->mesh.vertices)
+	if (!model->mesh->vertices)
 		return;
 
-	int shader_idx = (model->mesh.texcoords) ? 0:1;
+	int shader_idx = (model->mesh->texcoords) ? 0:1;
 	const SurfaceShader* shader = &d->surf_shader[shader_idx];
 	GL_WRAP(glUseProgram(shader->program));
 
@@ -264,12 +264,12 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 	// calc model matrix
 	mat4x4 m;
 	mat4x4_identity(m);
-	mat4x4_rotate_X(m, m, DEG_TO_RAD(model->rot[0]));
-	mat4x4_rotate_Y(m, m, DEG_TO_RAD(model->rot[1]));
 	mat4x4_rotate_Z(m, m, DEG_TO_RAD(model->rot[2]));
-	float scale = model->scale * model->mesh.base_scale;
+	mat4x4_rotate_Y(m, m, DEG_TO_RAD(model->rot[1]));
+	mat4x4_rotate_X(m, m, DEG_TO_RAD(model->rot[0]));
+	float scale = model->scale * model->mesh->base_scale;
 	mat4x4_scale_aniso(m, m, scale, scale, scale);
-	vec3_sub(m[3], m[3], model->mesh.bounds.center);
+	vec3_sub(m[3], m[3], model->mesh->bounds.center);
 	vec3_add(m[3], m[3], model->position);
 
 	// bind model-view matrix
@@ -294,7 +294,7 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
   float height_scale = (model->material.height_map) ? model->material.height_map_scale : 0.0f;
 	GL_WRAP(glUniform1fv(shader->height_scale_loc, 1, (const GLfloat*)&height_scale));
 
-	mesh_draw(&model->mesh,
+	mesh_draw(model->mesh,
 			  shader->texcoord_loc,
 			  shader->normal_loc,
 			  shader->tangent_loc,
@@ -323,12 +323,12 @@ static void render_shading(Deferred* d, Scene *s) {
 
 	// bind env irradiance map
 	GL_WRAP(glActiveTexture(GL_TEXTURE0+i));
-	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap));
+	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox->irr_cubemap));
 	GL_WRAP(glUniform1i(shader->env_irr_map_loc, i));
 
 	// bind env prefiltered map
 	GL_WRAP(glActiveTexture(GL_TEXTURE0+i+1));
-	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.prefilter_cubemap));
+	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox->prefilter_cubemap));
 	GL_WRAP(glUniform1i(shader->env_prefilter_map_loc, i+1));
 
 	// bind the brdf lut
@@ -338,7 +338,12 @@ static void render_shading(Deferred* d, Scene *s) {
 
 	// light setup
 	vec4 view_light_pos_in;
-	vec4_dup(view_light_pos_in, s->light->position);
+  if (s->light->type == LIGHT_TYPE_POINT) {
+	  vec4_dup(view_light_pos_in, s->light->position);
+  } else {
+    vec3 axis = { 0.0f, 1.0f, 0.0f };
+    quat_mul_vec3(view_light_pos_in, s->light->rot, axis);
+  }
 
 	vec4 view_light_pos;
 	mat4x4_mul_vec4(view_light_pos, s->camera.view, view_light_pos_in);
@@ -377,15 +382,15 @@ static void render_skybox(Deferred *d, Scene *s) {
 	GL_WRAP(glActiveTexture(GL_TEXTURE0));
 	switch(d->skybox_mode) {
 		case SKYBOX_MODE_ENV_MAP: {
-    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.env_cubemap));
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox->env_cubemap));
       break;
     }
 		case SKYBOX_MODE_IRR_MAP: {
-    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.irr_cubemap));
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox->irr_cubemap));
       break;
     }
 		case SKYBOX_MODE_PREFILTER_MAP: {
-    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox.prefilter_cubemap));
+    	GL_WRAP(glBindTexture(GL_TEXTURE_CUBE_MAP, s->skybox->prefilter_cubemap));
       break;
     }
 	}

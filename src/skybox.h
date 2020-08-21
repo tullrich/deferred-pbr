@@ -1,7 +1,9 @@
 #pragma once
 
+struct SkyboxDesc;
+
 // Skybox renderable
-typedef struct
+struct Skybox
 {
 	// skybox cubemap
 	GLuint env_cubemap;
@@ -11,16 +13,19 @@ typedef struct
 
 	// prefiltered env map
   GLuint prefilter_cubemap;
-} Skybox;
+
+  // The definition this was created from
+  const SkyboxDesc* desc;
+};
 
 // Skybox load description
-typedef struct
+struct SkyboxDesc
 {
 	const char* name;
   const char* env_path;
   const char* irr_path;
   const char* prefilter_path;
 	Skybox skybox;
-} SkyboxDesc;
+};
 
 int skybox_load(Skybox *out_skybox, const SkyboxDesc *desc);

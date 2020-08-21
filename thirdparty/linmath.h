@@ -236,9 +236,9 @@ static inline void mat4x4_rotate_Y(mat4x4 Q, mat4x4 M, float angle)
 	float s = sinf(angle);
 	float c = cosf(angle);
 	mat4x4 R = {
-		{   c, 0.f,   s, 0.f},
+		{   c, 0.f,  -s, 0.f},
 		{ 0.f, 1.f, 0.f, 0.f},
-		{  -s, 0.f,   c, 0.f},
+		{   s, 0.f,   c, 0.f},
 		{ 0.f, 0.f, 0.f, 1.f}
 	};
 	mat4x4_mul(Q, M, R);
@@ -485,13 +485,14 @@ static inline void quat_mul_vec3(vec3 r, quat const q, vec3 const v)
 t = 2 * cross(q.xyz, v)
 v' = v + q.w * t + cross(q.xyz, t)
  */
-	vec3 t = {q[0], q[1], q[2]};
+	vec3 t;
+	vec3 q_xyz = {q[0], q[1], q[2]};
 	vec3 u = {q[0], q[1], q[2]};
 
-	vec3_mul_cross(t, t, v);
+	vec3_mul_cross(t, q_xyz, v);
 	vec3_scale(t, t, 2);
 
-	vec3_mul_cross(u, u, t);
+	vec3_mul_cross(u, q_xyz, t);
 	vec3_scale(t, t, q[3]);
 
 	vec3_add(r, v, t);
@@ -538,34 +539,29 @@ static inline void mat4x4o_mul_quat(mat4x4 R, mat4x4 const M, quat const q)
 	R[3][0] = R[3][1] = R[3][2] = 0.f;
 	R[3][3] = 1.f;
 }
-static inline void quat_from_mat4x4(quat q, mat4x4 const M)
+static inline void quat_from_mat4x4(quat q, mat4x4 M)
 {
-	float r=0.f;
-	int i;
-
-	int perm[] = { 0, 1, 2, 0, 1 };
-	int *p = perm;
-
-	for(i = 0; i<3; i++) {
-		float m = M[i][i];
-		if( m < r )
-			continue;
-		m = r;
-		p = &perm[i];
-	}
-
-	r = sqrtf(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]] );
-
-	if(r < 1e-6) {
-		q[0] = q[1] = q[2] = 0.f;
-		q[3] = 1.f;
-		return;
-	}
-
-	q[0] = (M[p[0]][p[1]] - M[p[1]][p[0]])/(2.f*r);
-	q[1] = (M[p[2]][p[0]] - M[p[0]][p[2]])/(2.f*r);
-	q[2] = (M[p[2]][p[1]] - M[p[1]][p[2]])/(2.f*r);
-	q[3] = r/2.f;
+  float r=0.f;
+  int i;
+  int perm[] = { 0, 1, 2, 0, 1 };
+  int *p = perm;
+  for(i = 0; i<3; i++) {
+    float m = M[i][i];
+    if( m < r )
+      continue;
+    m = r;
+    p = &perm[i];
+  }
+  r = (float) sqrt(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]] );
+  if(r < 1e-6) {
+    q[0] = q[1] = q[2] = 0.f;
+    q[3] = 1.f;
+    return;
+  }
+  q[0] = (M[p[0]][p[1]] - M[p[1]][p[0]])/(2.f*r);
+  q[1] = (M[p[2]][p[0]] - M[p[0]][p[2]])/(2.f*r);
+  q[2] = (M[p[2]][p[1]] - M[p[1]][p[2]])/(2.f*r);
+  q[3] = r/2.f;
 }
 
 #endif
