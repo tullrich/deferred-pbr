@@ -4,7 +4,7 @@ DEFINE_ENUM(RenderMode, render_mode_strings, ENUM_RenderMode);
 DEFINE_ENUM(SkyboxMode, skybox_mode_strings, ENUM_SkyboxMode);
 DEFINE_ENUM(TonemappingOperator, tonemapping_op_strings, ENUM_TonemappingOperator);
 
-static int load_surface_shader(SurfaceShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
+static int load_surface_shader(SurfaceShader* shader, const char** defines, int defines_count) {
 	if(!(shader->program = utility_create_program_defines("shaders/mesh.vert", "shaders/mesh.frag",
 																 defines, defines_count))) {
 		return 1;
@@ -43,7 +43,7 @@ static int load_surface_shader(SurfaceShader* shader, const char* vert, const ch
 	return 0;
 }
 
-static int load_lighting_shader(LightingShader* shader, const char* vert, const char* frag, const char* tonemapping_define) {
+static int load_lighting_shader(LightingShader* shader, const char* tonemapping_define) {
   char buf[512];
   sprintf(buf, "#define %s\n", tonemapping_define);
   const char* defines[] = { &buf[0] };
@@ -68,19 +68,22 @@ static int load_lighting_shader(LightingShader* shader, const char* vert, const 
 	GL_WRAP(shader->env_irr_map_loc = glGetUniformLocation(shader->program, "EnvIrrMap"));
 	GL_WRAP(shader->env_prefilter_map_loc = glGetUniformLocation(shader->program, "EnvPrefilterMap"));
 	GL_WRAP(shader->env_brdf_lut_loc = glGetUniformLocation(shader->program, "EnvBrdfLUT"));
+	GL_WRAP(shader->shadow_map_loc = glGetUniformLocation(shader->program, "ShadowMap"));
 	GL_WRAP(shader->inv_view_loc = glGetUniformLocation(shader->program, "InvView"));
 	GL_WRAP(shader->inv_proj_loc = glGetUniformLocation(shader->program, "InvProjection"));
+	GL_WRAP(shader->light_space_loc = glGetUniformLocation(shader->program, "LightSpace"));
   return 0;
 }
 
-static int load_debug_shader(DebugShader* shader, const char* vert, const char* frag, const char** defines, int defines_count) {
-	if (!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/passthrough.frag", defines, defines_count))) {
+static int load_debug_shader(DebugShader* shader, const char** defines, int defines_count) {
+	if (!(shader->program = utility_create_program_defines("shaders/passthrough.vert", "shaders/passthrough.frag"
+        , defines, defines_count))) {
 		return 1;
 	}
 	GL_WRAP(shader->pos_loc = glGetAttribLocation(shader->program, "position"));
 	GL_WRAP(shader->texcoord_loc = glGetAttribLocation(shader->program, "texcoord"));
-	GL_WRAP(shader->gbuffer_render_loc = glGetUniformLocation(shader->program, "GBuffer_Render"));
-	GL_WRAP(shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "GBuffer_Depth"));
+	GL_WRAP(shader->gbuffer_render_loc = glGetUniformLocation(shader->program, "RenderMap"));
+	GL_WRAP(shader->gbuffer_depth_loc = glGetUniformLocation(shader->program, "DepthMap"));
 	GL_WRAP(shader->z_near_loc = glGetUniformLocation(shader->program, "ZNear"));
 	GL_WRAP(shader->z_far_loc = glGetUniformLocation(shader->program, "ZFar"));
 	return 0;
@@ -133,23 +136,14 @@ int deferred_initialize(Deferred* d) {
 		"#define USE_AO_MAP\n",
 		"#define USE_EMISSIVE_MAP\n",
 	};
-	if(load_surface_shader(&d->surf_shader[0], "shaders/mesh.vert", "shaders/mesh.frag",
-							uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))) {
-		printf("Unable to load shader\n");
-		return 1;
-	}
-	if(load_surface_shader(&d->surf_shader[1], "shaders/mesh.vert", "shaders/mesh.frag",
-							NULL, 0)) {
+	if(load_surface_shader(&d->surf_shader[0], uv_surf_shader_defines, STATIC_ELEMENT_COUNT(uv_surf_shader_defines))
+      || load_surface_shader(&d->surf_shader[1], NULL, 0)) {
 		printf("Unable to load shader\n");
 		return 1;
 	}
 
-  if(load_lighting_shader(&d->lighting_shader[0], "shaders/mesh.vert", "shaders/mesh.frag", "TONE_MAPPING_REINHARD")) {
-    printf("Unable to load shader\n");
-    return 1;
-  }
-
-  if(load_lighting_shader(&d->lighting_shader[1], "shaders/mesh.vert", "shaders/mesh.frag", "TONE_MAPPING_UNCHARTED2")) {
+  if(load_lighting_shader(&d->lighting_shader[0], "TONE_MAPPING_REINHARD")
+      || load_lighting_shader(&d->lighting_shader[1], "TONE_MAPPING_UNCHARTED2")) {
     printf("Unable to load shader\n");
     return 1;
   }
@@ -166,11 +160,9 @@ int deferred_initialize(Deferred* d) {
 	const char* debug_linearize_defines[] ={
 		"#define DEBUG_RENDER_LINEARIZE\n"
 	};
-	if(load_debug_shader(&d->debug_shader[0], "shaders/passthrough.vert", "shaders/passthrough.frag", NULL, 0) ||
-	   load_debug_shader(&d->debug_shader[1], "shaders/passthrough.vert", "shaders/passthrough.frag",
-						  debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines)) ||
-	   load_debug_shader(&d->debug_shader[2], "shaders/passthrough.vert", "shaders/passthrough.frag",
-						  debug_linearize_defines, STATIC_ELEMENT_COUNT(debug_linearize_defines))) {
+	if(load_debug_shader(&d->debug_shader[0], NULL, 0)
+	   || load_debug_shader(&d->debug_shader[1], debug_ndc_defines, STATIC_ELEMENT_COUNT(debug_ndc_defines))
+	   || load_debug_shader(&d->debug_shader[2], debug_linearize_defines, STATIC_ELEMENT_COUNT(debug_linearize_defines))) {
 		printf("Unable to load debug shader\n");
 		return 1;
 	}
@@ -301,7 +293,7 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
 			  shader->pos_loc);
 }
 
-static void render_shading(Deferred* d, Scene *s) {
+static void render_shading(Deferred* d, Scene *s, ShadowMap* sm) {
   LightingShader* shader = &d->lighting_shader[(int)d->tonemapping_op];
 
   GL_WRAP(glUseProgram(shader->program));
@@ -336,13 +328,24 @@ static void render_shading(Deferred* d, Scene *s) {
 	GL_WRAP(glBindTexture(GL_TEXTURE_2D, d->brdf_lut_tex));
 	GL_WRAP(glUniform1i(shader->env_brdf_lut_loc, i+2));
 
+	// bind the shadow map
+	GL_WRAP(glActiveTexture(GL_TEXTURE0+i+3));
+	GL_WRAP(glBindTexture(GL_TEXTURE_2D, sm->depth_buffer));
+	GL_WRAP(glUniform1i(shader->shadow_map_loc, i+3));
+
 	// light setup
 	vec4 view_light_pos_in;
   if (s->light->type == LIGHT_TYPE_POINT) {
 	  vec4_dup(view_light_pos_in, s->light->position);
   } else {
-    vec3 axis = { 0.0f, 1.0f, 0.0f };
-    quat_mul_vec3(view_light_pos_in, s->light->rot, axis);
+  	mat4x4 m;
+    vec4 tmp;
+  	mat4x4_identity(m);
+  	mat4x4_rotate_Z(m, m, DEG_TO_RAD(s->light->rot[2]));
+  	mat4x4_rotate_Y(m, m, DEG_TO_RAD(s->light->rot[1]));
+  	mat4x4_rotate_X(m, m, DEG_TO_RAD(s->light->rot[0]));
+    vec4_set(tmp, 0.0f, 1.0f, 0.0f, 0.0f);
+    mat4x4_mul_vec4(view_light_pos_in, m, tmp);
   }
 
 	vec4 view_light_pos;
@@ -355,17 +358,24 @@ static void render_shading(Deferred* d, Scene *s) {
 	GL_WRAP(glUniform3fv(shader->light_color_loc, 1, (const GLfloat*)s->light->color));
 	GL_WRAP(glUniform1f(shader->light_intensity_loc, s->light->intensity));
 
-	// View rotation only
-	mat4x4 view_rot, inv_view_rot;
-	mat4x4_dup(view_rot, s->camera.view);
-	vec3_zero(view_rot[3]);
-	mat4x4_invert(inv_view_rot, view_rot);
-	GL_WRAP(glUniformMatrix4fv(shader->inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view_rot));
+	// Inverse view
+	mat4x4 inv_view;
+	mat4x4_invert(inv_view, s->camera.view);
+	GL_WRAP(glUniformMatrix4fv(shader->inv_view_loc, 1, GL_FALSE, (const GLfloat*)inv_view));
 
-	// View rotation only
+	// Inverse proj
 	mat4x4 inv_proj;
 	mat4x4_invert(inv_proj, s->camera.proj);
 	GL_WRAP(glUniformMatrix4fv(shader->inv_proj_loc, 1, GL_FALSE, (const GLfloat*)inv_proj));
+
+	// Light-space matrix for shadowmap
+	mat4x4 proj, view, vp, light;
+  vec3 center = { 0.0f, 0.0f, 0.0f };
+  mat4x4_ortho(proj, -50.0f, 50.0f, -50.0f, 50.0f, Z_NEAR, Z_FAR);
+	mat4x4_look_at(view, s->light->position, center, Axis_Up);
+  mat4x4_mul(vp, proj, view);
+  mat4x4_mul(light, vp, inv_view);
+	GL_WRAP(glUniformMatrix4fv(shader->light_space_loc, 1, GL_FALSE, (const GLfloat*)light));
 
 	utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
 }
@@ -438,7 +448,7 @@ static void render_debug(Deferred *d, Scene *s) {
 	utility_draw_fullscreen_quad(d->debug_shader[program_idx].texcoord_loc, d->debug_shader[program_idx].pos_loc);
 }
 
-void deferred_render(Deferred *d, Scene *s) {
+void deferred_render(Deferred *d, Scene *s, ShadowMap* sm) {
 	GL_WRAP(glEnable(GL_CULL_FACE));
 	GL_WRAP(glEnable(GL_TEXTURE_2D));
 
@@ -457,7 +467,7 @@ void deferred_render(Deferred *d, Scene *s) {
 	}
 
 	if (d->render_mode == RENDER_MODE_SHADED) {
-		render_shading(d, s);
+		render_shading(d, s, sm);
 		render_skybox(d, s);
 	} else {
 		render_debug(d, s);

@@ -209,7 +209,7 @@ extern const quat Quat_Identity;
 #define VIEWPORT_HEIGHT 1000
 #define VIEWPORT_X_OFFSET SIDEBAR_WIDTH
 #define Z_NEAR 0.1f
-#define Z_FAR 100.0f
+#define Z_FAR 200.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 #define RAD_TO_DEG(rad) (rad*180.0f/(float)M_PI)

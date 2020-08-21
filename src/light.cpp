@@ -31,5 +31,5 @@ void light_gui(Light *light) {
   }
   ImGui::InputFloat3("Position", light->position);
   ImGui::ColorEdit3("Color", light->color);
-  ImGui::SliderFloat("Intensity", &light->intensity, 0, 1.0f);
+  ImGui::SliderFloat("Intensity", &light->intensity, 0, 300.0f);
 }

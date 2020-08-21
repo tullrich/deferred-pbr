@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "gbuffer.h"
+#include "shadowmap.h"
 #include "scene.h"
 
 #define ENUM_RenderMode(D)								\
@@ -92,6 +93,7 @@ typedef struct
 	GLint env_irr_map_loc;
 	GLint env_prefilter_map_loc;
   GLint env_brdf_lut_loc;
+  GLint shadow_map_loc;
 
 	// shader vars
 	GLint ambient_term_loc;
@@ -101,7 +103,7 @@ typedef struct
 	GLint eye_pos_loc;
 	GLint inv_view_loc;
 	GLint inv_proj_loc;
-
+  GLint light_space_loc;
 } LightingShader;
 
 typedef struct
@@ -134,4 +136,4 @@ typedef struct
 } Deferred;
 
 int deferred_initialize(Deferred* d);
-void deferred_render(Deferred* d, Scene *s);
+void deferred_render(Deferred* d, Scene *s, ShadowMap* sm);

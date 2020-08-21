@@ -13,6 +13,7 @@ uniform sampler2D GBuffer_Depth;
 uniform samplerCube EnvIrrMap;
 uniform samplerCube EnvPrefilterMap;
 uniform sampler2D EnvBrdfLUT;
+uniform sampler2D ShadowMap;
 
 uniform vec3 AmbientTerm;
 uniform vec4 MainLightPosition;
@@ -20,6 +21,7 @@ uniform vec3 MainLightColor;
 uniform float MainLightIntensity;
 uniform mat4x4 InvView;
 uniform mat4x4 InvProjection;
+uniform mat4x4 LightSpace;
 
 out vec4 outColor;
 
@@ -162,7 +164,7 @@ vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
 	vec3 diffuseBrdf = kD * (m.Albedo / PI) * (1.0 - m.Metalness); // Lambert diffuse
 
   // Point light attenuation
-  float A = mix(1.0f, 20.0 / dot(MainLightPosition.xyz - P, MainLightPosition.xyz - P), MainLightPosition.w);
+  float A = mix(1.0f, 1.0 / (1.0 + 0.1 * dot(MainLightPosition.xyz - P, MainLightPosition.xyz - P)), MainLightPosition.w);
 
   // L
   vec3 radiance = A * MainLightColor * MainLightIntensity;
@@ -193,6 +195,14 @@ vec3 IBLAmbientRadiance(vec3 N, vec3 V, Material m, vec3 F0)
 	return (diffuse + specular) * m.Occlusion; // IBL ambient
 }
 
+float ShadowMapVisibility(vec3 P, vec3 N) {
+  vec3 PL = (LightSpace * vec4(P, 1.0)).xyz * 0.5 + 0.5;
+  float closestDepth = texture(ShadowMap, PL.xy).r;
+  vec3 L = normalize(MainLightPosition.xyz - P * MainLightPosition.w);
+  float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+  return ((PL.z - bias ) > closestDepth) ? 1.0 : 0.0;
+}
+
 void main()
 {
   // Sample G-Buffer
@@ -217,11 +227,14 @@ void main()
   vec3 V = normalize(-P);
 
 	// Lerp between Dia-electric = 0.04f to Metal = albedo
-  vec3 F0 = mix(vec3(0.04f), m.Albedo, m.Metalness);
+  vec3 F0 = mix(vec3(0.04), m.Albedo, m.Metalness);
+
+  // Shadow map visibility term
+  float Vis = ShadowMapVisibility(P, N);
 
   // Lighting
   vec3 result = vec3(0.0);
-  result += DirectRadiance(P, N, V, m, F0);
+  result += (1.0 - Vis) * DirectRadiance(P, N, V, m, F0);
   result += IBLAmbientRadiance(N, V, m, F0);
   result += m.Emissive * 4.0;
 

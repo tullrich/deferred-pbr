@@ -46,6 +46,8 @@ add_executable( Deferred
   src/light.cpp
   src/assets.h
   src/assets.cpp
+  src/shadowmap.h
+  src/shadowmap.cpp
 
 	src/imgui/imconfig.h
 	src/imgui/imgui.h

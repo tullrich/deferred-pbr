@@ -36,7 +36,7 @@ MaterialDesc gMaterials[] = {
 		.name = "Mirror",
 		.albedo_base = { 1.0f, 1.0f, 1.0f },
 		.metalness_base = 1.0f,
-		.roughness_base = 0.0f,
+		.roughness_base = 0.05f,
 		.emissive_base = { 0.0f, 0.0f, 0.0f }
 	},
 	{

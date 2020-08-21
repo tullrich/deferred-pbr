@@ -114,7 +114,7 @@ void SurfaceShaderTextured(out SurfaceOut surface)
   // if (texCoord.x > 1.0 || texCoord.y > 1.0 || texCoord.x < 0.0 || texCoord.y < 0.0) {
   //   discard;
   // }
-#endif // USE_NORMAL_MAP
+#endif // USE_HEIGHT_MAP
 
 	vec3 normal;
 #ifdef USE_NORMAL_MAP
@@ -143,7 +143,7 @@ void SurfaceShaderTextured(out SurfaceOut surface)
 	surface.Emissive = EmissiveBase;
 #ifdef USE_EMISSIVE_MAP
 	surface.Emissive *= texture(EmissiveMap, texCoord).rgb;
-#endif // USE_ALBEDO_MAP
+#endif // USE_EMISSIVE_MAP
 
 #ifdef USE_AO_MAP
 	surface.Occlusion = texture(AOMap, texCoord).r;

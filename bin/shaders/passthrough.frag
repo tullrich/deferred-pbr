@@ -2,16 +2,18 @@
 
 in vec2 Texcoord;
 
-uniform sampler2D GBuffer_Render;
-uniform sampler2D GBuffer_Depth;
+uniform sampler2D RenderMap;
+uniform sampler2D DepthMap;
+#ifdef DEBUG_RENDER_LINEARIZE
 uniform float ZNear;
 uniform float ZFar;
+#endif
 
 out vec4 outColor;
 
 void main()
 {
-	vec3 color = texture(GBuffer_Render, Texcoord).xyz;
+	vec3 color = texture(RenderMap, Texcoord).xyz;
 #ifdef DEBUG_RENDER_NORMALIZE
 	color = color*0.5f + 0.5f;
 #endif
@@ -21,5 +23,5 @@ void main()
 #endif
 
 	outColor = vec4(color, 1.0f);
-	gl_FragDepth = texture(GBuffer_Depth, Texcoord).x;
+	gl_FragDepth = texture(DepthMap, Texcoord).x;
 }

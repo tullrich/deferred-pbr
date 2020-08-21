@@ -11,7 +11,7 @@ typedef struct
 {
 	LightType type;
 	vec4 position;
-	quat rot;
+	vec3 rot;
 	vec3 color;
 	float intensity;
 } Light;

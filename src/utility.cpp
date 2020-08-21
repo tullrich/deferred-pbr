@@ -506,3 +506,24 @@ int utility_save_screenshot(const char* path, int x_off, int y_off, int width, i
   free(pixels);
   return 0;
 }
+
+
+int utility_save_depth_screenshot(const char* path, GLuint fbo, int x_off, int y_off, int width, int height) {
+  // Make the GLubyte array, factor of 3 because it's RBG.
+  GLubyte* pixels = (GLubyte*)malloc(3 * width * height);
+
+  GL_WRAP(glPixelStorei(GL_PACK_ALIGNMENT, 1));
+	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
+	// GL_WRAP(glReadBuffer(GL_FRONT));
+  GL_WRAP(glReadPixels(x_off, y_off, width, height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels));
+	GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+
+  // Convert to FreeImage format & save to file
+  FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, width, height, 3 * width, 24, 0x0000FF, 0xFF0000, 0x00FF00, false);
+  FreeImage_Save(FIF_PNG, image, path, PNG_DEFAULT);
+
+  // Free resources
+  FreeImage_Unload(image);
+  free(pixels);
+  return 0;
+}

@@ -2,6 +2,7 @@
 #include "assets.h"
 #include "deferred.h"
 #include "forward.h"
+#include "shadowmap.h"
 #include "scene.h"
 
 #include "imgui/imgui_custom_theme.h"
@@ -12,11 +13,13 @@
 static SDL_Window* gWindow;
 static Deferred gDeferred;
 static Forward gForward;
+static ShadowMap gShadowMap;
 static Scene gScene;
 
 static ParticleEmitterDesc gEmitterDesc;
 
 static int rotate_cam = 0;
+static int debug_shadow_map = 1;
 static int show_manipulator = 0;
 static float prevFrameTime = 0.0f;
 static float fps = 0.0f;
@@ -129,7 +132,7 @@ static int initialize_scene(int sphere_scene) {
 	// Setup main directional light
 	gScene.light = (Light*)malloc(sizeof(Light));
 	vec3 lightPos = { 0.0f, 0.0f, 10.0f };
-	light_initialize_point(gScene.light, lightPos, White, 3.0f);
+	light_initialize_point(gScene.light, lightPos, White, 100.0f);
 
 	// Setup particle system
 	gScene.emitters[0] = (ParticleEmitter*)malloc(sizeof(ParticleEmitter));
@@ -167,7 +170,7 @@ static int initialize_scene(int sphere_scene) {
 
   // Setup floor
   Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
-  mesh_make_quad(mesh, 100, 100, 5);
+  mesh_make_quad(mesh, 200, 200, 5);
   gScene.models[1] = (Model*)malloc(sizeof(Model));
 	model_initialize(gScene.models[1], mesh, &gMaterials[6].material);
   vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
@@ -188,6 +191,12 @@ static int initialize() {
 	printf("<-- Initializing forward renderer... -->\n");
 	if (err = forward_initialize(&gForward)) {
 		printf("Forward renderer init failed\n");
+		return err;
+	}
+
+	printf("<-- Initializing shadow map... -->\n");
+	if (err = shadow_map_initialize(&gShadowMap, VIEWPORT_WIDTH, VIEWPORT_HEIGHT)) {
+		printf("Shadow map init failed\n");
 		return err;
 	}
 
@@ -251,8 +260,15 @@ static int frame() {
 	GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
 	// render
-	deferred_render(&gDeferred, &gScene);
+  shadow_map_render(&gShadowMap, &gScene);
+	deferred_render(&gDeferred, &gScene, &gShadowMap);
 	forward_render(&gForward, &gScene);
+
+  if (debug_shadow_map) {
+    const int width = 300;
+    const int height = width * gShadowMap.height/(float)gShadowMap.width;
+    shadow_map_render_debug(&gShadowMap, VIEWPORT_X_OFFSET, VIEWPORT_HEIGHT - height, width, height);
+  }
 
   ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
@@ -296,9 +312,19 @@ static int frame() {
 		light_gui(gScene.light);
 		ImGui::PopID();
 	}
+  if (ImGui::CollapsingHeader("Shadow Map", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Checkbox("Show Debug View", (bool*)&debug_shadow_map);
+  }
   if (ImGui::Button("Save Screenshot")) {
     if (!utility_save_screenshot("./test.png", 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)) {
       printf("Wrote screenshot to './test.png'\n");
+    } else {
+      printf("Error saving screenshot\n");
+    }
+  }
+  if (ImGui::Button("Save Shadow Map Screenshot")) {
+    if (!utility_save_depth_screenshot("./depth-test.png", gShadowMap.fbo, 0, 0, gShadowMap.width, gShadowMap.height)) {
+      printf("Wrote screenshot to './depth-test.png'\n");
     } else {
       printf("Error saving screenshot\n");
     }
@@ -420,7 +446,7 @@ int main(int argc, char* argv[]) {
   ImGui_ImplOpenGL3_Init("#version 130");
 	StyleImguiCustom();
 
-	// seed random
+	// seed not so random
 	srand((unsigned)time(0));
 
  	// clear window during load

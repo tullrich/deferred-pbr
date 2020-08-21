@@ -53,3 +53,4 @@ float utility_random_range(float min, float max); // [min, max]
 void utility_rotation_gizmo(quat out_euler, const vec3 pos, const mat4x4 view, const mat4x4 proj);
 void utility_translation_gizmo(vec3 out_pos, const mat4x4 view, const mat4x4 proj);
 int utility_save_screenshot(const char* path, int x_off, int y_off, int width, int height);
+int utility_save_depth_screenshot(const char* path, GLuint fbo, int x_off, int y_off, int width, int height);
