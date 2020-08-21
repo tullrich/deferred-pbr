@@ -2,7 +2,7 @@
 
 This is an SDL+OpenGL rendering project written in C that implements various computer graphics techniques I find interesting.
 
-It currently includes an HDR deferred render pipeline, PBR lighting, shadow mapping, parallax mapping, tonemapping, basic particle emitters (forward rendered).
+It currently includes an HDR deferred render pipeline, PBR lighting, IBL, shadow mapping, parallax mapping, tonemapping, basic particle emitters (forward rendered).
 
 The material system uses a roughness/metallic workflow and supports any/all of the following textures:
 * Roughness
