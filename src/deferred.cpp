@@ -261,8 +261,8 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
   mat4x4_rotate_X(m, m, DEG_TO_RAD(model->rot[0]));
   float scale = model->scale * model->mesh->base_scale;
   mat4x4_scale_aniso(m, m, scale, scale, scale);
-  vec3_sub(m[3], m[3], model->mesh->bounds.center);
   vec3_add(m[3], m[3], model->position);
+  mat4x4_translate_in_place(m, -model->mesh->bounds.center[0], -model->mesh->bounds.center[1], -model->mesh->bounds.center[2]);
 
   // bind model-view matrix
   mat4x4 mv;

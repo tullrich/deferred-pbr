@@ -14,13 +14,20 @@ static inline void bounds_set(Bounds *b, vec3 center, vec3 extents) {
   vec3_dup(b->extents, extents);
 }
 
-static inline Bounds bounds_from_min_max(vec3 min, vec3 max) {
+static inline Bounds bounds_from_min_max(const vec3 min, const vec3 max) {
   Bounds b;
   for (int i = 0; i < 3; i++) {
     b.extents[i] = (max[i]-min[i])/2.0f;
     b.center[i] = min[i] + b.extents[i];
   }
   return b;
+}
+
+static inline void bounds_to_min_max(const Bounds* b, vec3 min, vec3 max) {
+    for (int i = 0; i < 3; i++) {
+      min[i] = b->center[i] - b->extents[i];
+      max[i] = b->center[i] + b->extents[i];
+    }
 }
 
 struct MeshDesc;

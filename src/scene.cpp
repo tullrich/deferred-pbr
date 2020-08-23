@@ -7,7 +7,7 @@ void camera_update(Camera* camera, float dt, int auto_rotate) {
 
   // calculate view matrix
   camera->pos[0] = camera->pos[1] = 0.0f;
-  camera->pos[2] = camera->boomLen;
+  camera->pos[2] = camera->boom_len;
   mat4x4_identity(camera->view);
   mat4x4_rotate_X(camera->view, camera->view, 2.5f * camera->rot[0]);
   mat4x4_rotate_Y(camera->view, camera->view, 2.5f * camera->rot[1]);
@@ -40,4 +40,22 @@ void model_initialize(Model *out, const Mesh *mesh, const Material *mat) {
   out->scale = 1.0f;
   out->mesh = mesh;
   out->material = *mat;
+}
+
+void model_get_obb(const Model* model, OBB* out) {
+  vec3_dup(out->center, model->position);
+  if (model->mesh) {
+    vec3_dup(out->extents, model->mesh->bounds.extents);
+  } else {
+    vec3_set(out->extents, 0.5f, 0.5f, 0.5f);
+  }
+  vec3_scale(out->extents, out->extents, model->scale * model->mesh->base_scale);
+  mat4x4 m;
+  mat4x4_identity(m);
+  mat4x4_rotate_Z(m, m, DEG_TO_RAD(model->rot[2]));
+  mat4x4_rotate_Y(m, m, DEG_TO_RAD(model->rot[1]));
+  mat4x4_rotate_X(m, m, DEG_TO_RAD(model->rot[0]));
+  mat4x4_mul_vec4(out->axes[0], m, Axis_X);
+  mat4x4_mul_vec4(out->axes[1], m, Axis_Y);
+  mat4x4_mul_vec4(out->axes[2], m, Axis_Z);
 }

@@ -10,6 +10,12 @@
 #define SCENE_MODELS_MAX 256
 #define SCENE_EMITTERS_MAX 256
 
+struct OBB {
+  vec3 center;
+  vec3 extents;
+  vec3 axes[3];
+};
+
 typedef struct
 {
   // camera position
@@ -19,7 +25,7 @@ typedef struct
   vec3 rot;
 
   // camera boom length
-  float boomLen;
+  float boom_len;
 
   // camera field of view
   float fovy;
@@ -57,6 +63,7 @@ typedef struct
 } Model;
 
 void model_initialize(Model *out, const Mesh *mesh, const Material *mat);
+void model_get_obb(const Model* model, OBB* out);
 
 typedef struct
 {

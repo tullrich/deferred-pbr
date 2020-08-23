@@ -23,6 +23,20 @@ static inline void vec2_dup(vec2 r, vec2 const v) {
   for (int i=0; i<2; ++i)
     r[i] = v[i];
 }
+static inline void vec2_swizzle(vec2 r, float val) {
+  r[0] = r[1] = val;
+}
+static inline void vec2_zero(vec2 r) {
+  r[0] = r[1] = 0.0f;
+}
+static inline void vec2_negate(vec2 r, vec2 const v) {
+  for(int i=0; i<2; ++i)
+    r[i] = -v[i];
+}
+static inline void vec2_negate_in_place(vec2 r) {
+  for(int i=0; i<2; ++i)
+    r[i] = -r[i];
+}
 static inline void vec2_print(vec2 const v) {
   printf("<%f, %f>\n", v[0], v[1]);
 }
@@ -38,6 +52,10 @@ static inline void vec3_swizzle(vec3 r, float val) {
 }
 static inline void vec3_zero(vec3 r) {
   r[0] = r[1] = r[2] = 0.0f;
+}
+static inline void vec3_negate(vec3 r, vec3 const v) {
+  for(int i=0; i<3; ++i)
+    r[i] = -v[i];
 }
 static inline void vec3_negate_in_place(vec3 r) {
   for(int i=0; i<3; ++i)
@@ -198,6 +216,9 @@ extern const vec4 Zero;
 extern const vec4 Axis_Forward;
 extern const vec4 Axis_Up;
 extern const vec4 Axis_Right;
+extern const vec4 Axis_X;
+extern const vec4 Axis_Y;
+extern const vec4 Axis_Z;
 extern const vec4 Vec_Zero;
 extern const vec4 Vec_One;
 extern const quat Quat_Identity;

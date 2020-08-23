@@ -7,6 +7,7 @@ SkyboxDesc gSkyboxes[] = {
     .irr_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Irr.dds",
     .prefilter_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Prefilter.dds"
   },
+#ifdef ALL_ASSETS
   {
     .name = "San Francisco",
     .env_path = "environments/SanFrancisco4/SanFrancisco4_Env_512.dds",
@@ -17,6 +18,7 @@ SkyboxDesc gSkyboxes[] = {
     .name = "UV Debug",
     .env_path = "environments/UVDebug/UVDebug_Env.dds",
   }
+#endif
 };
 const int gSkyboxesCount = STATIC_ELEMENT_COUNT(gSkyboxes);
 
@@ -26,7 +28,9 @@ MeshDesc gMeshes[] = {
   { .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
   { .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
   { .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
+#ifdef ALL_ASSETS
   { .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj", .base_scale = 50.0f },
+#endif
   { .name = "None" }
 };
 const int gMeshesCount = STATIC_ELEMENT_COUNT(gMeshes);
@@ -39,6 +43,21 @@ MaterialDesc gMaterials[] = {
     .roughness_base = 0.05f,
     .emissive_base = { 0.0f, 0.0f, 0.0f }
   },
+  {
+    .name = "Snow Covered Path",
+    .albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
+    .normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
+    .height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
+    .metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
+    .roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
+    .ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 1.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
+  },
+#ifdef ALL_ASSETS
   {
     .name = "Sci-Fi Cube",
     .albedo_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
@@ -107,20 +126,6 @@ MaterialDesc gMaterials[] = {
     .height_map_scale = 0.1f
   },
   {
-    .name = "Snow Covered Path",
-    .albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
-    .normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
-    .height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
-    .metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
-    .roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
-    .ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
-    .albedo_base = { 1.0f, 1.0f, 1.0f },
-    .metalness_base = 1.0f,
-    .roughness_base = 1.0f,
-    .emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
-  },
-  {
     .name = "Medievil",
     .albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
     .normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
@@ -157,6 +162,7 @@ MaterialDesc gMaterials[] = {
     .roughness_base = 1.0f,
     .emissive_base = { 0.0f, 0.0f, 0.0f }
   }
+#endif
 };
 const int gMaterialsCount = STATIC_ELEMENT_COUNT(gMaterials);
 

@@ -1,6 +1,7 @@
 #include "common.h"
 #include "assets.h"
 #include "deferred.h"
+#include "debug_lines.h"
 #include "forward.h"
 #include "shadowmap.h"
 #include "scene.h"
@@ -19,7 +20,7 @@ static Scene gScene;
 static ParticleEmitterDesc gEmitterDesc;
 
 static int rotate_cam = 0;
-static int debug_shadow_map = 1;
+static int render_debug_lines = 1, debug_shadow_map;
 static int show_manipulator = 0;
 static float prevFrameTime = 0.0f;
 static float fps = 0.0f;
@@ -118,7 +119,7 @@ static int initialize_scene(int sphere_scene) {
   memset(&gScene, 0, sizeof(Scene));
 
   // Setup camera
-  gScene.camera.boomLen = 30.0f;
+  gScene.camera.boom_len = 30.0f;
   gScene.camera.fovy = 72.0f;
   gScene.camera.rot[0] = gScene.camera.rot[1] = -30.0f;
 
@@ -172,7 +173,7 @@ static int initialize_scene(int sphere_scene) {
   Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
   mesh_make_quad(mesh, 200, 200, 5);
   gScene.models[1] = (Model*)malloc(sizeof(Model));
-  model_initialize(gScene.models[1], mesh, &gMaterials[6].material);
+  model_initialize(gScene.models[1], mesh, &gMaterials[1].material);
   vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
   return 0;
 }
@@ -192,6 +193,11 @@ static int initialize() {
   if (err = forward_initialize(&gForward)) {
     printf("Forward renderer init failed\n");
     return err;
+  }
+
+  printf("<-- Initializing debug line renderer... -->\n");
+  if (err = debug_lines_initialize()) {
+    printf("Debug line renderer init failed\n");
   }
 
   printf("<-- Initializing shadow map... -->\n");
@@ -259,11 +265,28 @@ static int frame() {
   utility_set_clear_color(0, 0, 0);
   GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
-  // render
+  // render offscreen shadowmap
   shadow_map_render(&gShadowMap, &gScene);
+
+  // render opaque objects
   deferred_render(&gDeferred, &gScene, &gShadowMap);
+
+  // render transparent objects, particles, and billboarded icons
   forward_render(&gForward, &gScene);
 
+  // render debug lines
+  if (render_debug_lines) {
+    if (gScene.models[0]) {
+      OBB obb;
+      model_get_obb(gScene.models[0], &obb);
+      debug_lines_submit_obb(&obb, Green);
+    }
+    debug_lines_render(&gScene);
+  } else {
+    debug_lines_clear();
+  }
+
+  // render debug shadow map picture-in-picture
   if (debug_shadow_map) {
     const int width = 300;
     const int height = width * gShadowMap.height/(float)gShadowMap.width;
@@ -280,10 +303,11 @@ static int frame() {
   );
   ImGui::Combo("Render Mode", (int*)&gDeferred.render_mode, render_mode_strings, render_mode_strings_count);
   ImGui::Combo("Tonemapping Operator", (int*)&gDeferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
+  ImGui::Checkbox("Show Debug Lines", (bool*)&render_debug_lines);
   ImGui::Separator();
   if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::Checkbox("Cam Rotate", (bool*)&rotate_cam);
-    ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boomLen, 0.0f, 150.0f);
+    ImGui::SliderFloat("Cam Zoom", (float*)&gScene.camera.boom_len, 0.0f, 150.0f);
     ImGui::SliderFloat("FOVy", (float*)&gScene.camera.fovy, 0.0f, 180.0f);
   }
   if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -363,6 +387,10 @@ static int frame() {
         bool show_model_rot_manip = (show_manipulator == 3);
         if (ImGui::Checkbox("Rotation Show Manipulator", &show_model_rot_manip)) {
           show_manipulator = (show_model_rot_manip) ? 3 : 0;
+        }
+        if (ImGui::Button("Reset")) {
+          vec3_zero(gScene.models[0]->position);
+          vec3_zero(gScene.models[0]->rot);
         }
         ImGui::PopID();
       }
@@ -490,9 +518,9 @@ int main(int argc, char* argv[]) {
           break;
         case SDL_MOUSEWHEEL:
           if (event.wheel.y == 1)  {
-            gScene.camera.boomLen -= 2.f;
+            gScene.camera.boom_len -= 2.f;
           } else if (event.wheel.y == -1) {
-            gScene.camera.boomLen +=  2.f;
+            gScene.camera.boom_len +=  2.f;
           }
           break;
         case SDL_QUIT:
