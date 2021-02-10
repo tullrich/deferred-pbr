@@ -128,7 +128,7 @@ int forward_initialize(Forward* f) {
   return 0;
 }
 
-void forward_render(Forward* f, Scene *s) {
+void forward_render(Forward* f, const Scene *s) {
   // bind default backbuffer
   GL_WRAP(glDepthMask(GL_FALSE));
 

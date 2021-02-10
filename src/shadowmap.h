@@ -44,5 +44,5 @@ struct ShadowMap
 };
 
 int shadow_map_initialize(ShadowMap* shadow_map, int width, int height);
-void shadow_map_render(ShadowMap* shadow_map, Scene* s);
+void shadow_map_render(ShadowMap* shadow_map, const Scene* s);
 void shadow_map_render_debug(const ShadowMap *shadow_map, int x_off, int y_off, int width, int height);

@@ -50,6 +50,10 @@ add_executable( Deferred
   src/shadowmap.cpp
   src/debug_lines.h
   src/debug_lines.cpp
+  src/renderer.h
+  src/renderer.cpp
+  src/gui.h
+  src/gui.cpp
 
   src/imgui/imconfig.h
   src/imgui/imgui.h

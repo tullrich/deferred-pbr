@@ -392,43 +392,6 @@ float utility_random_range(float min, float max) {
   return min + rand() / (float)RAND_MAX * (max - min);
 }
 
-void utility_rotation_gizmo(quat out_euler, const vec3 pos, const mat4x4 view, const mat4x4 proj) {
-  mat4x4 manip_mat;
-  mat4x4_identity(manip_mat);
-  mat4x4_rotate_Z(manip_mat, manip_mat, DEG_TO_RAD(out_euler[2]));
-  mat4x4_rotate_Y(manip_mat, manip_mat, DEG_TO_RAD(out_euler[1]));
-  mat4x4_rotate_X(manip_mat, manip_mat, DEG_TO_RAD(out_euler[0]));
-  ImGuizmo::Enable(true);
-  ImGuizmo::SetRect((float)VIEWPORT_X_OFFSET, 0.0f, (float)VIEWPORT_WIDTH, (float)VIEWPORT_HEIGHT);
-  ImGuizmo::Manipulate(
-    &view[0][0],
-    &proj[0][0],
-    ImGuizmo::ROTATE,
-    ImGuizmo::LOCAL,
-    &manip_mat[0][0]
-  );
-  mat4x4_to_euler(out_euler, manip_mat);
-  for (int i = 0; i < 3; i++) {
-    out_euler[i] = RAD_TO_DEG(out_euler[i]);
-  }
-}
-
-void utility_translation_gizmo(vec3 out_pos, const mat4x4 view, const mat4x4 proj) {
-  mat4x4 manip_mat;
-  mat4x4_identity(manip_mat);
-  vec3_dup(manip_mat[3], out_pos);
-  ImGuizmo::Enable(true);
-  ImGuizmo::SetRect((float)VIEWPORT_X_OFFSET, 0.0f, (float)VIEWPORT_WIDTH, (float)VIEWPORT_HEIGHT);
-  ImGuizmo::Manipulate(
-    &view[0][0],
-    &proj[0][0],
-    ImGuizmo::TRANSLATE,
-    ImGuizmo::LOCAL,
-    &manip_mat[0][0]
-  );
-  vec3_dup(out_pos, manip_mat[3]);
-}
-
 GLuint utility_load_texture_dds(const char* filepath) {
   gli::texture Texture = gli::load(filepath);
   if (Texture.empty()) {

@@ -163,4 +163,4 @@ typedef struct
   GLuint texture;
 } ParticleEmitterTextureDesc;
 
-void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);
+void particle_emitter_gui(ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count);

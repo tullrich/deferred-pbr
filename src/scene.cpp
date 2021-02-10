@@ -1,7 +1,7 @@
 #include "scene.h"
 
-void camera_update(Camera* camera, float dt, int auto_rotate) {
-  if (auto_rotate) {
+void camera_update(Camera* camera, float dt) {
+  if (camera->auto_rotate) {
     camera->rot[1] += dt * (float)M_PI/10.0f;
   }
 
@@ -58,4 +58,15 @@ void model_get_obb(const Model* model, OBB* out) {
   mat4x4_mul_vec4(out->axes[0], m, Axis_X);
   mat4x4_mul_vec4(out->axes[1], m, Axis_Y);
   mat4x4_mul_vec4(out->axes[2], m, Axis_Z);
+}
+
+void scene_update(Scene* scene, float dt) {
+  camera_update(&scene->camera, dt);
+
+  // update emitters
+  for (int i = 0; i < SCENE_EMITTERS_MAX; i++) {
+    if (scene->emitters[i]) {
+      particle_emitter_update(scene->emitters[i], dt);
+    }
+  }
 }

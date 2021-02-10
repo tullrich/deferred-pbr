@@ -36,4 +36,4 @@ typedef struct
 } Forward;
 
 int forward_initialize(Forward* f);
-void forward_render(Forward* f, Scene *s);
+void forward_render(Forward* f, const Scene *s);

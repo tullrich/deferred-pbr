@@ -170,7 +170,7 @@ int deferred_initialize(Deferred* d) {
   return 0;
 }
 
-static void render_geometry(Model* model, Deferred* d, Scene *s) {
+static void render_geometry(const Model* model, Deferred* d, const Scene *s) {
   if (!model->mesh->vertices)
     return;
 
@@ -293,7 +293,7 @@ static void render_geometry(Model* model, Deferred* d, Scene *s) {
         shader->pos_loc);
 }
 
-static void render_shading(Deferred* d, Scene *s, ShadowMap* sm) {
+static void render_shading(Deferred* d, const Scene *s, const ShadowMap* sm) {
   LightingShader* shader = &d->lighting_shader[(int)d->tonemapping_op];
 
   GL_WRAP(glUseProgram(shader->program));
@@ -380,7 +380,7 @@ static void render_shading(Deferred* d, Scene *s, ShadowMap* sm) {
   utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
 }
 
-static void render_skybox(Deferred *d, Scene *s) {
+static void render_skybox(Deferred *d, const Scene *s) {
   GL_WRAP(glUseProgram(d->skybox_shader.program));
 
   GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
@@ -418,7 +418,7 @@ static void render_skybox(Deferred *d, Scene *s) {
   utility_draw_fullscreen_quad2(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
 }
 
-static void render_debug(Deferred *d, Scene *s) {
+static void render_debug(Deferred *d, const Scene *s) {
   int program_idx = 0;
   GLuint render_buffer = 0;
   switch(d->render_mode) {
@@ -448,7 +448,7 @@ static void render_debug(Deferred *d, Scene *s) {
   utility_draw_fullscreen_quad(d->debug_shader[program_idx].texcoord_loc, d->debug_shader[program_idx].pos_loc);
 }
 
-void deferred_render(Deferred *d, Scene *s, ShadowMap* sm) {
+void deferred_render(Deferred *d, const Scene *s, const ShadowMap* sm) {
   GL_WRAP(glEnable(GL_CULL_FACE));
   GL_WRAP(glEnable(GL_TEXTURE_2D));
 

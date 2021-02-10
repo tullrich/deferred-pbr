@@ -78,7 +78,7 @@ int shadow_map_initialize(ShadowMap* shadow_map, int width, int height) {
   return 0;
 }
 
-static void render_geometry(ShadowMap *shadow_map, Model* model, Scene *s) {
+static void render_geometry(ShadowMap *shadow_map, const Model* model, const Scene *s) {
   if (!model->mesh->vertices)
     return;
 
@@ -120,7 +120,7 @@ static void render_geometry(ShadowMap *shadow_map, Model* model, Scene *s) {
 }
 
 
-void shadow_map_render(ShadowMap *shadow_map, Scene *s) {
+void shadow_map_render(ShadowMap *shadow_map, const Scene *s) {
   // Bind render target
   GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, shadow_map->fbo));
   GL_WRAP(glViewport(0, 0, shadow_map->width, shadow_map->height));

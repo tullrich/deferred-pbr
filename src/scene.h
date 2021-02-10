@@ -38,9 +38,12 @@ typedef struct
 
   // view-projection matrix
   mat4x4 viewProj;
+
+  // if set, the camera rotates about the origin
+  int auto_rotate;
 } Camera;
 
-void camera_update(Camera* camera, float dt, int auto_rotate);
+void camera_update(Camera* camera, float dt);
 void camera_forward(const Camera* camera, vec3 out);
 void camera_up(const Camera* camera, vec3 out);
 
@@ -88,3 +91,5 @@ typedef struct
   // Particle emitters to render
   ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
 } Scene;
+
+void scene_update(Scene* scene, float dt);

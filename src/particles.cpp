@@ -200,7 +200,8 @@ static int get_particle_texture_index(GLuint texId, const ParticleEmitterTexture
   return 0;
 }
 
-void particle_emitter_gui(ParticleEmitterDesc* desc, ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
+void particle_emitter_gui(ParticleEmitter* emitter, const ParticleEmitterTextureDesc* tex_defs, int tex_defs_count) {
+  ParticleEmitterDesc* desc = (ParticleEmitterDesc*)emitter->desc; // HACKy const cast here
   if (ImGui::Button("Flare")) {
     *desc = gEmitterDescs[0];
     particle_emitter_refresh(emitter);

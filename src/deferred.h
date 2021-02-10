@@ -136,4 +136,4 @@ typedef struct
 } Deferred;
 
 int deferred_initialize(Deferred* d);
-void deferred_render(Deferred* d, Scene *s, ShadowMap* sm);
+void deferred_render(Deferred* d, const Scene *s, const ShadowMap* sm);

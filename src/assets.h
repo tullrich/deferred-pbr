@@ -17,3 +17,6 @@ extern const int gParticleTexturesCount;
 
 extern ParticleEmitterDesc gEmitterDescs[];
 extern const int gEmitterDescsCount;
+
+typedef void(*LoadingCallback)(const char* stage, const char* asset, int index, int total);
+int initialize_assets(LoadingCallback update_loading_cb);
