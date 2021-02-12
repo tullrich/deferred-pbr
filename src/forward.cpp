@@ -121,7 +121,7 @@ int forward_initialize(Forward* f) {
     return 1;
   }
 
-  if ((f->light_icon = utility_load_texture(GL_TEXTURE_2D, "icons/lightbulb.png")) < 0) {
+  if ((f->light_icon = utility_load_texture(GL_TEXTURE_2D, "icons/lightbulb.png")) == 0) {
     return 1;
   }
 
@@ -138,7 +138,10 @@ void forward_render(Forward* f, const Scene *s) {
   GL_WRAP(glBlendEquation(GL_FUNC_ADD));
 
   // draw emitters
-  for (int i = 0; i < SCENE_EMITTERS_MAX, s->emitters[i]; i++) {
+  for (int i = 0; i < SCENE_EMITTERS_MAX; i++) {
+    if (!s->emitters[i])
+      continue;
+
     ParticleEmitter* emitter = s->emitters[i];
     const ParticleEmitterDesc* desc = emitter->desc;
 
@@ -187,7 +190,7 @@ void forward_render(Forward* f, const Scene *s) {
     }
 
     // bind texture
-    if (shader->texture_loc >= 0 && desc->texture >= 0) {
+    if (shader->texture_loc >= 0 && desc->texture > 0) {
       GL_WRAP(glActiveTexture(GL_TEXTURE1));
       GL_WRAP(glBindTexture(GL_TEXTURE_2D, desc->texture));
       GL_WRAP(glUniform1i(shader->texture_loc, 1));

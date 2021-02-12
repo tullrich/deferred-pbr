@@ -1,6 +1,7 @@
 #include "gui.h"
 #include "assets.h"
 
+#include "imgui/imgui.h"
 #include "imgui/imgui_custom_theme.h"
 #include "imgui/imgui_impl_sdl.h"
 #include "imgui/imgui_impl_opengl3.h"
@@ -72,6 +73,7 @@ int gui_process_event(SDL_Event* event) {
 void gui_rotation_gizmo(quat out_euler, const vec3 pos, const mat4x4 view, const mat4x4 proj) {
   mat4x4 manip_mat;
   mat4x4_identity(manip_mat);
+  mat4x4_translate(manip_mat, pos[0], pos[1], pos[2]);
   mat4x4_rotate_Z(manip_mat, manip_mat, DEG_TO_RAD(out_euler[2]));
   mat4x4_rotate_Y(manip_mat, manip_mat, DEG_TO_RAD(out_euler[1]));
   mat4x4_rotate_X(manip_mat, manip_mat, DEG_TO_RAD(out_euler[0]));
@@ -215,7 +217,7 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt) 
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Emitter")) {
-      particle_emitter_gui(scene->emitters[0], gParticleTextures, gParticleTexturesCount);
+      // particle_emitter_gui(scene->emitters[0], gParticleTextures, gParticleTexturesCount);
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();

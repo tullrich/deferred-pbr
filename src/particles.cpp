@@ -1,5 +1,6 @@
 #include "particles.h"
 #include "assets.h"
+#include "imgui/imgui.h"
 
 #define PARTICLE_GRAVITY -9.81f
 
@@ -36,11 +37,11 @@ void particle_update(const ParticleEmitterDesc* def, Particle* part, float dt) {
   float min_dt = fminf(part->ttl, dt);
 
   vec4 dt_color;
-  vec4_scale(dt_color, part->delta_color, dt);
+  vec4_scale(dt_color, part->delta_color, min_dt);
   vec4_add(part->color, part->color, dt_color);
 
   vec3 dt_scale;
-  vec3_scale(dt_scale, part->delta_scale, dt);
+  vec3_scale(dt_scale, part->delta_scale, min_dt);
   vec3_add(part->scale, part->scale, dt_scale);
 }
 

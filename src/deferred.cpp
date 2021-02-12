@@ -418,7 +418,7 @@ static void render_skybox(Deferred *d, const Scene *s) {
   utility_draw_fullscreen_quad2(d->skybox_shader.texcoord_loc, d->skybox_shader.pos_loc);
 }
 
-static void render_debug(Deferred *d, const Scene *s) {
+static void render_debug(Deferred *d) {
   int program_idx = 0;
   GLuint render_buffer = 0;
   switch(d->render_mode) {
@@ -427,6 +427,7 @@ static void render_debug(Deferred *d, const Scene *s) {
     case RENDER_MODE_ROUGHNESS: 	render_buffer = d->g_buffer.roughness_render_buffer; break;
     case RENDER_MODE_METALNESS: 	render_buffer = d->g_buffer.metalness_render_buffer; break;
     case RENDER_MODE_DEPTH: 	render_buffer = d->g_buffer.depth_render_buffer; program_idx = 2; break;
+    default: return;
   }
 
   GL_WRAP(glUseProgram(d->debug_shader[program_idx].program));
@@ -462,14 +463,15 @@ void deferred_render(Deferred *d, const Scene *s, const ShadowMap* sm) {
   GL_WRAP(glDisable(GL_BLEND));
   GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
-  for (int i = 0; i < SCENE_MODELS_MAX, s->models[i]; i++) {
-    render_geometry(s->models[i], d, s);
+  for (int i = 0; i < SCENE_MODELS_MAX; i++) {
+    if (s->models[i])
+      render_geometry(s->models[i], d, s);
   }
 
   if (d->render_mode == RENDER_MODE_SHADED) {
     render_shading(d, s, sm);
     render_skybox(d, s);
   } else {
-    render_debug(d, s);
+    render_debug(d);
   }
 }

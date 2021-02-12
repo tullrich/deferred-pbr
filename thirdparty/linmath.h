@@ -23,6 +23,18 @@ static inline void vec##n##_scale(vec##n r, vec##n const v, float const s) \
   for(i=0; i<n; ++i) \
     r[i] = v[i] * s; \
 } \
+static inline void vec##n##_add_scaled(vec##n r, vec##n const a, vec##n const b, float const s) \
+{ \
+  int i; \
+  for(i=0; i<n; ++i) \
+    r[i] = a[i] + b[i] * s; \
+} \
+static inline void vec##n##_add_scaled(vec##n r, vec##n const a, vec##n const b, vec##n const s) \
+{ \
+  int i; \
+  for(i=0; i<n; ++i) \
+    r[i] = a[i] + b[i] * s[i]; \
+} \
 static inline float vec##n##_mul_inner(vec##n const a, vec##n const b) \
 { \
   float p = 0.0f; \

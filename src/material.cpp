@@ -1,6 +1,7 @@
 #include "common.h"
 #include "material.h"
 #include "assets.h"
+#include "imgui/imgui.h"
 
 static const vec4 Normal_Z_Up = { 0.5f, 0.5f, 1.0f, 0.0f };
 

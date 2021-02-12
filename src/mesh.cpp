@@ -66,7 +66,7 @@ void mesh_make_box(Mesh *out_mesh, float side_len) {
   vec3_swizzle(out_mesh->bounds.extents, 0.5f*side_len);
   out_mesh->base_scale = 1.0f;
   out_mesh->vertices = (float*)malloc(sizeof(box_vertices));
-  for (int i = 0; i < STATIC_ELEMENT_COUNT(box_vertices); i++) {
+  for (size_t i = 0; i < STATIC_ELEMENT_COUNT(box_vertices); i++) {
     out_mesh->vertices[i] = box_vertices[i]*side_len;
   }
   out_mesh->normals = (float*)malloc(sizeof(box_normals));
@@ -79,15 +79,13 @@ void mesh_make_box(Mesh *out_mesh, float side_len) {
 
 // Adapted from https://stackoverflow.com/questions/7946770/calculating-a-sphere-in-opengl
 void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, unsigned int sectors) {
-    const float R = 1.f/(float)(rings-1);
-    const float S = 1.f/(float)(sectors-1);
-
+  const float R = 1.f/(float)(rings-1);
+  const float S = 1.f/(float)(sectors-1);
   float* v = (float*)malloc(rings * sectors * 3 * sizeof(float));
   float* n = (float*)malloc(rings * sectors * 3 * sizeof(float));
   float* ta = (float*)malloc(rings * sectors * 4 * sizeof(float));
   float* t = (float*)malloc(rings * sectors * 2 * sizeof(float));
   unsigned int* indices = (unsigned int*)malloc((rings-1) * (sectors-1) * 4 * sizeof(unsigned int));
-
   memset(out_mesh, 0, sizeof(Mesh));
   out_mesh->vertices = v;
   out_mesh->normals = n;
@@ -99,22 +97,20 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
   out_mesh->mode = GL_QUADS;
   out_mesh->base_scale = 1.0f;
   vec3_swizzle(out_mesh->bounds.extents, radius);
-
   unsigned int r, s;
-    for(r = 0; r < rings; r++) {
+  for(r = 0; r < rings; r++) {
     for(s = 0; s < sectors; s++) {
       const float y = (float)(sin( -M_PI_2 + M_PI * r * R ));
-            const float x = (float)(cos(2*M_PI * s * S) * sin( M_PI * r * R ));
-            const float z = (float)(sin(2*M_PI * s * S) * sin( M_PI * r * R ));
+      const float x = (float)(cos(2*M_PI * s * S) * sin( M_PI * r * R ));
+      const float z = (float)(sin(2*M_PI * s * S) * sin( M_PI * r * R ));
       *t++ = s*S;
       *t++ = r*R;
       *v++ = x * radius;
-            *v++ = y * radius;
-            *v++ = z * radius;
-            *n++ = x;
-            *n++ = y;
+      *v++ = y * radius;
+      *v++ = z * radius;
+      *n++ = x;
+      *n++ = y;
       *n++ = z;
-
       ta[0] = -z; ta[1] = 0; ta[2] = x;
       if (vec3_len(ta) != 0.0f) {
         vec3_norm(ta, ta);
@@ -125,15 +121,14 @@ void mesh_sphere_tessellate(Mesh *out_mesh, float radius, unsigned int rings, un
       ta += 4;
     }
   }
-
-    for(r = 0; r < rings-1; r++) {
+  for(r = 0; r < rings-1; r++) {
     for(s = 0; s < sectors-1; s++) {
       *indices++ = (r+1) * sectors + s;
       *indices++ = (r+1) * sectors + (s+1);
       *indices++ = r * sectors + (s+1);
       *indices++ = r * sectors + s;
     }
-    }
+  }
 }
 
 void mesh_make_quad(Mesh *out_mesh, float size_x, float size_z, float uv_scale) {
@@ -143,12 +138,11 @@ void mesh_make_quad(Mesh *out_mesh, float size_x, float size_z, float uv_scale) 
   out_mesh->mode = GL_QUADS;
   out_mesh->vertex_count = 4;
   out_mesh->index_count = 4;
-  vec3* extents = &out_mesh->bounds.extents;
   vec3_set(out_mesh->bounds.extents, size_x, .001f, size_z);
   out_mesh->base_scale = 1.0f;
   out_mesh->vertices = (float*)malloc(sizeof(plane_vertices));
   out_mesh->texcoords = (float*)malloc(sizeof(plane_texcoords));
-  for (int i = 0; i < STATIC_ELEMENT_COUNT(plane_vertices)/3; i++) {
+  for (size_t i = 0; i < STATIC_ELEMENT_COUNT(plane_vertices)/3; i++) {
     out_mesh->vertices[i*3] = plane_vertices[i*3] * size_x;
     out_mesh->vertices[i*3+1] = plane_vertices[i*3+1];
     out_mesh->vertices[i*3+2] = plane_vertices[i*3+2] * size_z;
@@ -324,7 +318,6 @@ static void build_adjacency() {
 
 static void compute_mesh_normals(tinyobj_attrib_t *out_attrib) {
   assert(out_attrib->num_vertices > 0 && out_attrib->num_faces > 0);
-  tinyobj_vertex_index_t *indices = out_attrib->faces;
   const unsigned int face_count = out_attrib->num_faces;
   const float *vertices = out_attrib->vertices;
 
@@ -384,8 +377,6 @@ static Bounds compute_mesh_bounds(const Mesh* mesh) {
 
 static float* compute_mesh_tangents(const tinyobj_attrib_t *attrib) {
   assert(attrib->num_texcoords > 0 && attrib->num_normals > 0);
-  const tinyobj_vertex_index_t *indices = attrib->faces;
-  const unsigned int face_count = attrib->num_faces;
   const float *vertices = attrib->vertices;
   const float *normals = attrib->normals;
   const float *texcoords = attrib->texcoords;

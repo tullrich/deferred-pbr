@@ -1,4 +1,5 @@
 #include "light.h"
+#include "imgui/imgui.h"
 
 DEFINE_ENUM(LightType, light_type_strings, ENUM_LightType);
 

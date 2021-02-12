@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <stdint.h>
+#include <float.h>
 #include <algorithm>
 
 #include "SDL.h"
@@ -12,7 +14,6 @@
 
 #include "stb_image.h"
 #include "tinyobj_loader_c/tinyobj_loader_c.h"
-#include "imgui/imgui.h"
 
 #include "linmath.h"
 
@@ -179,7 +180,7 @@ static inline void mat4x4_make_transform_uscale(mat4x4 r, float scale, const qua
   mat4x4_make_transform(r, scaleVec, rotation, translation);
 }
 
-static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n, float f) {
+static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, float n) {
   float const e = 1.f / tanf(y_fov / 2.f);
 
   m[0][0] = e / aspect;
@@ -230,7 +231,7 @@ extern const quat Quat_Identity;
 #define VIEWPORT_HEIGHT 1000
 #define VIEWPORT_X_OFFSET SIDEBAR_WIDTH
 #define Z_NEAR 0.1f
-#define Z_FAR 200.0f
+#define Z_FAR 400.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 #define RAD_TO_DEG(rad) (rad*180.0f/(float)M_PI)

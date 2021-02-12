@@ -5,24 +5,24 @@ int renderer_initialize(Renderer* r) {
   r->render_debug_lines = 1;
 
   int err = 0;
-  if (err = deferred_initialize(&r->deferred)) {
+  if ((err = deferred_initialize(&r->deferred))) {
     printf("Deferred renderer init failed\n");
     return err;
   }
 
   printf("<-- Initializing forward renderer... -->\n");
-  if (err = forward_initialize(&r->forward)) {
+  if ((err = forward_initialize(&r->forward))) {
     printf("Forward renderer init failed\n");
     return err;
   }
 
   printf("<-- Initializing debug line renderer... -->\n");
-  if (err = debug_lines_initialize()) {
+  if ((err = debug_lines_initialize())) {
     printf("Debug line renderer init failed\n");
   }
 
   printf("<-- Initializing shadow map... -->\n");
-  if (err = shadow_map_initialize(&r->shadow_map, VIEWPORT_WIDTH, VIEWPORT_HEIGHT)) {
+  if ((err = shadow_map_initialize(&r->shadow_map, VIEWPORT_WIDTH, VIEWPORT_HEIGHT))) {
     printf("Shadow map init failed\n");
     return err;
   }
@@ -46,11 +46,6 @@ void renderer_render(Renderer* r, const Scene* scene) {
 
   // render debug lines
   if (r->render_debug_lines) {
-    if (scene->models[0]) {
-      OBB obb;
-      model_get_obb(scene->models[0], &obb);
-      debug_lines_submit_obb(&obb, Green);
-    }
     debug_lines_render(scene);
   } else {
     debug_lines_clear();

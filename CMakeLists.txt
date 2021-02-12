@@ -54,6 +54,8 @@ add_executable( Deferred
   src/renderer.cpp
   src/gui.h
   src/gui.cpp
+  src/physics.h
+  src/physics.cpp
 
   src/imgui/imconfig.h
   src/imgui/imgui.h
@@ -79,11 +81,12 @@ add_executable( Deferred
 )
 
 if ( NOT MSVC )
+  set(CMAKE_BUILD_TYPE Debug)
   if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
   endif()
 
-  # set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-missing-field-initializers")
   set(CMAKE_CXX_FLAGS_DEBUG "-g")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
   target_link_libraries( Deferred "-lm" )

@@ -1,5 +1,7 @@
 #include "assets.h"
 
+#define ALL_ASSETS
+
 SkyboxDesc gSkyboxes[] = {
   {
     .name = "Saint Peters Basilica",
@@ -230,9 +232,7 @@ const int gEmitterDescsCount = STATIC_ELEMENT_COUNT(gEmitterDescs);
 static int initialize_emitters(LoadingCallback update_loading_cb) {
   for (int i = 0; i < gParticleTexturesCount; i++) {
     update_loading_cb("Initializing particle", gParticleTextures[i].name, i, gParticleTexturesCount);
-    if ((gParticleTextures[i].texture = utility_load_texture(GL_TEXTURE_2D, gParticleTextures[i].path)) < 0) {
-      return 1;
-    }
+    gParticleTextures[i].texture = utility_load_texture(GL_TEXTURE_2D, gParticleTextures[i].path);
   }
 
   for (int i = 0; i < gEmitterDescsCount; i++) {
@@ -244,10 +244,10 @@ static int initialize_emitters(LoadingCallback update_loading_cb) {
 
 static int initialize_meshes(LoadingCallback update_loading_cb) {
   update_loading_cb("Initializing mesh", "sphere", 0, gMeshesCount);
-  mesh_sphere_tessellate(&gMeshes[0].mesh, 2.5f, 100, 100);
+  mesh_sphere_tessellate(&gMeshes[0].mesh, 1, 100, 100);
   gMeshes[0].mesh.desc = &gMeshes[0];
   update_loading_cb("Initializing mesh", "box", 1, gMeshesCount);
-  mesh_make_box(&gMeshes[1].mesh, 5.0f);
+  mesh_make_box(&gMeshes[1].mesh, 1.0f);
   gMeshes[1].mesh.desc = &gMeshes[1];
   for (int i = 2; i < (gMeshesCount - 1); i++) {
     update_loading_cb("Initializing mesh", gMeshes[i].name, i, gMeshesCount);
@@ -283,25 +283,25 @@ static int initialize_skyboxes(LoadingCallback update_loading_cb) {
 int initialize_assets(LoadingCallback update_loading_cb) {
   int err = 0;
   printf("<-- Initializing skyboxes... -->\n");
-  if (err = initialize_skyboxes(update_loading_cb)) {
+  if ((err = initialize_skyboxes(update_loading_cb))) {
     printf("Skyboxes init failed\n");
     return err;
   }
 
   printf("<-- Initializing emitters... -->\n");
-  if (err = initialize_emitters(update_loading_cb)) {
+  if ((err = initialize_emitters(update_loading_cb))) {
     printf("Emitters init failed\n");
     return err;
   }
 
   printf("<-- Initializing meshes... -->\n");
-  if (err = initialize_meshes(update_loading_cb)) {
+  if ((err = initialize_meshes(update_loading_cb))) {
     printf("Mesh loading failed\n");
     return err;
   }
 
   printf("<-- Initializing materials... -->\n");
-  if (err = initialize_materials(update_loading_cb)) {
+  if ((err = initialize_materials(update_loading_cb))) {
     printf("Material loading failed\n");
     return err;
   }

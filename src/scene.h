@@ -92,4 +92,6 @@ typedef struct
   ParticleEmitter* emitters[SCENE_EMITTERS_MAX];
 } Scene;
 
+int scene_add_model(Scene* scene, Model* m);
+int scene_remove_model(Scene* scene, Model* m);
 void scene_update(Scene* scene, float dt);

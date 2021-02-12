@@ -13,18 +13,24 @@ void utility_report_gl_err(const char * file, const char * func, int line) {
 }
 
 void utility_gl_debug_cb(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam) {
+  (void)(source);
+  (void)(type);
+  (void)(id);
+  (void)(severity);
+  (void)(length);
+  (void)(userParam);
   printf("GL Error: %s", message);
 }
 
 int utility_buffer_file(const char *filename, unsigned char **buf, size_t *size) {
   FILE *fd;
   int ret = 1;
-  if (fd = fopen(filename, "rb")) {
+  if ((fd = fopen(filename, "rb"))) {
     if (!fseek(fd, 0, SEEK_END)) {
       size_t fsize = ftell(fd);
       rewind(fd);
       *buf = (unsigned char*)malloc(fsize);
-      if (!fread(*buf, 1, fsize, fd) != fsize) {
+      if (!(fread(*buf, 1, fsize, fd) != fsize)) {
         *size = fsize;
         ret = 0;
       } else {
@@ -260,6 +266,7 @@ void utility_draw_fullscreen_quad(GLint texcoord_loc, GLint pos_loc) {
 }
 
 void utility_draw_fullscreen_quad2(GLint texcoord_loc, GLint pos_loc) {
+  (void)(texcoord_loc);
   GL_WRAP(
     glBegin(GL_QUADS);
       glVertexAttrib2f(pos_loc, 1.0f, -1.0f);
@@ -415,15 +422,15 @@ GLuint utility_load_texture_dds(const char* filepath) {
   GL_WRAP(glTexParameteriv(target, GL_TEXTURE_SWIZZLE_RGBA, &format.Swizzles[0]));
 
   glm::tvec3<GLsizei> extent = Texture.extent();
-  printf("DDS %i: Extents: <%i, %i, %i> Faces: %i Levels: %i IsCube %i\n", texture_id, extent.x, extent.y, extent.z, Texture.faces(), Texture.levels(), gli::is_target_cube(Texture.target()));
+  printf("DDS %u: Extents: <%i, %i, %i> Faces: %lu Levels: %lu IsCube %i\n", texture_id, extent.x, extent.y, extent.z, Texture.faces(), Texture.levels(), gli::is_target_cube(Texture.target()));
 
   for (std::size_t face = 0; face < Texture.faces(); face++) {
     for (std::size_t level = 0; level < Texture.levels(); level++) {
       GLenum face_target = gli::is_target_cube(Texture.target()) ? (GL_TEXTURE_CUBE_MAP_POSITIVE_X + face) : target;
       glm::tvec3<GLsizei> level_extent = Texture.extent(level);
-      printf("\tFace: %i Mip: %i Extents: <%i, %i, %i> Format: %#010x External %#010x\n", face, level, level_extent.x, level_extent.y, level_extent.z, format.Internal, format.External);
+      printf("\tFace: %lu Mip: %lu Extents: <%i, %i, %i> Format: %#010x External %#010x\n", face, level, level_extent.x, level_extent.y, level_extent.z, format.Internal, format.External);
       if (gli::is_compressed(Texture.format())) {
-        printf("\t\tCompressed Size: %i\n", Texture.size(level));
+        printf("\t\tCompressed Size: %lu\n", Texture.size(level));
         GL_WRAP(glCompressedTexImage2D(
           face_target, level,
           format.Internal,

@@ -60,6 +60,26 @@ void model_get_obb(const Model* model, OBB* out) {
   mat4x4_mul_vec4(out->axes[2], m, Axis_Z);
 }
 
+int scene_add_model(Scene* scene, Model* m) {
+  for (int i = 0; i < SCENE_MODELS_MAX; i++) {
+    if (!scene->models[i]) {
+      scene->models[i] = m;
+      return 0;
+    }
+  }
+  return 1;
+}
+
+int scene_remove_model(Scene* scene, Model* m) {
+  for (int i = 0; i < SCENE_MODELS_MAX; i++) {
+    if (scene->models[i] == m) {
+      scene->models[i] = NULL;
+      return 0;
+    }
+  }
+  return 1;
+}
+
 void scene_update(Scene* scene, float dt) {
   camera_update(&scene->camera, dt);
 
