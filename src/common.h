@@ -132,7 +132,7 @@ static inline void quat_rotation_between(quat out, const vec3 a, const vec3 b) {
 static inline void quat_print(const quat q) {
   printf("<%f, %f, %f, %f>\n", q[0], q[1], q[2], q[3]);
 }
-static inline void mat4x4_printf(mat4x4 m) {
+static inline void mat4x4_printf(const mat4x4 m) {
   printf("[ %f, %f, %f, %f\n", m[0][0], m[0][1], m[0][2], m[0][3]);
   printf("  %f, %f, %f, %f\n", m[1][0], m[1][1], m[1][2], m[1][3]);
   printf("  %f, %f, %f, %f\n", m[2][0], m[2][1], m[2][2], m[2][3]);
@@ -202,6 +202,62 @@ static inline void mat4x4_inf_perspective(mat4x4 m, float y_fov, float aspect, f
   m[3][1] = 0.f;
   m[3][2] = -2.0f * n;
   m[3][3] = 0.f;
+}
+
+typedef vec3 mat3x3[3];
+static inline void mat3x3_identity(mat3x3 M) {
+  int i, j;
+  for(i=0; i<3; ++i)
+    for(j=0; j<3; ++j)
+      M[i][j] = i==j ? 1.f : 0.f;
+}
+
+static inline void mat3x3_from_mat4x4(mat3x3 M, const mat4x4 N) {
+  int i, j;
+  for(i=0; i<3; ++i)
+    for(j=0; j<3; ++j)
+      M[i][j] = N[i][j];
+}
+
+static inline void mat3x3_dup(mat3x3 M, const mat3x3 N) {
+  int i, j;
+  for(i=0; i<3; ++i)
+    for(j=0; j<3; ++j)
+      M[i][j] = N[i][j];
+}
+
+static inline void mat3x3_mul(mat3x3 M, const mat3x3 a, const mat3x3 b) {
+  int k, r, c;
+  for(c=0; c<3; ++c)  {
+    for(r=0; r<3; ++r) {
+      M[c][r] = 0.f;
+      for(k=0; k<3; ++k)
+        M[c][r] += a[k][r] * b[c][k];
+    }
+  }
+}
+
+static inline void mat3x3_inverse(mat3x3 M, const mat3x3 N) {
+    // computes the inverse of a matrix m
+  float det = N[0][0] * (N[1][1] * N[2][2] - N[2][1] * N[1][2]) -
+               N[0][1] * (N[1][0] * N[2][2] - N[1][2] * N[2][0]) +
+               N[0][2] * (N[1][0] * N[2][1] - N[1][1] * N[2][0]);
+  float invdet = 1 / det;
+  M[0][0] = (N[1][1] * N[2][2] - N[2][1] * N[1][2]) * invdet;
+  M[0][1] = (N[0][2] * N[2][1] - N[0][1] * N[2][2]) * invdet;
+  M[0][2] = (N[0][1] * N[1][2] - N[0][2] * N[1][1]) * invdet;
+  M[1][0] = (N[1][2] * N[2][0] - N[1][0] * N[2][2]) * invdet;
+  M[1][1] = (N[0][0] * N[2][2] - N[0][2] * N[2][0]) * invdet;
+  M[1][2] = (N[1][0] * N[0][2] - N[0][0] * N[1][2]) * invdet;
+  M[2][0] = (N[1][0] * N[2][1] - N[2][0] * N[1][1]) * invdet;
+  M[2][1] = (N[2][0] * N[0][1] - N[0][0] * N[2][1]) * invdet;
+  M[2][2] = (N[0][0] * N[1][1] - N[1][0] * N[0][1]) * invdet;
+}
+
+static inline void mat3x3_printf(const mat3x3 m) {
+  printf("[ %f, %f, %f\n", m[0][0], m[0][1], m[0][2]);
+  printf("  %f, %f, %f\n", m[1][0], m[1][1], m[1][2]);
+  printf("  %f, %f, %f ]\n", m[2][0], m[2][1], m[2][2]);
 }
 
 #define FORMAT_VEC3(v) v[0], v[1], v[2]

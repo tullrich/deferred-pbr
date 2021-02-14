@@ -108,7 +108,7 @@ void gui_translation_gizmo(vec3 out_pos, const mat4x4 view, const mat4x4 proj) {
   vec3_dup(out_pos, manip_mat[3]);
 }
 
-void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt) {
+void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, EditorState* state) {
   gui_begin_frame(window);
   ImGui::SetNextWindowPos(ImVec2(0, 0));
   ImGui::SetNextWindowSize(ImVec2(SIDEBAR_WIDTH, WINDOW_HEIGHT));
@@ -217,7 +217,7 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt) 
       ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Emitter")) {
-      // particle_emitter_gui(scene->emitters[0], gParticleTextures, gParticleTexturesCount);
+      particle_emitter_gui(scene->emitters[0], gParticleTextures, gParticleTexturesCount);
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
@@ -239,6 +239,36 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt) 
   )) {
     int fps = 1.0f / dt;
     ImGui::Text("FPS: %i", (int)fps);
+  }
+  ImGui::End();
+
+
+  ImGui::SetNextWindowPos(ImVec2(SIDEBAR_WIDTH  + VIEWPORT_WIDTH - 10, VIEWPORT_HEIGHT - 10), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+  // ImGui::SetNextWindowSize(ImVec2(100, 0));
+  ImGui::SetNextWindowBgAlpha(0.65f);
+  if (ImGui::Begin("Time Controls", 0,
+    ImGuiWindowFlags_NoScrollbar
+    | ImGuiWindowFlags_NoCollapse
+    | ImGuiWindowFlags_NoMove
+    | ImGuiWindowFlags_NoResize
+    | ImGuiWindowFlags_NoDecoration
+    | ImGuiWindowFlags_AlwaysAutoResize
+    | ImGuiWindowFlags_NoSavedSettings
+    | ImGuiWindowFlags_NoFocusOnAppearing
+    | ImGuiWindowFlags_NoNav
+  )) {
+    if (!state->paused) {
+      if (ImGui::Button("Pause", ImVec2(60,0))) {
+        state->paused = 1;
+      }
+    } else {
+      if (ImGui::Button("Play", ImVec2(60,0))) {
+        state->paused = 0;
+      }
+    }
+    ImGui::SameLine();
+    state->step_frame = ImGui::Button("Step", ImVec2(60,0));
+    ImGui::Text("Physics Sim: %s", state->paused ? "Paused" : "Running");
   }
   ImGui::End();
 

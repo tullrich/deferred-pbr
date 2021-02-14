@@ -132,8 +132,9 @@ void shadow_map_render(ShadowMap *shadow_map, const Scene *s) {
   GL_WRAP(glClearDepth(1.0f));
   GL_WRAP(glClear(GL_DEPTH_BUFFER_BIT));
 
-  for (int i = 0; i < SCENE_MODELS_MAX, s->models[i]; i++) {
-    render_geometry(shadow_map, s->models[i], s);
+  for (int i = 0; i < SCENE_MODELS_MAX; i++) {
+    if (s->models[i])
+      render_geometry(shadow_map, s->models[i], s);
   }
 
   // Cleanup

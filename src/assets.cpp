@@ -1,6 +1,6 @@
 #include "assets.h"
 
-#define ALL_ASSETS
+// #define ALL_ASSETS
 
 SkyboxDesc gSkyboxes[] = {
   {
@@ -46,6 +46,16 @@ MaterialDesc gMaterials[] = {
     .emissive_base = { 0.0f, 0.0f, 0.0f }
   },
   {
+    .name = "Terracotta",
+    .albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
+    .normal_map_path = "materials/Terracotta/terracotta_normal.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f }
+  },
+#ifdef ALL_ASSETS
+  {
     .name = "Snow Covered Path",
     .albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
     .normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
@@ -59,7 +69,6 @@ MaterialDesc gMaterials[] = {
     .emissive_base = { 0.0f, 0.0f, 0.0f },
     .height_map_scale = 0.1f
   },
-#ifdef ALL_ASSETS
   {
     .name = "Sci-Fi Cube",
     .albedo_map_path = "materials/SciFiCube/Sci_Wall_Panel_01_basecolor.jpeg",
@@ -142,15 +151,6 @@ MaterialDesc gMaterials[] = {
     .name = "Moorish Lattice",
     .albedo_map_path = "materials/MoorishLattice/moorish_lattice_diffuse.png",
     .normal_map_path = "materials/MoorishLattice/moorish_lattice_normal.png",
-    .albedo_base = { 1.0f, 1.0f, 1.0f },
-    .metalness_base = 0.0f,
-    .roughness_base = 1.0f,
-    .emissive_base = { 0.0f, 0.0f, 0.0f }
-  },
-  {
-    .name = "Terracotta",
-    .albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
-    .normal_map_path = "materials/Terracotta/terracotta_normal.png",
     .albedo_base = { 1.0f, 1.0f, 1.0f },
     .metalness_base = 0.0f,
     .roughness_base = 1.0f,

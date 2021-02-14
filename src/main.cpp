@@ -3,19 +3,24 @@
 #include "gui.h"
 #include "scene.h"
 #include "renderer.h"
-#include "physics.h"
+#include "physics_particles.h"
+#include "physics_rigidbodies.h"
 #include "container.h"
+
+#define MAX_DELTA_TIME (1/60.0f)
 
 static SDL_Window* gWindow;
 static Renderer gRenderer;
 static Scene gScene;
-static PhysicsWorld gPhysWorld;
+static PhysicsParticleWorld gPhysWorld;
+static EditorState gEditor;
 
 struct Entity {
   DECLATE_INTRUSIVE_LL_MEMBERS(Entity);
   Model model;
+  PhysicsRigidBody body;
   PhysicsParticle particle;
-  PhysicsForceGenerator* force_generator;
+  PhysicsParticleForceGenerator* force_generator;
 };
 
 DECLARE_LINKED_LIST_TYPE(Entity, EntityList);
@@ -94,16 +99,16 @@ static int setup_scene(int sphere_scene) {
   }
 
   // Setup floor
-  // Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
-  // mesh_make_quad(mesh, 200, 200, 3);
-  // gScene.models[1] = (Model*)malloc(sizeof(Model));
-  // model_initialize(gScene.models[1], mesh, &gMaterials[1].material);
-  // vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
+  Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
+  mesh_make_quad(mesh, 200, 200, 3);
+  gScene.models[1] = (Model*)malloc(sizeof(Model));
+  model_initialize(gScene.models[1], mesh, &gMaterials[1].material);
+  vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
 
   // Setup physics
-  physics_world_initialize(&gPhysWorld);
-  PhysicsContactGenerator* contact_gen = physics_contact_generator_allocate_simple(&gPhysWorld, 1.0f, .9f);
-  physics_world_register_contact_generator(&gPhysWorld, contact_gen);
+  physics_particle_world_initialize(&gPhysWorld);
+  physics_particle_world_register_contact_generator(&gPhysWorld, physics_particle_contact_generator_allocate_simple(&gPhysWorld, 1.0f, .3f));
+  physics_particle_world_register_contact_generator(&gPhysWorld, physics_particle_contact_generator_allocate_plane(&gPhysWorld, Axis_Up, -10.0f, 1.0f, .3f));
 
   return 0;
 }
@@ -143,28 +148,30 @@ static int initialize() {
 static void destroy_entity(Entity* ent) {
   LINKED_LIST_REMOVE(&gEntities, ent);
   if (ent->force_generator) {
-    physics_world_unregister_force_generator(&gPhysWorld, ent->force_generator, &ent->particle);
+    physics_particle_world_unregister_force_generator(&gPhysWorld, ent->force_generator, &ent->particle);
     free(ent->force_generator);
   }
-  physics_world_remove_particle(&gPhysWorld, &ent->particle);
+  physics_particle_world_remove_particle(&gPhysWorld, &ent->particle);
   scene_remove_model(&gScene, &ent->model);
   free(ent);
 }
 
-static void spawn_entity(ForceGeneratorType type) {
+static void spawn_entity(ParticleForceGeneratorType type) {
   Entity* ent = (Entity*)calloc(1, sizeof(Entity));
+  mat3x3 inertia_tensor; mat3x3_identity(inertia_tensor);
+  // physics_rigidbody_initialize(&ent->body, 1, inertia_tensor);
   physics_particle_initialize(&ent->particle, gScene.models[0]->position, 4, Gravity, .5f);
   model_initialize(&ent->model, gScene.models[0]->mesh, &gScene.models[0]->material);
   switch (type) {
-    case FORCE_GENERATOR_TYPE_DRAG: ent->force_generator = physics_force_generator_allocate_drag(.9f, .9f); break;
-    case FORCE_GENERATOR_TYPE_SPRING: ent->force_generator  = physics_force_generator_allocate_spring(Zero, 5.0f, 50.0f, 1); break;
-    case FORCE_GENERATOR_TYPE_BUOYANCY: ent->force_generator  = physics_force_generator_allocate_buoyancy(1.0f, 1, -10, 350.0f); break;
-    case FORCE_GENERATOR_TYPE_NONE: // intentional fall-through
+    case PARTICLE_FORCE_GENERATOR_TYPE_DRAG: ent->force_generator = physics_particle_force_generator_allocate_drag(.9f, .9f); break;
+    case PARTICLE_FORCE_GENERATOR_TYPE_SPRING: ent->force_generator  = physics_particle_force_generator_allocate_spring(Zero, 5.0f, 50.0f, 1); break;
+    case PARTICLE_FORCE_GENERATOR_TYPE_BUOYANCY: ent->force_generator  = physics_particle_force_generator_allocate_buoyancy(1.0f, 1, -10, 350.0f); break;
+    case PARTICLE_FORCE_GENERATOR_TYPE_NONE: // intentional fall-through
     default: break;
   }
-  if (physics_world_add_particle(&gPhysWorld, &ent->particle) ||
+  if (physics_particle_world_add_particle(&gPhysWorld, &ent->particle) ||
       scene_add_model(&gScene, &ent->model) ||
-      (ent->force_generator && physics_world_register_force_generator(&gPhysWorld, ent->force_generator, &ent->particle))
+      (ent->force_generator && physics_particle_world_register_force_generator(&gPhysWorld, ent->force_generator, &ent->particle))
     ) {
     destroy_entity(ent);
     return;
@@ -206,7 +213,7 @@ static int process_input() {
         if (event.button.button == SDL_BUTTON_LEFT) {
           SDL_SetWindowGrab(gWindow, SDL_FALSE);
         } else if (event.button.button == SDL_BUTTON_RIGHT) {
-          spawn_entity(FORCE_GENERATOR_TYPE_SPRING);
+          spawn_entity(PARTICLE_FORCE_GENERATOR_TYPE_NONE);
         }
         break;
       case SDL_MOUSEMOTION:
@@ -223,8 +230,11 @@ static int process_input() {
         }
         break;
        case SDL_KEYDOWN:
-        if (event.key.keysym.sym == SDLK_c) {
-          destroy_all_entities();
+        switch (event.key.keysym.sym) {
+          case SDLK_c: destroy_all_entities(); break;
+          case SDLK_b: gEditor.step_frame = 1; break;
+          case SDLK_SPACE: gEditor.paused = !gEditor.paused; break;
+          default: break;
         }
         break;
       case SDL_QUIT:
@@ -239,7 +249,7 @@ static int frame() {
   // calc dt
   float frameTime = utility_secs_since_launch();
   static float prevFrameTime = frameTime;
-  float dt = frameTime - prevFrameTime;
+  float dt = std::min(frameTime - prevFrameTime, MAX_DELTA_TIME);
   prevFrameTime = frameTime;
 
   // pump window events
@@ -248,7 +258,9 @@ static int frame() {
   }
 
   // update physics
-  physics_world_run(&gPhysWorld, dt);
+  if (!gEditor.paused || gEditor.step_frame) {
+    physics_particle_world_run(&gPhysWorld, dt);
+  }
   update_entities();
 
   // update camera and emitters
@@ -261,14 +273,14 @@ static int frame() {
       model_get_obb(gScene.models[0], &obb);
       debug_lines_submit_obb(&obb, Green);
     }
-    physics_world_debug_render(&gPhysWorld);
+    physics_particle_world_debug_render(&gPhysWorld);
   }
 
   // render viewport
   renderer_render(&gRenderer, &gScene);
 
   // render gui
-  gui_render(gWindow, &gRenderer, &gScene, dt);
+  gui_render(gWindow, &gRenderer, &gScene, dt, &gEditor);
 
   return 0;
 }

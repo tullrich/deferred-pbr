@@ -54,8 +54,10 @@ add_executable( Deferred
   src/renderer.cpp
   src/gui.h
   src/gui.cpp
-  src/physics.h
-  src/physics.cpp
+  src/physics_particles.h
+  src/physics_particles.cpp
+  src/physics_rigidbodies.h
+  src/physics_rigidbodies.cpp
 
   src/imgui/imconfig.h
   src/imgui/imgui.h
@@ -81,7 +83,7 @@ add_executable( Deferred
 )
 
 if ( NOT MSVC )
-  set(CMAKE_BUILD_TYPE Debug)
+  # set(CMAKE_BUILD_TYPE Debug)
   if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
   endif()

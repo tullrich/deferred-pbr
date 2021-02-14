@@ -15,6 +15,7 @@ static void random_direction(vec3 out) {
   out[2] = -cosf(phi);
 }
 
+#if 0
 static void random_conical_direction(vec3 out, const vec3 axis) {
   float phi = atan2f(axis[0], -axis[2] );
   float theta = atan2f(axis[1], axis[0] );
@@ -23,6 +24,7 @@ static void random_conical_direction(vec3 out, const vec3 axis) {
   out[2] = -cosf(phi);
 
 }
+#endif
 
 void particle_update(const ParticleEmitterDesc* def, Particle* part, float dt) {
   if (def->simulate_gravity) {
