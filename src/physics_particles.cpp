@@ -1,7 +1,7 @@
 #include "physics_particles.h"
 #include "debug_lines.h"
 
-DEFINE_ENUM(ParticleForceGeneratorType, force_generator_type_strings, ENUM_ParticleForceGeneratorType);
+DEFINE_ENUM(ParticleForceGeneratorType, particle_force_generator_type_strings, ENUM_ParticleForceGeneratorType);
 
 struct PhysicsDragForceGenerator
 {
@@ -313,9 +313,9 @@ void physics_particle_contact_resolve(PhysicsParticleContact* contact, float dt)
   physics_particle_contact_resolve_interpenetration(contact, dt);
 }
 
-int physics_particle_contact_generator_add_contact(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
-  assert(generator->add_contact_vfn);
-  return generator->add_contact_vfn(generator, next, limit);
+int physics_particle_contact_generator_add_contacts(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
+  assert(generator->add_contacts_vfn);
+  return generator->add_contacts_vfn(generator, next, limit);
 }
 
 struct PhysicsSimpleContactGenerator {
@@ -325,7 +325,7 @@ struct PhysicsSimpleContactGenerator {
   float contact_restitution;
 };
 
-static int physics_simple_contact_generator_add_contact(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
+static int physics_simple_contact_generator_add_contacts(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
   const PhysicsSimpleContactGenerator* simple = (const PhysicsSimpleContactGenerator*)generator;
   float radius2 = powf(simple->particle_radius * 2.0f, 2.0f);
   const PhysicsParticleWorld* world = simple->world;
@@ -360,7 +360,7 @@ static int physics_simple_contact_generator_add_contact(const PhysicsParticleCon
 
 PhysicsParticleContactGenerator* physics_particle_contact_generator_allocate_simple(const PhysicsParticleWorld* world, float particle_radius, float contact_restitution) {
   PhysicsSimpleContactGenerator* simple = (PhysicsSimpleContactGenerator*)calloc(1, sizeof(PhysicsSimpleContactGenerator));
-  simple->base.add_contact_vfn = physics_simple_contact_generator_add_contact;
+  simple->base.add_contacts_vfn = physics_simple_contact_generator_add_contacts;
   simple->world = world;
   simple->particle_radius = particle_radius;
   simple->contact_restitution = contact_restitution;
@@ -376,25 +376,25 @@ struct PhysicsPlaneContactGenerator {
   float d;
 };
 
-static int physics_plane_contact_generator_add_contact(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
+static int physics_plane_contact_generator_add_contacts(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit) {
   const PhysicsPlaneContactGenerator* plane = (const PhysicsPlaneContactGenerator*)generator;
-   const PhysicsParticleWorld* world = plane->world;
-   PhysicsParticle* const * particles = world->particles;
-   int particle_count = world->particle_count;
-   int found = 0;
-   for (int i = 0; i < particle_count && found < limit; i++) {
-     float penetration =  plane->d - (vec3_mul_inner(plane->normal, particles[i]->position) - plane->particle_radius);
-     if ((penetration + COLLISION_FUDGE) > FLT_EPSILON) {
-       PhysicsParticleContact* contact = &next[found++];
-       physics_particle_contact_initialize(contact, particles[i], NULL, plane->contact_restitution, plane->normal, penetration);
-     }
-   }
+  const PhysicsParticleWorld* world = plane->world;
+  PhysicsParticle* const * particles = world->particles;
+  int particle_count = world->particle_count;
+  int found = 0;
+  for (int i = 0; i < particle_count && found < limit; i++) {
+    float penetration =  plane->d - (vec3_mul_inner(plane->normal, particles[i]->position) - plane->particle_radius);
+    if ((penetration + COLLISION_FUDGE) > FLT_EPSILON) {
+      PhysicsParticleContact* contact = &next[found++];
+      physics_particle_contact_initialize(contact, particles[i], NULL, plane->contact_restitution, plane->normal, penetration);
+    }
+  }
   return found;
 }
 
 PhysicsParticleContactGenerator* physics_particle_contact_generator_allocate_plane(const PhysicsParticleWorld* world, const vec3 normal, float d, float particle_radius, float contact_restitution) {
   PhysicsPlaneContactGenerator* plane = (PhysicsPlaneContactGenerator*)calloc(1, sizeof(PhysicsPlaneContactGenerator));
-  plane->base.add_contact_vfn = physics_plane_contact_generator_add_contact;
+  plane->base.add_contacts_vfn = physics_plane_contact_generator_add_contacts;
   plane->world = world;
   plane->d = d;
   plane->particle_radius = particle_radius;
@@ -411,7 +411,7 @@ static int physics_particle_world_generate_contacts(PhysicsParticleWorld* world)
   int found = 0;
   const PhysicsParticleContactGenerator* head = LINKED_LIST_GET_HEAD(&world->contact_generators);
   while (head && found < MAX_CONTACTS) {
-    found += physics_particle_contact_generator_add_contact(head, world->contacts + found, MAX_CONTACTS - found);
+    found += physics_particle_contact_generator_add_contacts(head, world->contacts + found, MAX_CONTACTS - found);
     head = LINKED_LIST_GET_NEXT(head);
   }
   return found;

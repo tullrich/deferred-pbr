@@ -12,15 +12,14 @@
 static SDL_Window* gWindow;
 static Renderer gRenderer;
 static Scene gScene;
-static PhysicsParticleWorld gPhysWorld;
+static PhysicsWorld gPhysWorld;
 static EditorState gEditor;
 
 struct Entity {
   DECLATE_INTRUSIVE_LL_MEMBERS(Entity);
   Model model;
   PhysicsRigidBody body;
-  PhysicsParticle particle;
-  PhysicsParticleForceGenerator* force_generator;
+  PhysicsForceGenerator* generator;
 };
 
 DECLARE_LINKED_LIST_TYPE(Entity, EntityList);
@@ -75,7 +74,7 @@ static int setup_scene(int sphere_scene) {
   if (!sphere_scene) {
     printf("Creating single model scene\n");
     gScene.models[0] = (Model*)malloc(sizeof(Model));
-    model_initialize(gScene.models[0], &gMeshes[0].mesh, &gMaterials[0].material);
+    model_initialize(gScene.models[0], &gMeshes[1].mesh, &gMaterials[0].material);
   } else {
     const int kSphereRows = 7;
     const int kSphereCols = 7;
@@ -106,9 +105,9 @@ static int setup_scene(int sphere_scene) {
   vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
 
   // Setup physics
-  physics_particle_world_initialize(&gPhysWorld);
-  physics_particle_world_register_contact_generator(&gPhysWorld, physics_particle_contact_generator_allocate_simple(&gPhysWorld, 1.0f, .3f));
-  physics_particle_world_register_contact_generator(&gPhysWorld, physics_particle_contact_generator_allocate_plane(&gPhysWorld, Axis_Up, -10.0f, 1.0f, .3f));
+  physics_world_initialize(&gPhysWorld);
+  PhysicsContactGenerator* cgen = physics_contact_generator_allocate_plane(Axis_Up, 0.0f, .6f);
+  physics_world_register_contact_generator(&gPhysWorld, cgen);
 
   return 0;
 }
@@ -147,32 +146,38 @@ static int initialize() {
 
 static void destroy_entity(Entity* ent) {
   LINKED_LIST_REMOVE(&gEntities, ent);
-  if (ent->force_generator) {
-    physics_particle_world_unregister_force_generator(&gPhysWorld, ent->force_generator, &ent->particle);
-    free(ent->force_generator);
-  }
-  physics_particle_world_remove_particle(&gPhysWorld, &ent->particle);
+  physics_world_unregister_force_generator(&gPhysWorld, ent->generator, &ent->body);
+  physics_world_remove_rigid_body(&gPhysWorld, &ent->body);
   scene_remove_model(&gScene, &ent->model);
   free(ent);
 }
 
-static void spawn_entity(ParticleForceGeneratorType type) {
+static void spawn_entity() {
   Entity* ent = (Entity*)calloc(1, sizeof(Entity));
-  mat3x3 inertia_tensor; mat3x3_identity(inertia_tensor);
-  // physics_rigidbody_initialize(&ent->body, 1, inertia_tensor);
-  physics_particle_initialize(&ent->particle, gScene.models[0]->position, 4, Gravity, .5f);
+
+  // quat rot, rot_x, rot_y;
+  // quat_from_axis_angle(rot_x, DEG_TO_RAD(80), Axis_Z);
+  // quat_rotate(rot_y, DEG_TO_RAD(10), Axis_Y);
+  // quat_mul(rot, rot_x, rot_y);
+  const PhysicsShape* shape = physics_shape_allocate_box(Vec_One);
+  physics_rigid_body_initialize(&ent->body, gScene.models[0]->position, Quat_Identity, Gravity, 1, shape);
+  ent->body.linear_damping = ent->body.angular_damping = .6f;
+  physics_world_add_rigid_body(&gPhysWorld, &ent->body);
+  vec3 attach_point;
+  vec3_set(attach_point, 0, 0.5f, 0);
+  ent->generator = physics_force_generator_allocate_spring(Zero, attach_point, 5.0f, 50.0f, 1);
+  physics_world_register_force_generator(&gPhysWorld, ent->generator, &ent->body);
+
+  // vec3 torque;
+  // vec3_set(torque, 0, 5, 5);
+  // physics_rigid_body_apply_torque(&ent->body, torque);
+  //
+  // vec3 force;
+  // vec3_set(force, 0, 5, 0);
+  // physics_rigid_body_apply_force(&ent->body, force);
+
   model_initialize(&ent->model, gScene.models[0]->mesh, &gScene.models[0]->material);
-  switch (type) {
-    case PARTICLE_FORCE_GENERATOR_TYPE_DRAG: ent->force_generator = physics_particle_force_generator_allocate_drag(.9f, .9f); break;
-    case PARTICLE_FORCE_GENERATOR_TYPE_SPRING: ent->force_generator  = physics_particle_force_generator_allocate_spring(Zero, 5.0f, 50.0f, 1); break;
-    case PARTICLE_FORCE_GENERATOR_TYPE_BUOYANCY: ent->force_generator  = physics_particle_force_generator_allocate_buoyancy(1.0f, 1, -10, 350.0f); break;
-    case PARTICLE_FORCE_GENERATOR_TYPE_NONE: // intentional fall-through
-    default: break;
-  }
-  if (physics_particle_world_add_particle(&gPhysWorld, &ent->particle) ||
-      scene_add_model(&gScene, &ent->model) ||
-      (ent->force_generator && physics_particle_world_register_force_generator(&gPhysWorld, ent->force_generator, &ent->particle))
-    ) {
+  if (scene_add_model(&gScene, &ent->model)) {
     destroy_entity(ent);
     return;
   }
@@ -192,7 +197,8 @@ static void destroy_all_entities() {
 static void update_entities() {
   Entity* head = LINKED_LIST_GET_HEAD(&gEntities);
   while (head) {
-    vec3_dup(head->model.position, head->particle.position);
+    vec3_dup(head->model.position, head->body.position);
+    quat_to_euler(head->model.rot, head->body.orientation);
     head = LINKED_LIST_GET_NEXT(head);
   }
 }
@@ -213,7 +219,7 @@ static int process_input() {
         if (event.button.button == SDL_BUTTON_LEFT) {
           SDL_SetWindowGrab(gWindow, SDL_FALSE);
         } else if (event.button.button == SDL_BUTTON_RIGHT) {
-          spawn_entity(PARTICLE_FORCE_GENERATOR_TYPE_NONE);
+          spawn_entity();
         }
         break;
       case SDL_MOUSEMOTION:
@@ -259,7 +265,7 @@ static int frame() {
 
   // update physics
   if (!gEditor.paused || gEditor.step_frame) {
-    physics_particle_world_run(&gPhysWorld, dt);
+    physics_world_run(&gPhysWorld, dt);
   }
   update_entities();
 
@@ -273,7 +279,7 @@ static int frame() {
       model_get_obb(gScene.models[0], &obb);
       debug_lines_submit_obb(&obb, Green);
     }
-    physics_particle_world_debug_render(&gPhysWorld);
+    physics_world_debug_render(&gPhysWorld);
   }
 
   // render viewport

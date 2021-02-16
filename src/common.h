@@ -17,6 +17,9 @@
 
 #include "linmath.h"
 
+#define RAD_TO_DEG(rad) ((rad)*180.0f/(float)M_PI)
+#define DEG_TO_RAD(deg) ((deg)*(float)M_PI/180.0f)
+
 static inline void vec2_set(vec3 r, float x, float y) {
   r[0] = x; r[1] = y;
 }
@@ -98,6 +101,11 @@ static inline void quat_dup(quat r, quat const v) {
     r[i] = v[i];
 }
 
+static inline void quat_from_axis_angle(quat out, float angle, const vec3 axis) {
+  quat_identity(out);
+  quat_rotate(out, angle, axis);
+}
+
 static inline void quat_from_euler(quat out, const vec3 euler) {
   quat_identity(out);
   vec3 axis;
@@ -112,6 +120,24 @@ static inline void quat_from_euler(quat out, const vec3 euler) {
   quat_mul(tmp, xrot, yrot);
   quat_mul(out, tmp, zrot);
 }
+
+static inline void quat_to_euler(vec3 out, const quat q) {
+  // roll (x-axis rotation)
+  float sinr_cosp = 2 * (q[3] * q[0] + q[1] * q[2]);
+  float cosr_cosp = 1 - 2 * (q[0] * q[0] + q[1] * q[1]);
+  out[0] = RAD_TO_DEG(std::atan2(sinr_cosp, cosr_cosp));
+  // pitch (y-axis rotation)
+  float sinp = 2 * (q[3] * q[1] - q[2] * q[0]);
+  if (std::abs(sinp) >= 1)
+      out[1] = RAD_TO_DEG(std::copysign(M_PI / 2, sinp)); // use 90 degrees if out of range
+  else
+      out[1] = RAD_TO_DEG(std::asin(sinp));
+  // yaw (z-axis rotation)
+  float siny_cosp = 2 * (q[3] * q[2] + q[0] * q[1]);
+  float cosy_cosp = 1 - 2 * (q[1] * q[1] + q[2] * q[2]);
+  out[2] = RAD_TO_DEG(std::atan2(siny_cosp, cosy_cosp));
+}
+
 static inline void quat_to_axis_angle(float* angle, vec3 axis, const quat q) {
   *angle = acosf(q[3]) * 2.0f;
   float sin_half_angle = sqrtf(1.0f-q[3]*q[3]);
@@ -128,6 +154,18 @@ static inline void quat_rotation_between(quat out, const vec3 a, const vec3 b) {
   vec3_mul_cross(rot, a, b);
   rot[3] = sqrtf(vec3_len2(a)* vec3_len2(b)) + vec3_mul_inner(a, b);
   quat_norm(out, rot);
+}
+static inline void quat_add_scaled_vec3(vec3 r, const quat in, const vec3 v, float scale) {
+  quat tmp;
+  tmp[3] = 0;
+  for(int i=0; i<3; ++i) {
+    tmp[i] = v[i] * scale;
+  }
+  quat tmp2;
+  quat_mul(tmp2, tmp, in);
+  for(int i=0; i<4; ++i) {
+    r[i] += tmp2[i] * 0.5f;
+  }
 }
 static inline void quat_print(const quat q) {
   printf("<%f, %f, %f, %f>\n", q[0], q[1], q[2], q[3]);
@@ -212,6 +250,11 @@ static inline void mat3x3_identity(mat3x3 M) {
       M[i][j] = i==j ? 1.f : 0.f;
 }
 
+static inline void mat3x3_zero(mat3x3 M) {
+  for (int i=0; i<3; i++)
+    vec3_zero(M[i]);
+}
+
 static inline void mat3x3_from_mat4x4(mat3x3 M, const mat4x4 N) {
   int i, j;
   for(i=0; i<3; ++i)
@@ -234,6 +277,16 @@ static inline void mat3x3_mul(mat3x3 M, const mat3x3 a, const mat3x3 b) {
       for(k=0; k<3; ++k)
         M[c][r] += a[k][r] * b[c][k];
     }
+  }
+}
+
+static inline void mat3x3_mul_vec3(vec3 r, const mat3x3 M, const vec3 v)
+{
+  int i, j;
+  for(j=0; j<3; ++j) {
+    r[j] = 0.f;
+    for(i=0; i<3; ++i)
+      r[j] += M[i][j] * v[i];
   }
 }
 
@@ -290,8 +343,6 @@ extern const quat Quat_Identity;
 #define Z_FAR 400.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
-#define RAD_TO_DEG(rad) (rad*180.0f/(float)M_PI)
-#define DEG_TO_RAD(deg) (deg*(float)M_PI/180.0f)
 #define BOOL_TO_STRING(b) ((b) ? "true" : "false")
 
 #ifdef _WIN32

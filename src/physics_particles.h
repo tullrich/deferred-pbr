@@ -4,9 +4,6 @@
 
 #define MAX_PARTICLES 256
 #define MAX_FORCE_GENERATORS 256
-#define MAX_CONTACTS 512
-#define MAX_RESOLVE_ITERATIONS (1024 * 10)
-#define COLLISION_FUDGE 0.01f
 
 struct PhysicsParticleWorld;
 
@@ -49,11 +46,11 @@ void physics_particle_move(PhysicsParticle* p, const vec3 delta_pos);
   D(PARTICLE_FORCE_GENERATOR_TYPE_BUOYANCY,  "Buoyancy")      \
   D(PARTICLE_FORCE_GENERATOR_TYPE_SPRING, 		"Spring")
 
-DECLARE_ENUM(ParticleForceGeneratorType, force_generator_type_strings, ENUM_ParticleForceGeneratorType);
+DECLARE_ENUM(ParticleForceGeneratorType, particle_force_generator_type_strings, ENUM_ParticleForceGeneratorType);
 
 struct PhysicsParticleForceGenerator;
-typedef void(*UpdateForceVFN)(const PhysicsParticleForceGenerator* generator, PhysicsParticle* p, float dt);
-typedef void(*DebugRenderVFN)(const PhysicsParticleForceGenerator* generator, const PhysicsParticle* p);
+typedef void(*ParticleUpdateForceVFN)(const PhysicsParticleForceGenerator* generator, PhysicsParticle* p, float dt);
+typedef void(*ParticleDebugRenderVFN)(const PhysicsParticleForceGenerator* generator, const PhysicsParticle* p);
 
 struct PhysicsParticleForceGenerator
 {
@@ -61,10 +58,10 @@ struct PhysicsParticleForceGenerator
   ParticleForceGeneratorType type;
 
   // the virtual update_force function
-  UpdateForceVFN update_force_vfn;
+  ParticleUpdateForceVFN update_force_vfn;
 
   // the virtual debug_render function
-  DebugRenderVFN debug_render_vfn;
+  ParticleDebugRenderVFN debug_render_vfn;
 };
 
 void physics_particle_force_generator_update_force(const PhysicsParticleForceGenerator* generator, PhysicsParticle* p, float dt);
@@ -91,7 +88,7 @@ struct PhysicsParticleContact
   float penetration;
 };
 
-void physics_particle_contact_initialize(PhysicsParticleContact* contact, PhysicsParticle* a, PhysicsParticle* b, float restitution, const vec3 contact_normal, float penetration);
+void physics_particle_contact_initialize(PhysicsParticleContact* contact, PhysicsParticle* a, PhysicsParticle* b, float restitution, const vec3 normal, float penetration);
 float physics_particle_contact_get_separating_velocity(const PhysicsParticleContact* contact);
 void physics_particle_contact_resolve(PhysicsParticleContact* contact, float dt);
 
@@ -102,17 +99,17 @@ struct PhysicsParticleForceGeneratorRegistration
 };
 
 struct PhysicsParticleContactGenerator;
-typedef int(*AddContactVFN)(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit);
+typedef int(*ParticleAddContactsVFN)(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit);
 
 struct PhysicsParticleContactGenerator
 {
   DECLATE_INTRUSIVE_LL_MEMBERS(PhysicsParticleContactGenerator);
 
   // the virtual add_contact function
-  AddContactVFN add_contact_vfn;
+  ParticleAddContactsVFN add_contacts_vfn;
 };
 
-int physics_particle_contact_generator_add_contact(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit);
+int physics_particle_contact_generator_add_contacts(const PhysicsParticleContactGenerator* generator, PhysicsParticleContact* next, int limit);
 PhysicsParticleContactGenerator* physics_particle_contact_generator_allocate_simple(const PhysicsParticleWorld* world, float particle_radius, float contact_restitution);
 PhysicsParticleContactGenerator* physics_particle_contact_generator_allocate_plane(const PhysicsParticleWorld* world, const vec3 normal, float d, float particle_radius, float contact_restitution);
 
@@ -135,7 +132,7 @@ struct PhysicsParticleWorld
   // found particle contacts
   PhysicsParticleContact contacts[MAX_CONTACTS];
 
-  // The linked list of contact generators`
+  // The linked list of contact generators
   PhysicsParticleContactGeneratorList contact_generators;
 };
 

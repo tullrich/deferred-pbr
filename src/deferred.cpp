@@ -452,7 +452,7 @@ static void render_debug(Deferred *d) {
 void deferred_render(Deferred *d, const Scene *s, const ShadowMap* sm) {
   GL_WRAP(glEnable(GL_CULL_FACE));
   GL_WRAP(glEnable(GL_TEXTURE_2D));
-
+  GL_WRAP(glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS));
   GL_WRAP(glEnable(GL_DEPTH_TEST));
   GL_WRAP(glDepthFunc(GL_LEQUAL));
 
