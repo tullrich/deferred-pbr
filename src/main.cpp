@@ -14,6 +14,7 @@ static Renderer gRenderer;
 static Scene gScene;
 static PhysicsWorld gPhysWorld;
 static EditorState gEditor;
+static PhysicsContactGenerator* gContactGenerators[2];
 
 struct Entity {
   DECLATE_INTRUSIVE_LL_MEMBERS(Entity);
@@ -99,15 +100,17 @@ static int setup_scene(int sphere_scene) {
 
   // Setup floor
   Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
-  mesh_make_quad(mesh, 200, 200, 3);
+  mesh_make_quad(mesh, 200, 200, 10);
   gScene.models[1] = (Model*)malloc(sizeof(Model));
   model_initialize(gScene.models[1], mesh, &gMaterials[1].material);
-  vec3_set(gScene.models[1]->position, 0, -10.0f, 0);
+  vec3_set(gScene.models[1]->position, 0, -3.0f, 0);
 
   // Setup physics
   physics_world_initialize(&gPhysWorld);
-  PhysicsContactGenerator* cgen = physics_contact_generator_allocate_plane(Axis_Up, 0.0f, .6f);
-  physics_world_register_contact_generator(&gPhysWorld, cgen);
+  gContactGenerators[0] = physics_contact_generator_allocate_plane(Axis_Up, -3.0f, gEditor.restitution, gEditor.friction);
+  gContactGenerators[1] = physics_contact_generator_allocate_brute_force(gEditor.restitution, gEditor.friction);
+  for (unsigned i = 0; i < STATIC_ELEMENT_COUNT(gContactGenerators); i++)
+    physics_world_register_contact_generator(&gPhysWorld, gContactGenerators[i]);
 
   return 0;
 }
@@ -121,6 +124,14 @@ static int initialize() {
 
   // show loading screen
   update_loading_screen("Initializing renderer...", "", 0, 0);
+
+  // setup editor state
+  gEditor.time_scale = 1.0f;
+  gEditor.mass = 100.0f;
+  gEditor.friction = 0.0f;
+  gEditor.restitution = 0.2f;
+  gEditor.linear_damping = 0.9f;
+  gEditor.angular_damping = 0.9f;
 
   int err = 0;
   printf("<-- Initializing renderer... -->\n");
@@ -152,21 +163,32 @@ static void destroy_entity(Entity* ent) {
   free(ent);
 }
 
-static void spawn_entity() {
+static void spawn_entity(ForceGeneratorType type) {
   Entity* ent = (Entity*)calloc(1, sizeof(Entity));
 
-  // quat rot, rot_x, rot_y;
-  // quat_from_axis_angle(rot_x, DEG_TO_RAD(80), Axis_Z);
-  // quat_rotate(rot_y, DEG_TO_RAD(10), Axis_Y);
-  // quat_mul(rot, rot_x, rot_y);
+  quat rot;
+  quat_from_euler(rot, gScene.models[0]->rot);
   const PhysicsShape* shape = physics_shape_allocate_box(Vec_One);
-  physics_rigid_body_initialize(&ent->body, gScene.models[0]->position, Quat_Identity, Gravity, 1, shape);
-  ent->body.linear_damping = ent->body.angular_damping = .6f;
+  // const PhysicsShape* shape = physics_shape_allocate_sphere(1.0f);
+  physics_rigid_body_initialize(&ent->body, gScene.models[0]->position, rot, Gravity, gEditor.mass, shape);
+  ent->body.linear_damping = gEditor.linear_damping;
+  ent->body.angular_damping = gEditor.angular_damping;
   physics_world_add_rigid_body(&gPhysWorld, &ent->body);
-  vec3 attach_point;
-  vec3_set(attach_point, 0, 0.5f, 0);
-  ent->generator = physics_force_generator_allocate_spring(Zero, attach_point, 5.0f, 50.0f, 1);
-  physics_world_register_force_generator(&gPhysWorld, ent->generator, &ent->body);
+
+  switch (type) {
+    case FORCE_GENERATOR_TYPE_SPRING: {
+      vec3 attach_point;
+      vec3_set(attach_point, 0, 0.5f, 0);
+      ent->generator = physics_force_generator_allocate_spring(Zero, attach_point, 5.0f, 50.0f, 1);
+      break;
+    }
+    case FORCE_GENERATOR_TYPE_NONE: break;
+    default: break;
+  }
+
+  if (ent->generator) {
+    physics_world_register_force_generator(&gPhysWorld, ent->generator, &ent->body);
+  }
 
   // vec3 torque;
   // vec3_set(torque, 0, 5, 5);
@@ -219,7 +241,7 @@ static int process_input() {
         if (event.button.button == SDL_BUTTON_LEFT) {
           SDL_SetWindowGrab(gWindow, SDL_FALSE);
         } else if (event.button.button == SDL_BUTTON_RIGHT) {
-          spawn_entity();
+          spawn_entity(FORCE_GENERATOR_TYPE_NONE);
         }
         break;
       case SDL_MOUSEMOTION:
@@ -255,7 +277,7 @@ static int frame() {
   // calc dt
   float frameTime = utility_secs_since_launch();
   static float prevFrameTime = frameTime;
-  float dt = std::min(frameTime - prevFrameTime, MAX_DELTA_TIME);
+  float dt = std::min(frameTime - prevFrameTime, MAX_DELTA_TIME) * gEditor.time_scale;
   prevFrameTime = frameTime;
 
   // pump window events
@@ -265,22 +287,33 @@ static int frame() {
 
   // update physics
   if (!gEditor.paused || gEditor.step_frame) {
+    debug_lines_clear();
+
+    for (unsigned i = 0; i < STATIC_ELEMENT_COUNT(gContactGenerators); i++)
+      physics_contact_generator_allocate_set_restitution_friction(gContactGenerators[i], gEditor.restitution, gEditor.friction);
+
     physics_world_run(&gPhysWorld, dt);
+
+    if (gEditor.pause_on_collision) {
+      if (gPhysWorld.contacts_count > 0) {
+        gEditor.paused = 1;
+      }
+    }
+
+    // Draw debug lines
+    if (gRenderer.render_debug_lines) {
+      if (gScene.models[0]) {
+        OBB obb;
+        model_get_obb(gScene.models[0], &obb);
+        debug_lines_submit_obb(&obb, Green);
+      }
+      physics_world_debug_render(&gPhysWorld);
+    }
   }
   update_entities();
 
   // update camera and emitters
   scene_update(&gScene, dt);
-
-  // Draw debug lines
-  if (gRenderer.render_debug_lines) {
-    if (gScene.models[0]) {
-      OBB obb;
-      model_get_obb(gScene.models[0], &obb);
-      debug_lines_submit_obb(&obb, Green);
-    }
-    physics_world_debug_render(&gPhysWorld);
-  }
 
   // render viewport
   renderer_render(&gRenderer, &gScene);

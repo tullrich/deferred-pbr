@@ -261,7 +261,6 @@ static void physics_particle_contact_resolve_interpenetration(PhysicsParticleCon
 }
 
 static void physics_particle_contact_resolve_velocity(PhysicsParticleContact* contact, float dt) {
-  (void)(dt);
   // separating velocity will be negative if the bodies are closing, otherwise positive if they are separating
   float sep_velocity = physics_particle_contact_get_separating_velocity(contact);
 

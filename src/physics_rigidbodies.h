@@ -6,9 +6,10 @@ class PhysicsWorld;
 
 #define ENUM_PhysicsShapeType(D)					         \
   D(PHYSICS_SHAPE_TYPE_NONE, 		    "None")			   \
-  D(PHYSICS_SHAPE_TYPE_PLANE, 		  "Plane")	     \
   D(PHYSICS_SHAPE_TYPE_SPHERE, 		  "Sphere")	     \
-  D(PHYSICS_SHAPE_TYPE_BOX, 		    "Box")
+  D(PHYSICS_SHAPE_TYPE_BOX, 		    "Box")	       \
+  D(PHYSICS_SHAPE_TYPE_PLANE, 		  "Plane")       \
+  D(PHYSICS_SHAPE_TYPE_MAX, 		    "MAX")
 
 DECLARE_ENUM(PhysicsShapeType, physics_shape_type_strings, ENUM_PhysicsShapeType);
 
@@ -26,6 +27,7 @@ struct PhysicsShape
 
 PhysicsShape* physics_shape_allocate_sphere(float radius, int is_hollow = 0);
 PhysicsShape* physics_shape_allocate_box(const vec3 extents);
+PhysicsShape* physics_shape_allocate_plane(const vec3 normal, float d);
 void physics_shape_free(PhysicsShape* shape);
 void physics_shape_get_inertia_tensor(const PhysicsShape* shape, float mass, mat3x3 tensor_out);
 
@@ -81,11 +83,14 @@ void physics_rigid_body_set_mass(PhysicsRigidBody* rb, float mass);
 float physics_rigid_body_get_mass(const PhysicsRigidBody* rb);
 void physics_rigid_body_get_inertia_tensor(PhysicsRigidBody* rb, mat3x3 out);
 void physics_rigid_body_calc_derived_data(PhysicsRigidBody* rb);
+void physics_rigid_body_move(PhysicsRigidBody* rb, const vec3 delta);
 void physics_rigid_body_apply_force(PhysicsRigidBody* rb, const vec3 force);
 void physics_rigid_body_apply_force_at_local_point(PhysicsRigidBody* rb, const vec3 force, const vec3 local_point);
 void physics_rigid_body_apply_force_at_world_point(PhysicsRigidBody* rb, const vec3 force, const vec3 point);
 void physics_rigid_body_apply_torque(PhysicsRigidBody* rb, const vec3 torque);
+void physics_rigid_body_apply_impulse_at_world_point(PhysicsRigidBody* rb, const vec3 impulse, const vec3 point);
 void physics_rigid_body_get_world_point(const PhysicsRigidBody* rb, vec3 out, const vec3 local_point);
+void physics_rigid_body_get_velocity_at_world_point(const PhysicsRigidBody* rb, const vec3 world_point, vec3 out_velocity);
 void physics_rigid_body_integrate(PhysicsRigidBody* rb, float dt);
 void physics_rigid_body_debug_render(const PhysicsRigidBody* rb);
 
@@ -139,6 +144,9 @@ struct PhysicsContact
   // the coefficient of restitution representing the interactions between the materials of both particles
   float restitution;
 
+  // the friction of the contact
+  float friction;
+
   // the contact point in world space
   vec3 world_point;
 
@@ -150,6 +158,16 @@ struct PhysicsContact
 };
 
 void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, PhysicsRigidBody* b, float restitution, const vec3 world_point, const vec3 normal, float penetration);
+float physics_contact_get_separating_velocity(const PhysicsContact* contact);
+void physics_contact_resolve(PhysicsContact* contact, float dt);
+void physics_contact_debug_render(const PhysicsContact* contact);
+
+#define ENUM_ContactGeneratorType(D)					           \
+  D(CONTACT_GENERATOR_TYPE_NONE, 		      "None")			   \
+  D(CONTACT_GENERATOR_TYPE_PLANE, 		    "Plane")			 \
+  D(CONTACT_GENERATOR_TYPE_BRUTE_FORCE, 	"Brute Force")
+
+DECLARE_ENUM(ContactGeneratorType, contact_generator_type_strings, ENUM_ContactGeneratorType);
 
 struct PhysicsContactGenerator;
 typedef int(*AddContactsVFN)(const PhysicsContactGenerator* generator, const PhysicsWorld* world, PhysicsContact* next, int limit);
@@ -158,18 +176,25 @@ struct PhysicsContactGenerator
 {
   DECLATE_INTRUSIVE_LL_MEMBERS(PhysicsContactGenerator);
 
+  // the implementation type of this contact generator
+  ContactGeneratorType type;
+
   // the virtual add_contact function
   AddContactsVFN add_contacts_vfn;
 };
 
+PhysicsContactGenerator* physics_contact_generator_allocate_plane(const vec3 normal, float d, float restitution, float friction);
+PhysicsContactGenerator* physics_contact_generator_allocate_brute_force(float restitution, float friction);
+
+void physics_contact_generator_allocate_set_restitution_friction(PhysicsContactGenerator* generator, float restitution, float friction);
 int physics_contact_generator_add_contacts(const PhysicsContactGenerator* generator, const PhysicsWorld* world, PhysicsContact* next, int limit);
-PhysicsContactGenerator* physics_contact_generator_allocate_plane(const vec3 normal, float d, float contact_restitution);
 
 DECLARE_LINKED_LIST_TYPE(PhysicsRigidBody, PhysicsRigidBodyList);
 DECLARE_LINKED_LIST_TYPE(PhysicsForceGeneratorRegistration, PhysicsForceGeneratorRegistrationList);
 DECLARE_LINKED_LIST_TYPE(PhysicsContactGenerator, PhysicsContactGeneratorList);
 
-struct PhysicsWorld {
+struct PhysicsWorld
+{
   // The linked list of rigid bodies
   PhysicsRigidBodyList rigid_bodies;
 

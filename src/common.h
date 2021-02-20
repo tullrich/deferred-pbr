@@ -111,14 +111,14 @@ static inline void quat_from_euler(quat out, const vec3 euler) {
   vec3 axis;
   quat xrot, yrot, zrot;
   axis[0] = 1.0f; axis[1] = axis[2] = 0.0f;
-  quat_rotate(xrot, euler[0], axis);
+  quat_rotate(xrot, DEG_TO_RAD(euler[0]), axis);
   axis[1] = 1.0f; axis[0] = axis[2] = 0.0f;
-  quat_rotate(yrot, euler[1], axis);
+  quat_rotate(yrot, DEG_TO_RAD(euler[1]), axis);
   axis[2] = 1.0f; axis[0] = axis[1] = 0.0f;
-  quat_rotate(zrot, euler[2], axis);
+  quat_rotate(zrot, DEG_TO_RAD(euler[2]), axis);
   quat tmp;
   quat_mul(tmp, xrot, yrot);
-  quat_mul(out, tmp, zrot);
+  quat_mul(out, zrot, tmp);
 }
 
 static inline void quat_to_euler(vec3 out, const quat q) {
@@ -170,7 +170,7 @@ static inline void quat_add_scaled_vec3(vec3 r, const quat in, const vec3 v, flo
 static inline void quat_print(const quat q) {
   printf("<%f, %f, %f, %f>\n", q[0], q[1], q[2], q[3]);
 }
-static inline void mat4x4_printf(const mat4x4 m) {
+static inline void mat4x4_print(const mat4x4 m) {
   printf("[ %f, %f, %f, %f\n", m[0][0], m[0][1], m[0][2], m[0][3]);
   printf("  %f, %f, %f, %f\n", m[1][0], m[1][1], m[1][2], m[1][3]);
   printf("  %f, %f, %f, %f\n", m[2][0], m[2][1], m[2][2], m[2][3]);
@@ -262,6 +262,12 @@ static inline void mat3x3_from_mat4x4(mat3x3 M, const mat4x4 N) {
       M[i][j] = N[i][j];
 }
 
+static inline void mat3x3_from_basis(mat3x3 M, const vec3 i, const vec3 j, const vec3 k) {
+  for(int ii=0; ii<3; ++ii) M[ii][0] = i[ii];
+  for(int ii=0; ii<3; ++ii) M[ii][1] = j[ii];
+  for(int ii=0; ii<3; ++ii) M[ii][2] = k[ii];
+}
+
 static inline void mat3x3_dup(mat3x3 M, const mat3x3 N) {
   int i, j;
   for(i=0; i<3; ++i)
@@ -307,7 +313,15 @@ static inline void mat3x3_inverse(mat3x3 M, const mat3x3 N) {
   M[2][2] = (N[0][0] * N[1][1] - N[1][0] * N[0][1]) * invdet;
 }
 
-static inline void mat3x3_printf(const mat3x3 m) {
+static inline void mat3x3_transpose(mat3x3 M, mat3x3 const N)
+{
+  int i, j;
+  for(j=0; j<3; ++j)
+    for(i=0; i<3; ++i)
+      M[i][j] = N[j][i];
+}
+
+static inline void mat3x3_print(const mat3x3 m) {
   printf("[ %f, %f, %f\n", m[0][0], m[0][1], m[0][2]);
   printf("  %f, %f, %f\n", m[1][0], m[1][1], m[1][2]);
   printf("  %f, %f, %f ]\n", m[2][0], m[2][1], m[2][2]);
@@ -362,5 +376,7 @@ extern const quat Quat_Identity;
     values(ENUM_STR_VALUE)																			\
   };																														\
   const int strTable##_count = STATIC_ELEMENT_COUNT(strTable);
+
+#define ALMOST_ZERO(value) (((value) < FLT_EPSILON) && ((value) > -FLT_EPSILON))
 
 #include "utility.h"

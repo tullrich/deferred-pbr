@@ -9,7 +9,7 @@ typedef struct
 } Bounds;
 
 // Directy set the center and extents
-static inline void bounds_set(Bounds *b, vec3 center, vec3 extents) {
+static inline void bounds_set(Bounds *b, const vec3 center, const vec3 extents) {
   vec3_dup(b->center, center);
   vec3_dup(b->extents, extents);
 }

@@ -2,6 +2,7 @@
 #include "common.h"
 #include "scene.h"
 
+void debug_lines_submit_cube(const vec3 center, float sides, const vec3 rgb);
 void debug_lines_submit_aabb(const Bounds* b, const vec3 rgb);
 void debug_lines_submit_obb(const OBB* obb, const vec3 rgb);
 void debug_lines_submit(const vec3 start, const vec3 end, const vec3 rgb);

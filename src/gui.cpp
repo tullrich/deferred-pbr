@@ -269,6 +269,14 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, 
     ImGui::SameLine();
     state->step_frame = ImGui::Button("Step", ImVec2(60,0));
     ImGui::Text("Physics Sim: %s", state->paused ? "Paused" : "Running");
+    ImGui::Checkbox("Pause on collision", (bool*)&state->pause_on_collision);
+    ImGui::SliderFloat("Time Scale", (float*)&state->time_scale, 0.0f, 1.0f);
+
+    ImGui::SliderFloat("Restitution", (float*)&state->restitution, 0.0f, 1.0f);
+    ImGui::SliderFloat("Friction", (float*)&state->friction, 0.0f, 1.0f);
+    ImGui::SliderFloat("Mass", (float*)&state->mass, 0.0f, 100.0f);
+    ImGui::SliderFloat("Liner Damping", (float*)&state->linear_damping, 0.0f, 1.0f);
+    ImGui::SliderFloat("Angular Damping", (float*)&state->angular_damping, 0.0f, 1.0f);
   }
   ImGui::End();
 

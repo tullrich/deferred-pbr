@@ -47,8 +47,6 @@ void renderer_render(Renderer* r, const Scene* scene) {
   // render debug lines
   if (r->render_debug_lines) {
     debug_lines_render(scene);
-  } else {
-    debug_lines_clear();
   }
 
   // render debug shadow map picture-in-picture

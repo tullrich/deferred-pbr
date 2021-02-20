@@ -7,6 +7,14 @@ struct EditorState
 {
   int paused;
   int step_frame;
+  int pause_on_collision;
+  float time_scale;
+
+  float mass;
+  float restitution;
+  float friction;
+  float linear_damping;
+  float angular_damping;
 };
 
 void gui_initialize(SDL_Window* window);

@@ -33,9 +33,7 @@ int debug_lines_initialize() {
   return 0;
 }
 
-void debug_lines_submit_aabb(const Bounds* b, const vec3 rgb) {
-  vec3 min, max;
-  bounds_to_min_max(b, min, max);
+static void debug_lines_submit_min_max(const vec3 min, const vec3 max, const vec3 rgb) {
   debug_lines_submit(max[0], max[1], max[2], min[0], max[1], max[2], rgb);
   debug_lines_submit(max[0], max[1], max[2], max[0], min[1], max[2], rgb);
   debug_lines_submit(max[0], max[1], max[2], max[0], max[1], min[2], rgb);
@@ -48,6 +46,20 @@ void debug_lines_submit_aabb(const Bounds* b, const vec3 rgb) {
   debug_lines_submit(max[0], min[1], min[2], max[0], min[1], max[2], rgb);
   debug_lines_submit(min[0], max[1], min[2], max[0], max[1], min[2], rgb);
   debug_lines_submit(min[0], max[1], min[2], min[0], max[1], max[2], rgb);
+}
+
+void debug_lines_submit_cube(const vec3 center, float sides, const vec3 rgb) {
+  vec3 min, max, half_extents;
+  vec3_swizzle(half_extents, sides/2.0f);
+  vec3_sub(min, center, half_extents);
+  vec3_add(max, center, half_extents);
+  debug_lines_submit_min_max(min, max, rgb);
+}
+
+void debug_lines_submit_aabb(const Bounds* b, const vec3 rgb) {
+  vec3 min, max;
+  bounds_to_min_max(b, min, max);
+  debug_lines_submit_min_max(min, max, rgb);
 }
 
 void debug_lines_submit_obb(const OBB* obb, const vec3 rgb) {
@@ -105,7 +117,7 @@ void debug_lines_clear() {
 void debug_lines_render(const Scene *s) {
   GL_WRAP(glUseProgram(sLineShader.program));
   GL_WRAP(glDisable(GL_BLEND));
-  // GL_WRAP(glDisable(GL_DEPTH_TEST));
+  GL_WRAP(glDisable(GL_DEPTH_TEST));
   GL_WRAP(glDepthMask(GL_FALSE));
 
   GL_WRAP(glUniformMatrix4fv(sLineShader.view_proj_loc, 1, GL_FALSE, (const GLfloat*)s->camera.viewProj));
@@ -122,5 +134,4 @@ void debug_lines_render(const Scene *s) {
   );
 
   GL_WRAP(glDepthMask(GL_TRUE));
-  debug_lines_clear();
 }
