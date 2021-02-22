@@ -26,7 +26,7 @@ struct PhysicsShape
 };
 
 PhysicsShape* physics_shape_allocate_sphere(float radius, int is_hollow = 0);
-PhysicsShape* physics_shape_allocate_box(const vec3 extents);
+PhysicsShape* physics_shape_allocate_box(const vec3 sides);
 PhysicsShape* physics_shape_allocate_plane(const vec3 normal, float d);
 void physics_shape_free(PhysicsShape* shape);
 void physics_shape_get_inertia_tensor(const PhysicsShape* shape, float mass, mat3x3 tensor_out);

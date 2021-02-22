@@ -55,14 +55,14 @@ static int setup_scene(int sphere_scene) {
 
   // Setup ambient light
   vec3_dup(gScene.ambient_color, White);
-  gScene.ambient_intensity = 0.03f;
+  gScene.ambient_intensity = 1.0f;
 
   // Setup skybox
   gScene.skybox = &gSkyboxes[0].skybox;
 
   // Setup main directional light
   gScene.light = (Light*)malloc(sizeof(Light));
-  vec3 lightPos = { 0.0f, 0.0f, 10.0f };
+  vec3 lightPos = { 0.0f, 10.0f, 10.0f };
   light_initialize_point(gScene.light, lightPos, White, 100.0f);
 
   // Setup particle system
@@ -100,7 +100,7 @@ static int setup_scene(int sphere_scene) {
 
   // Setup floor
   Mesh* mesh = (Mesh*)malloc(sizeof(Mesh));
-  mesh_make_quad(mesh, 200, 200, 10);
+  mesh_make_quad(mesh, 200, 200, 6);
   gScene.models[1] = (Model*)malloc(sizeof(Model));
   model_initialize(gScene.models[1], mesh, &gMaterials[1].material);
   vec3_set(gScene.models[1]->position, 0, -3.0f, 0);
@@ -126,12 +126,14 @@ static int initialize() {
   update_loading_screen("Initializing renderer...", "", 0, 0);
 
   // setup editor state
+  gEditor.show_floor = 1;
   gEditor.time_scale = 1.0f;
   gEditor.mass = 100.0f;
   gEditor.friction = 0.0f;
   gEditor.restitution = 0.2f;
   gEditor.linear_damping = 0.9f;
   gEditor.angular_damping = 0.9f;
+  vec3_dup(gEditor.gravity, Gravity);
 
   int err = 0;
   printf("<-- Initializing renderer... -->\n");
@@ -170,7 +172,7 @@ static void spawn_entity(ForceGeneratorType type) {
   quat_from_euler(rot, gScene.models[0]->rot);
   const PhysicsShape* shape = physics_shape_allocate_box(Vec_One);
   // const PhysicsShape* shape = physics_shape_allocate_sphere(1.0f);
-  physics_rigid_body_initialize(&ent->body, gScene.models[0]->position, rot, Gravity, gEditor.mass, shape);
+  physics_rigid_body_initialize(&ent->body, gScene.models[0]->position, rot, gEditor.gravity, gEditor.mass, shape);
   ent->body.linear_damping = gEditor.linear_damping;
   ent->body.angular_damping = gEditor.angular_damping;
   physics_world_add_rigid_body(&gPhysWorld, &ent->body);
@@ -285,6 +287,8 @@ static int frame() {
     return 1;
   }
 
+  gScene.models[1]->hidden = !gEditor.show_floor;
+
   // update physics
   if (!gEditor.paused || gEditor.step_frame) {
     debug_lines_clear();
@@ -295,14 +299,19 @@ static int frame() {
     physics_world_run(&gPhysWorld, dt);
 
     if (gEditor.pause_on_collision) {
-      if (gPhysWorld.contacts_count > 0) {
-        gEditor.paused = 1;
+      for (int i = 0; i < gPhysWorld.contacts_count; i++) {
+        if (gPhysWorld.contacts[i].bodies[0] && gPhysWorld.contacts[i].bodies[1]) {
+          gEditor.paused = 1;
+        }
       }
+      // if (gPhysWorld.contacts_count > 0) {
+      //   gEditor.paused = 1;
+      // }
     }
 
     // Draw debug lines
     if (gRenderer.render_debug_lines) {
-      if (gScene.models[0]) {
+      if (gScene.models[0] && !gScene.models[0]->hidden) {
         OBB obb;
         model_get_obb(gScene.models[0], &obb);
         debug_lines_submit_obb(&obb, Green);
@@ -333,13 +342,6 @@ int main(int argc, char* argv[]) {
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE,            8);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,          8);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,           8);
-  SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE,          8);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,          16);
-  SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE,         32);
-  SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE,      8);
-  SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,    8);
-  SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,     8);
-  SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,    8);
 
   // init platform window
   if(!(gWindow = SDL_CreateWindow("PBR Renderer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED

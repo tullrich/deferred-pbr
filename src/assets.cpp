@@ -1,6 +1,6 @@
 #include "assets.h"
 
-// #define ALL_ASSETS
+#define ALL_ASSETS
 
 SkyboxDesc gSkyboxes[] = {
   {
@@ -30,9 +30,9 @@ MeshDesc gMeshes[] = {
   { .name = "Buddha", .path = "meshes/buddha/buddha.obj" },
   { .name = "Dragon", .path = "meshes/dragon/dragon.obj" },
   { .name = "Bunny", .path = "meshes/bunny/bunny.obj" },
-#ifdef ALL_ASSETS
   { .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj", .base_scale = 50.0f },
-#endif
+  { .name = "Water Tower", .path = "meshes/water_tower/old_water_tower_OBJ.obj" },
+  { .name = "Fire Elemental", .path = "meshes/fire_elemental/fire_elemental_OBJ.obj" },
   { .name = "None" }
 };
 const int gMeshesCount = STATIC_ELEMENT_COUNT(gMeshes);
@@ -46,28 +46,52 @@ MaterialDesc gMaterials[] = {
     .emissive_base = { 0.0f, 0.0f, 0.0f }
   },
   {
-    .name = "Terracotta",
-    .albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
-    .normal_map_path = "materials/Terracotta/terracotta_normal.png",
-    .albedo_base = { 1.0f, 1.0f, 1.0f },
-    .metalness_base = 0.0f,
-    .roughness_base = 1.0f,
-    .emissive_base = { 0.0f, 0.0f, 0.0f }
-  },
-#ifdef ALL_ASSETS
-  {
-    .name = "Snow Covered Path",
-    .albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
-    .normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
-    .height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
-    .metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
-    .roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
-    .ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
+    .name = "Blue Bathroom Tile",
+    .albedo_map_path = "materials/BlueBathroomTile2/bathroomtile2-basecolor.png",
+    .normal_map_path = "materials/BlueBathroomTile2/bathroomtile2-normal-dx.png",
+    .metalness_map_path = "materials/BlueBathroomTile2/bathroomtile2-metalness.png",
+    .roughness_map_path = "materials/BlueBathroomTile2/bathroomtile2-roughness.png",
+    .ao_map_path = "materials/BlueBathroomTile2/bathroomtile2-ao.png",
     .albedo_base = { 1.0f, 1.0f, 1.0f },
     .metalness_base = 1.0f,
     .roughness_base = 1.0f,
     .emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 0.1f
+    .height_map_scale = 1.0f
+  },
+  {
+    .name = "Fire Elemental",
+    .albedo_map_path = "materials/FireElemental/Albedo FireElemental.png",
+    .normal_map_path = "materials/FireElemental/Normal FireElemental.png",
+    .roughness_map_path = "materials/FireElemental/Roughness FireElemental.png",
+    .emissive_map_path = "materials/FireElemental/Emission FireElemental.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 1.0f, 1.0f, 1.0f },
+    .height_map_scale = 1.0f
+  },
+  {
+    .name = "Old Water Tower",
+    .albedo_map_path = "materials/OldWaterTower/Base_color.png",
+    .normal_map_path = "materials/OldWaterTower/normal.png",
+    .metalness_map_path = "materials/OldWaterTower/metallic.png",
+    .roughness_map_path = "materials/OldWaterTower/roughness.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 1.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 1.0f
+  },
+  {
+    .name = "Medievil",
+    .albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
+    .normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
+    .ao_map_path = "materials/Medievil/Medievil Stonework - AO Map.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 1.0f
   },
   {
     .name = "Sci-Fi Cube",
@@ -82,6 +106,30 @@ MaterialDesc gMaterials[] = {
     .roughness_base = 1.0f,
     .emissive_base = { 1.0f, 1.0f, 1.0f },
     .height_map_scale = 0.015f
+  },
+#ifdef ALL_ASSETS
+  {
+    .name = "Terracotta",
+    .albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
+    .normal_map_path = "materials/Terracotta/terracotta_normal.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f }
+  },
+  {
+    .name = "Snow Covered Path",
+    .albedo_map_path = "materials/SnowCoveredPath/snowcoveredpath_albedo.png",
+    .normal_map_path = "materials/SnowCoveredPath/snowcoveredpath_normal-dx.png",
+    .height_map_path = "materials/SnowCoveredPath/snowcoveredpath_height.png",
+    .metalness_map_path = "materials/SnowCoveredPath/snowcoveredpath_metallic.png",
+    .roughness_map_path = "materials/SnowCoveredPath/snowcoveredpath_roughness.png",
+    .ao_map_path = "materials/SnowCoveredPath/snowcoveredpath_ao.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 1.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .height_map_scale = 0.1f
   },
   {
     .name = "Gold",
@@ -135,17 +183,6 @@ MaterialDesc gMaterials[] = {
     .roughness_base = 1.0f,
     .emissive_base = { 0.0f, 0.0f, 0.0f },
     .height_map_scale = 0.1f
-  },
-  {
-    .name = "Medievil",
-    .albedo_map_path = "materials/Medievil/Medievil Stonework - Color Map.png",
-    .normal_map_path = "materials/Medievil/Medievil Stonework - (Normal Map).png",
-    .ao_map_path = "materials/Medievil/Medievil Stonework - AO Map.png",
-    .albedo_base = { 1.0f, 1.0f, 1.0f },
-    .metalness_base = 0.0f,
-    .roughness_base = 1.0f,
-    .emissive_base = { 0.0f, 0.0f, 0.0f },
-    .height_map_scale = 1.0f
   },
   {
     .name = "Moorish Lattice",

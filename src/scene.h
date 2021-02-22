@@ -63,6 +63,9 @@ typedef struct
 
   // The material to render with
   Material material;
+
+  // This object is not rendered if set
+  int hidden;
 } Model;
 
 void model_initialize(Model *out, const Mesh *mesh, const Material *mat);

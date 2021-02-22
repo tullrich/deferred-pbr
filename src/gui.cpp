@@ -143,6 +143,7 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, 
     }
     ImGui::ColorEdit3("Ambient Color", scene->ambient_color);
     ImGui::SliderFloat("Ambient Intensity", &scene->ambient_intensity, 0, 6.0f);
+    ImGui::Checkbox("Show Floor", (bool*)&state->show_floor);
   }
   if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::PushID("light");
@@ -275,8 +276,9 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, 
     ImGui::SliderFloat("Restitution", (float*)&state->restitution, 0.0f, 1.0f);
     ImGui::SliderFloat("Friction", (float*)&state->friction, 0.0f, 1.0f);
     ImGui::SliderFloat("Mass", (float*)&state->mass, 0.0f, 100.0f);
-    ImGui::SliderFloat("Liner Damping", (float*)&state->linear_damping, 0.0f, 1.0f);
+    ImGui::SliderFloat("Linear Damping", (float*)&state->linear_damping, 0.0f, 1.0f);
     ImGui::SliderFloat("Angular Damping", (float*)&state->angular_damping, 0.0f, 1.0f);
+    ImGui::SliderFloat("Gravity (-y)", (float*)&state->gravity[1], -50.0f, 0.0f);
   }
   ImGui::End();
 

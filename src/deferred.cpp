@@ -369,12 +369,8 @@ static void render_shading(Deferred* d, const Scene *s, const ShadowMap* sm) {
   GL_WRAP(glUniformMatrix4fv(shader->inv_proj_loc, 1, GL_FALSE, (const GLfloat*)inv_proj));
 
   // Light-space matrix for shadowmap
-  mat4x4 proj, view, vp, light;
-  vec3 center = { 0.0f, 0.0f, 0.0f };
-  mat4x4_ortho(proj, -50.0f, 50.0f, -50.0f, 50.0f, Z_NEAR, Z_FAR);
-  mat4x4_look_at(view, s->light->position, center, Axis_Up);
-  mat4x4_mul(vp, proj, view);
-  mat4x4_mul(light, vp, inv_view);
+  mat4x4 light;
+  mat4x4_mul(light, sm->vp, inv_view);
   GL_WRAP(glUniformMatrix4fv(shader->light_space_loc, 1, GL_FALSE, (const GLfloat*)light));
 
   utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
@@ -464,7 +460,7 @@ void deferred_render(Deferred *d, const Scene *s, const ShadowMap* sm) {
   GL_WRAP(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
   for (int i = 0; i < SCENE_MODELS_MAX; i++) {
-    if (s->models[i])
+    if (s->models[i] && !s->models[i]->hidden)
       render_geometry(s->models[i], d, s);
   }
 

@@ -328,6 +328,10 @@ GLuint utility_load_texture(GLenum target, const char *filepath) {
 
   GL_WRAP(glGenerateMipmap(target));
 
+  float aniso = 0.0f;
+  glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+  glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+
   printf("Loaded Image -- '%s' Width: %i Height %i Components %i\n", filepath, width, height, components);
 
   return texture_id;
@@ -366,6 +370,10 @@ GLuint utility_load_cubemap(const char* const* filepaths) {
   GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR));
   GL_WRAP(glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
   GL_WRAP(glGenerateMipmap(GL_TEXTURE_CUBE_MAP));
+
+  float aniso = 0.0f;
+  glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
 
   printf("Loaded Cubemap -- '%s' Width: %i Height %i Components %i\n", filepaths[0], width, height, components);
   return texture_id;

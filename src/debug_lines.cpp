@@ -133,5 +133,6 @@ void debug_lines_render(const Scene *s) {
     glEnd()
   );
 
+  GL_WRAP(glEnable(GL_DEPTH_TEST));
   GL_WRAP(glDepthMask(GL_TRUE));
 }

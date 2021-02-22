@@ -51,11 +51,11 @@ void physics_shape_get_inertia_tensor_box(const PhysicsShape* shape, float mass,
   tensor_out[2][2] = (1.0f/12.0f) * mass * (powf(box->extents[0] * 2.0f, 2.0f) + powf(box->extents[1] * 2.0f, 2.0f));
 }
 
-PhysicsShape* physics_shape_allocate_box(const vec3 extents) {
+PhysicsShape* physics_shape_allocate_box(const vec3 sides) {
   PhysicsBoxShape* box = (PhysicsBoxShape*)calloc(1, sizeof(PhysicsBoxShape));
   box->base.type = PHYSICS_SHAPE_TYPE_BOX;
   box->base.get_inertia_tensor_vfn = physics_shape_get_inertia_tensor_box;
-  vec3_dup(box->extents, extents);
+  vec3_dup(box->extents, sides);
   vec3_scale(box->extents, box->extents, 0.5f);
   return &box->base;
 }
@@ -129,12 +129,10 @@ int physics_collide_box_vs_plane(PhysicsRigidBody* a, PhysicsRigidBody* b, const
         vec3 vert; vec4 offset;
         vec4_set(offset, box->extents[0] * deltas[dx], box->extents[1] * deltas[dy], box->extents[2] * deltas[dz], 1.0f);
         mat4x4_mul_vec4(vert, a->transform, offset);
-        // debug_lines_submit_cube(vert, 0.02f, Yellow);
         float dist = vec3_mul_inner(vert, plane->normal);
         if (dist <= plane->d) {
           vec3 contact_point;
           vec3_scale(contact_point, plane->normal, -(dist - plane->d));
-          // printf("CONTACT OFFSET <%f, %f, %f>\n", FORMAT_VEC3(contact_point));
           vec3_add(contact_point, contact_point, vert);
           physics_contact_initialize(params->next + found++, a, NULL, params->restitution, contact_point, plane->normal, plane->d - dist);
         }
@@ -144,17 +142,219 @@ int physics_collide_box_vs_plane(PhysicsRigidBody* a, PhysicsRigidBody* b, const
   return found;
 }
 
+static float project_box_to_axis(const vec3 extents, const mat4x4 transform, const vec3 axis) {
+  float out = 0.0f;
+  for (int i = 0; i < 3; i++) {
+    vec3 basis;
+    mat4x4_get_basis_vector(basis, transform, i);
+    out += fabs(vec3_mul_inner(basis, axis)) * extents[i];
+  }
+  return out;
+}
+
+static bool is_overlapping_on_axis(const vec3 a_to_b, const vec3 extents_a, const mat4x4 tform_a, const vec3 extents_b, const mat4x4 tform_b, const vec3 in_axis, int case_code, int* min_case, float* min_penetration) {
+  if (vec3_len2(in_axis) < 0.0001f) return true;
+  vec3 axis;
+  vec3_norm(axis, in_axis);
+  float proj_size_a = project_box_to_axis(extents_a, tform_a, axis);
+  float proj_size_b = project_box_to_axis(extents_b, tform_b, axis);
+  float proj_dist = fabs(vec3_mul_inner(a_to_b, axis));
+  float penetration = proj_size_a + proj_size_b - proj_dist; // positive indicates overlap
+  if (penetration < 0) return false;
+  if (penetration < *min_penetration) {
+    *min_case = case_code;
+    *min_penetration = penetration;
+  }
+  return true;
+}
+
+static bool intersect_box_vs_box(const vec3 a_to_b, const vec3 extents_a, const mat4x4 tform_a, const vec3 extents_b, const mat4x4 tform_b, int* min_case, float* min_penetration, int* min_major_case) {
+  // test 6x basis vectors (3 per cube)
+  vec3 basis_a, basis_b;
+  for (int i = 0; i < 3; i++) {
+    mat4x4_get_basis_vector(basis_a, tform_a, i);
+    mat4x4_get_basis_vector(basis_b, tform_b, i);
+    if (!is_overlapping_on_axis(a_to_b, extents_a, tform_a, extents_b, tform_b, basis_a, i, min_case, min_penetration)) return false;
+    if (!is_overlapping_on_axis(a_to_b, extents_a, tform_a, extents_b, tform_b, basis_b, i + 3, min_case, min_penetration)) return false;
+  }
+
+  *min_major_case = *min_case;
+
+  // test 9x cross products of every basis vector pair
+  vec3 basis_cross;
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      mat4x4_get_basis_vector(basis_a, tform_a, i);
+      mat4x4_get_basis_vector(basis_b, tform_b, j);
+      vec3_mul_cross(basis_cross, basis_a, basis_b);
+      if (!is_overlapping_on_axis(a_to_b, extents_a, tform_a, extents_b, tform_b, basis_cross, 6 + i * 3 + j, min_case, min_penetration)) return false;
+    }
+  }
+
+  return true;
+}
+
+static void find_contact_from_edge_centers(const vec3 edge_center_a, const vec3 basis_a, float a_len, const vec3 edge_center_b, const vec3 basis_b, float b_len, int use_a, vec3 out_contact) {
+  float sq_mag_a = vec3_len2(basis_a);
+  float sq_mag_b = vec3_len2(basis_b);
+  float a_dot_b = vec3_mul_inner(basis_a, basis_b);
+
+  vec3 b_to_a;
+  vec3_sub(b_to_a, edge_center_a, edge_center_b);
+  float a_dot_dist = vec3_mul_inner(basis_a, b_to_a);
+  float b_dot_dist = vec3_mul_inner(basis_b, b_to_a);
+  float denom = sq_mag_a * sq_mag_b - a_dot_b * a_dot_b;
+
+  // parrallel lines
+  if (fabs(denom) < 0.0001f) {
+    vec3_dup(out_contact, use_a ? edge_center_a : edge_center_b);
+    return;
+  }
+
+  float mu_a = (a_dot_b * b_dot_dist - sq_mag_b * a_dot_dist) / denom;
+  float mu_b = (sq_mag_a * b_dot_dist - a_dot_b * a_dot_dist) / denom;
+  if (mu_a > a_len || mu_a < -a_len ||
+      mu_b > b_len || mu_b < -b_len) {
+      vec3_dup(out_contact, use_a ? edge_center_a : edge_center_b);
+  } else {
+    vec3 first, second;
+    vec3_add_scaled(first, edge_center_a, basis_a, mu_a);
+    vec3_add_scaled(second, edge_center_b, basis_b, mu_b);
+    vec3_scale(first, first, 0.5f);
+    vec3_scale(second, second, 0.5f);
+    vec3_add(out_contact, first, second);
+  }
+}
+
 int physics_collide_box_vs_box(PhysicsRigidBody* a, PhysicsRigidBody* b, const CollisionParams* params) {
-  (void)(a);(void)(b);(void)(params);
-  printf("physics_collide_box_vs_box\n");
-  return 0;
+  const PhysicsBoxShape* box_a = (const PhysicsBoxShape*)(a->shape);
+  const PhysicsBoxShape* box_b = (const PhysicsBoxShape*)(b->shape);
+
+  // Calculate A to B
+  vec3 a_to_b;
+  vec3_sub(a_to_b, b->position, a->position);
+
+  // Perform SAT test on all 15 possible axes (6x major axis, and 9x cross axis)
+  float min_penetration = FLT_MAX;
+  int min_case = -1;
+  int min_major_case = -1;
+  bool is_intersecting = intersect_box_vs_box(a_to_b, box_a->extents, a->transform, box_b->extents, b->transform, &min_case, &min_penetration, &min_major_case);
+
+  // Early out if no intersection was found
+  if (!is_intersecting) return 0;
+
+  if (min_case < 3) {
+    // A face intersects B vert
+    vec3 normal;
+    mat4x4_get_basis_vector(normal, a->transform, min_case);
+    if (vec3_mul_inner(normal, a_to_b) > 0.0f) {
+      vec3_scale(normal, normal, -1.0f);
+    }
+    vec4 vert;
+    vec3_dup(vert, box_b->extents);
+    vert[3] = 1.0f;
+    for (int i = 0; i < 3; i++) {
+      vec3 axis;
+      mat4x4_get_basis_vector(axis, b->transform, i);
+      float dist = vec3_mul_inner(axis, normal);
+      if (ALMOST_ZERO(dist)) {
+        dist = -vec3_mul_inner(axis, a_to_b);
+      }
+      if (dist < 0) vert[i] = -vert[i];
+    }
+    vec4 contact_point;
+    mat4x4_mul_vec4(contact_point, b->transform, vert);
+    physics_contact_initialize(params->next, a, b, params->restitution, contact_point, normal, min_penetration);
+    return 1;
+  }
+  else if (min_case < 6) {
+    // B face intersects A vert
+    vec3 normal;
+    mat4x4_get_basis_vector(normal, b->transform, min_case-3);
+    if (vec3_mul_inner(normal, a_to_b) < 0.0f) {
+      vec3_scale(normal, normal, -1.0f);
+    }
+    vec4 vert;
+    vec3_dup(vert, box_a->extents);
+    vert[3] = 1.0f;
+    for (int i = 0; i < 3; i++) {
+      vec3 axis;
+      mat4x4_get_basis_vector(axis, a->transform, i);
+      float dist = vec3_mul_inner(axis, normal);
+      if (ALMOST_ZERO(dist)) {
+        dist = vec3_mul_inner(axis, a_to_b);
+      }
+      if (dist < 0) vert[i] = -vert[i];
+    }
+    vec4 contact_point;
+    mat4x4_mul_vec4(contact_point, a->transform, vert);
+    physics_contact_initialize(params->next, b, a, params->restitution, contact_point, normal, min_penetration);
+    return 1;
+  }
+  else {
+    // Edge to Edge contact
+    int a_axis_idx = (min_case - 6) / 3;
+    int b_axis_idx = (min_case - 6) % 3;
+    vec3 a_axis, b_axis;
+    mat4x4_get_basis_vector(a_axis, a->transform, a_axis_idx);
+    mat4x4_get_basis_vector(b_axis, b->transform, b_axis_idx);
+    vec3 normal;
+    vec3_mul_cross(normal, a_axis, b_axis);
+    if (vec3_mul_inner(normal, a_to_b) > 0) {
+      vec3_scale(normal, normal, -1.0f);
+    }
+
+    // Workout the center point of each contacting edge
+    vec4 edge_center_a, edge_center_b;
+    edge_center_a[3] = edge_center_b[3] = 1.0f;
+    for (int i = 0; i < 3; i++) {
+      if (i != a_axis_idx) {
+        vec3 basis_a;
+        mat4x4_get_basis_vector(basis_a, a->transform, i);
+        float dist = vec3_mul_inner(basis_a, normal);
+        if (ALMOST_ZERO(dist)) {
+          dist = -vec3_mul_inner(basis_a, a_to_b);
+        }
+        edge_center_a[i] = box_a->extents[i] * (dist > 0.0f ? -1.0f : 1.0f);
+      } else {
+        edge_center_a[i] = 0.0f;
+      }
+      if (i != b_axis_idx) {
+        vec3 basis_b;
+        mat4x4_get_basis_vector(basis_b, b->transform, i);
+        float dist = vec3_mul_inner(basis_b, normal);
+        if (ALMOST_ZERO(dist)) {
+          dist = -vec3_mul_inner(basis_b, a_to_b);
+        }
+        edge_center_b[i] = box_b->extents[i] * (dist > 0.0f ? 1.0f : -1.0f);
+      } else {
+        edge_center_b[i] = 0.0f;
+      }
+    }
+    vec4 w_edge_center_a, w_edge_center_b;
+    mat4x4_mul_vec4(w_edge_center_a, a->transform, edge_center_a);
+    mat4x4_mul_vec4(w_edge_center_b, b->transform, edge_center_b);
+
+    // workout contact point
+    vec3 contact_point;
+    find_contact_from_edge_centers(
+      w_edge_center_a, a_axis, box_a->extents[a_axis_idx],
+      w_edge_center_b, b_axis, box_b->extents[b_axis_idx],
+      min_major_case > 2,
+      contact_point
+    );
+    physics_contact_initialize(params->next, a, b, params->restitution, contact_point, normal, min_penetration);
+    return 1;
+  }
 }
 
 typedef int(*CollideShapeFN)(PhysicsRigidBody* a, PhysicsRigidBody* b, const CollisionParams* params);
 CollideShapeFN gCollisionFNTable[PHYSICS_SHAPE_TYPE_MAX][PHYSICS_SHAPE_TYPE_MAX];
 
 void physics_init_collision_fn_table() {
+  gCollisionFNTable[PHYSICS_SHAPE_TYPE_SPHERE][PHYSICS_SHAPE_TYPE_BOX] = NULL;
   gCollisionFNTable[PHYSICS_SHAPE_TYPE_SPHERE][PHYSICS_SHAPE_TYPE_PLANE] = physics_collide_sphere_vs_plane;
+  gCollisionFNTable[PHYSICS_SHAPE_TYPE_SPHERE][PHYSICS_SHAPE_TYPE_SPHERE] = NULL;
   gCollisionFNTable[PHYSICS_SHAPE_TYPE_BOX][PHYSICS_SHAPE_TYPE_PLANE] = physics_collide_box_vs_plane;
   gCollisionFNTable[PHYSICS_SHAPE_TYPE_BOX][PHYSICS_SHAPE_TYPE_BOX] = physics_collide_box_vs_box;
 }
@@ -446,8 +646,7 @@ void physics_contact_get_frictionless_impulse(const PhysicsContact* contact, flo
   // v_per_i =  I_inv * t_per_i
   vec3 rotation_per_impulse_a;
   mat3x3_mul_vec3(rotation_per_impulse_a, contact->bodies[0]->inverse_inertia_tensor_world, torque_per_impulse_a);
-  mat3x3_print(contact->bodies[0]->inverse_inertia_tensor_world);
-  printf("rotation_per_impulse_a: "); vec3_print(rotation_per_impulse_a);
+  // printf("rotation_per_impulse_a: <"); vec3_print(rotation_per_impulse_a);
 
   // vel_at_q = v_per_i X q_rel
   vec3 rotation_at_contact_per_impulse_a;
@@ -457,7 +656,16 @@ void physics_contact_get_frictionless_impulse(const PhysicsContact* contact, flo
   float delta_vel_per_impulse = vec3_mul_inner(rotation_at_contact_per_impulse_a, contact->normal);
   delta_vel_per_impulse += contact->bodies[0]->inverse_mass;
   if (contact->bodies[1]) {
-    // delta_vel_per_impulse +=
+    vec3 contact_pos_b;
+    vec3_sub(contact_pos_b, contact->world_point, contact->bodies[1]->position);
+    vec3 torque_per_impulse_b;
+    vec3_mul_cross(torque_per_impulse_b, contact_pos_b, contact->normal);
+    vec3 rotation_per_impulse_b;
+    mat3x3_mul_vec3(rotation_per_impulse_b, contact->bodies[1]->inverse_inertia_tensor_world, torque_per_impulse_b);
+    vec3 rotation_at_contact_per_impulse_b;
+    vec3_mul_cross(rotation_at_contact_per_impulse_b, rotation_per_impulse_b, contact_pos_b);
+    delta_vel_per_impulse += vec3_mul_inner(rotation_at_contact_per_impulse_b, contact->normal);
+    delta_vel_per_impulse += contact->bodies[1]->inverse_mass;
   }
 
   float restitution = contact->restitution;
@@ -468,7 +676,7 @@ void physics_contact_get_frictionless_impulse(const PhysicsContact* contact, flo
   }
   float desired_delta_vel = -v_sep * (1 + restitution);
   vec3_scale(out_impulse, contact->normal, desired_delta_vel / delta_vel_per_impulse);
-  printf("restitution %f target velocity %f = delta velocity %f / vel_per_impulse %f = impulse: <%f, %f, %f> \n"
+  PHYSICS_PRINT("restitution %f target velocity %f = delta velocity %f / vel_per_impulse %f = impulse: <%f, %f, %f> \n"
     , restitution, desired_delta_vel + v_sep, desired_delta_vel, delta_vel_per_impulse, FORMAT_VEC3(out_impulse));
 }
 
@@ -494,7 +702,7 @@ static void physics_contact_resolve_interpenetration(PhysicsContact* contact, fl
   PHYSICS_PRINT("[moving part by %f from y %f to", contact->penetration, contact->bodies[0]->position[1]);
   physics_rigid_body_move(contact->bodies[0], contact->delta_resolution[0]);
   physics_rigid_body_calc_derived_data(contact->bodies[0]);
-  PHYSICS_PRINT(" %f] ", contact->bodies[0]->position[1]);
+  PHYSICS_PRINT(" %f]\n", contact->bodies[0]->position[1]);
 
   // apply correction to body b = -delta_p * (m_a) / (m_a + m_b)
   if (contact->bodies[1]) {
@@ -518,9 +726,9 @@ static void physics_contact_resolve_velocity(PhysicsContact* contact, float dt) 
   {
     vec3 point_velocity;
     physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, point_velocity);
-    float v_new_sep = physics_contact_get_separating_velocity(contact);
-    printf("BEFORE linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> new sep: %f\n"
-      , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity), v_new_sep);
+    PHYSICS_PRINT("BEFORE linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> start sep: %f\n"
+      , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity)
+      , physics_contact_get_separating_velocity(contact));
   }
 
   // delta_sep_v` = -v_sep - (c * v_sep)
@@ -540,9 +748,9 @@ static void physics_contact_resolve_velocity(PhysicsContact* contact, float dt) 
   {
     vec3 point_velocity;
     physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, point_velocity);
-    float v_new_sep = physics_contact_get_separating_velocity(contact);
-    printf("AFTER linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> new sep: %f\n"
-      , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity), v_new_sep);
+    PHYSICS_PRINT("AFTER linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> new sep: %f\n"
+      , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity)
+      , physics_contact_get_separating_velocity(contact));
     debug_lines_submit(contact->bodies[0]->position, contact->world_point, Yellow);
     vec3 debug_rot;
     vec3_add(debug_rot, contact->bodies[0]->rotation, contact->bodies[0]->position);
@@ -552,6 +760,7 @@ static void physics_contact_resolve_velocity(PhysicsContact* contact, float dt) 
     debug_lines_submit(contact->world_point, debug_point_vel, Blue);
   }
   if (contact->bodies[1]) {
+    vec3_scale(impulse, impulse, -1.0f);
     physics_rigid_body_apply_impulse_at_world_point(contact->bodies[1], impulse, contact->world_point);
   }
 }
@@ -693,7 +902,7 @@ static int physics_world_generate_contacts(PhysicsWorld* world) {
 
 static void physics_world_resolve_contacts(PhysicsWorld* world, PhysicsContact* contacts, int count, float dt) {
   (void)(world);
-  printf("Got %i contacts\n", count);
+  PHYSICS_PRINT("Got %i contacts\n", count);
   for (int i = 0; i < count; i++) {
     physics_contact_resolve_interpenetration(&contacts[i], dt);
     int max_idx = i;
@@ -714,7 +923,7 @@ static void physics_world_resolve_contacts(PhysicsWorld* world, PhysicsContact* 
    }
   }
   int iterations = 0;
-  printf("===START RESOLVE===\n");
+  PHYSICS_PRINT("===START RESOLVE===\n");
   while (iterations < count * 10)
   {
     float min_sep = -COLLISION_FUDGE;
@@ -730,12 +939,12 @@ static void physics_world_resolve_contacts(PhysicsWorld* world, PhysicsContact* 
     }
     if (index == count) break;
 
-    printf("RESOLVING CONTACT %i\n", index);
+    PHYSICS_PRINT("RESOLVING CONTACT %i\n", index);
     physics_contact_resolve_velocity(&contacts[index], dt);
 
     iterations++;
   }
-  printf("===END RESOLVE (%i iterations)===\n", iterations);
+  PHYSICS_PRINT("===END RESOLVE (%i iterations)===\n", iterations);
 }
 
 void physics_world_run(PhysicsWorld* world, float dt) {

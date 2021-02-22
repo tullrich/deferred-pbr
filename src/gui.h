@@ -15,6 +15,9 @@ struct EditorState
   float friction;
   float linear_damping;
   float angular_damping;
+  vec3 gravity;
+
+  int show_floor;
 };
 
 void gui_initialize(SDL_Window* window);

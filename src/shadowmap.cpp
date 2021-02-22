@@ -41,7 +41,7 @@ int shadow_map_initialize(ShadowMap* shadow_map, int width, int height) {
   }
 
   const char* debug_linearize_defines[] ={
-    // "#define DEBUG_RENDER_LINEARIZE\n"
+    "#define DEBUG_RENDER_LINEARIZE\n"
   };
   if (load_debug_shader(&shadow_map->debug_shader, debug_linearize_defines, STATIC_ELEMENT_COUNT(debug_linearize_defines))) {
     printf("Unable to load debug shader\n");
@@ -55,8 +55,10 @@ int shadow_map_initialize(ShadowMap* shadow_map, int width, int height) {
   // Init depth texture
   GL_WRAP(glGenTextures(1, &shadow_map->depth_buffer));
   GL_WRAP(glBindTexture(GL_TEXTURE_2D, shadow_map->depth_buffer));
-  GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-  GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT));
+  GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER));
+  GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER));
+  float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+  GL_WRAP(glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor));
   GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
   GL_WRAP(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
   GL_WRAP(glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0));
@@ -78,22 +80,12 @@ int shadow_map_initialize(ShadowMap* shadow_map, int width, int height) {
   return 0;
 }
 
-static void render_geometry(ShadowMap *shadow_map, const Model* model, const Scene *s) {
+static void render_geometry(ShadowMap *shadow_map, const Model* model) {
   if (!model->mesh->vertices)
     return;
 
   const DepthRenderShader* shader = &shadow_map->depth_render_shader;
   GL_WRAP(glUseProgram(shader->program));
-
-  mat4x4 proj;
-  mat4x4_ortho(proj, -50.0f, 50.0f, -50.0f, 50.0f, Z_NEAR, Z_FAR);
-
-  mat4x4 view;
-  vec3 center = { 0.0f, 0.0f, 0.0f };
-  mat4x4_look_at(view, s->light->position, center, Axis_Up);
-
-  mat4x4 vp;
-  mat4x4_mul(vp, proj, view);
 
   // calc model matrix
   mat4x4 m;
@@ -108,17 +100,35 @@ static void render_geometry(ShadowMap *shadow_map, const Model* model, const Sce
 
   // bind model-view matrix
   mat4x4 mv;
-  mat4x4_mul(mv, view, m);
+  mat4x4_mul(mv, shadow_map->view, m);
   GL_WRAP(glUniformMatrix4fv(shader->model_view_loc, 1, GL_FALSE, (const GLfloat*)mv));
 
   // bind model-view-projection matrix
   mat4x4 mvp;
-  mat4x4_mul(mvp, vp, m);
+  mat4x4_mul(mvp, shadow_map->vp, m);
   GL_WRAP(glUniformMatrix4fv(shader->model_view_proj_loc, 1, GL_FALSE, (const GLfloat*)mvp));
 
   mesh_draw(model->mesh, -1, -1, -1, shader->pos_loc);
 }
 
+void shadow_map_update_view_proj(ShadowMap *shadow_map, const Light* light) {
+  // Setup projection matrix
+  switch (light->type) {
+    case LIGHT_TYPE_POINT: {
+      mat4x4_perspective(shadow_map->proj, DEG_TO_RAD(90), (float)shadow_map->width/(float)shadow_map->height, Z_NEAR, Z_FAR);
+      break;
+    }
+    case LIGHT_TYPE_DIRECTIONAL: {
+      mat4x4_ortho(shadow_map->proj, -50.0f, 50.0f, -50.0f, 50.0f, Z_NEAR, Z_FAR);
+      break;
+    }
+    default: UNREACHABLE();
+  }
+
+  vec3 center = { 0.0f, 0.0f, 0.0f };
+  mat4x4_look_at(shadow_map->view, light->position, center, Axis_Up);
+  mat4x4_mul(shadow_map->vp, shadow_map->proj, shadow_map->view);
+}
 
 void shadow_map_render(ShadowMap *shadow_map, const Scene *s) {
   // Bind render target
@@ -131,13 +141,20 @@ void shadow_map_render(ShadowMap *shadow_map, const Scene *s) {
   GL_WRAP(glDepthFunc(GL_LEQUAL));
   GL_WRAP(glClearDepth(1.0f));
   GL_WRAP(glClear(GL_DEPTH_BUFFER_BIT));
+  GL_WRAP(glCullFace(GL_FRONT));
 
+  // Recalc view and projection matrices
+  shadow_map_update_view_proj(shadow_map, s->light);
+
+  // Render geometry
   for (int i = 0; i < SCENE_MODELS_MAX; i++) {
-    if (s->models[i])
-      render_geometry(shadow_map, s->models[i], s);
+    if (s->models[i] && !s->models[i]->hidden)
+      render_geometry(shadow_map, s->models[i]);
   }
 
   // Cleanup
+  GL_WRAP(glCullFace(GL_BACK));
+  GL_WRAP(glEnable(GL_BLEND));
   GL_WRAP(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 

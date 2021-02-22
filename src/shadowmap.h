@@ -30,6 +30,15 @@ struct ShadowMap
   // pixel dimensions
   int width, height;
 
+  // projection matrix
+  mat4x4 proj;
+
+  // view matrix
+  mat4x4 view;
+
+  // view-projection matrix
+  mat4x4 vp;
+
   // frame buffer
   GLuint fbo;
 

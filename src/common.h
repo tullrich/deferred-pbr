@@ -180,20 +180,25 @@ static inline void mat4x4_zero(mat4x4 m) {
   for (int i=0; i<4; i++)
     vec4_zero(m[i]);
 }
-static inline void mat4x4_to_euler(vec3 euler, mat4x4 const m) {
-  if (m[0][2] == 1.0f) {
-    euler[0] = atan2f(-m[1][0], -m[2][0]);
+
+static inline void mat4x4_get_basis_vector(vec3 axis, const mat4x4 M, int idx) {
+  vec3_set(axis, M[idx][0], M[idx][1], M[idx][2]);
+}
+
+static inline void mat4x4_to_euler(vec3 euler,const mat4x4 M) {
+  if (M[0][2] == 1.0f) {
+    euler[0] = atan2f(-M[1][0], -M[2][0]);
      euler[1] = -(float)M_PI/2.0f;
     euler[2] = 0.0f;
-  } else if (m[0][2] == -1.0f) {
-    euler[0] = atan2f(m[1][0], m[2][0]);
+  } else if (M[0][2] == -1.0f) {
+    euler[0] = atan2f(M[1][0], M[2][0]);
      euler[1] = (float)M_PI/2.0f;
     euler[2] = 0.0f;
   } else {
-     euler[1] = -asinf(m[0][2]);
+     euler[1] = -asinf(M[0][2]);
     float cosTheta = cosf(euler[1]);
-    euler[0] = atan2f(m[1][2]/cosTheta,m[2][2]/cosTheta);
-    euler[2] = atan2f(m[0][1]/cosTheta,m[0][0]/cosTheta);
+    euler[0] = atan2f(M[1][2]/cosTheta,M[2][2]/cosTheta);
+    euler[2] = atan2f(M[0][1]/cosTheta,M[0][0]/cosTheta);
   }
 }
 
@@ -353,8 +358,8 @@ extern const quat Quat_Identity;
 #define WINDOW_HEIGHT 1000
 #define VIEWPORT_HEIGHT 1000
 #define VIEWPORT_X_OFFSET SIDEBAR_WIDTH
-#define Z_NEAR 0.1f
-#define Z_FAR 400.0f
+#define Z_NEAR 0.2f
+#define Z_FAR 200.0f
 
 #define STATIC_ELEMENT_COUNT(arr) sizeof(arr)/sizeof(arr[0])
 #define BOOL_TO_STRING(b) ((b) ? "true" : "false")
@@ -378,5 +383,7 @@ extern const quat Quat_Identity;
   const int strTable##_count = STATIC_ELEMENT_COUNT(strTable);
 
 #define ALMOST_ZERO(value) (((value) < FLT_EPSILON) && ((value) > -FLT_EPSILON))
+
+#define UNREACHABLE() assert(false)
 
 #include "utility.h"

@@ -28,30 +28,30 @@ out vec4 outColor;
 
 struct Material
 {
-	vec3 Albedo;
-	vec3 Emissive;
-	float Roughness;
-	float Metalness;
-	float Occlusion;
+  vec3 Albedo;
+  vec3 Emissive;
+  float Roughness;
+  float Metalness;
+  float Occlusion;
 };
 
 vec3 Uncharted2ToneMapping(vec3 color)
 {
-  color *= 2;  // Hardcoded Exposure Adjustment
-	float A = 0.15;
-	float B = 0.50;
-	float C = 0.10;
-	float D = 0.20;
-	float E = 0.02;
-	float F = 0.30;
-	float W = 11.2;
-	float exposure = 2.;
-	color *= exposure;
-	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
-	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
-	color /= white;
-	color = pow(color, vec3(1. / GAMMA));
-	return color;
+  //color *= 2;  // Hardcoded Exposure Adjustment
+  float A = 0.22;//0.15;
+  float B = 0.30;//0.50;
+  float C = 0.10;
+  float D = 0.20;
+  float E = 0.01;//0.02;
+  float F = 0.22;//0.30;
+  float W = 11.2;
+  float exposure = 2.;
+  color *= exposure;
+  color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+  float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+  color /= white;
+  color = pow(color, vec3(1. / GAMMA));
+  return color;
 }
 
 // Schlick-Frensel curve approximation
@@ -64,7 +64,7 @@ vec3 FresnelSchlick(vec3 F0, float cosTheta)
 // See: https://seblagarde.wordpress.com/2011/08/17/hello-world/
 vec3 FresnelSchlickWithRoughness(vec3 F0, float cosTheta, float roughness)
 {
-	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+  return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 // Reconstruct view space position from depth
@@ -161,9 +161,9 @@ vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
 
   // BRDF
   vec3 specBrdf = CookTorrenceSpecularBRDF(F, N, V, H, L, m.Roughness);
-	vec3 diffuseBrdf = kD * (m.Albedo / PI) * (1.0 - m.Metalness); // Lambert diffuse
+  vec3 diffuseBrdf = kD * (m.Albedo / PI) * (1.0 - m.Metalness); // Lambert diffuse
 
-  // Point light attenuation
+  // Point/Directional light attenuation
   float A = mix(1.0f, 1.0 / (1.0 + 0.1 * dot(MainLightPosition.xyz - P, MainLightPosition.xyz - P)), MainLightPosition.w);
 
   // L
@@ -174,16 +174,16 @@ vec3 DirectRadiance(vec3 P, vec3 N, vec3 V, Material m, vec3 F0)
 // PBR IBL from Env map
 vec3 IBLAmbientRadiance(vec3 N, vec3 V, Material m, vec3 F0)
 {
-	vec3 worldN = (InvView * vec4(N, 0)).xyz;	// World normal
-	vec3 worldV = (InvView * vec4(V, 0)).xyz;	// World view
-	vec3 irradiance = pow(texture(EnvIrrMap, worldN).xyz, vec3(GAMMA));
+  vec3 worldN = (InvView * vec4(N, 0)).xyz;	// World normal
+  vec3 worldV = (InvView * vec4(V, 0)).xyz;	// World view
+  vec3 irradiance = pow(texture(EnvIrrMap, worldN).xyz, vec3(GAMMA));
 
   // cos(angle) between surface normal and eye
   float NdV = max(0.001, dot(worldN, worldV));
-	vec3 kS = FresnelSchlickWithRoughness(F0, NdV, m.Roughness);
-	vec3 kD = 1.0 - kS;
+  vec3 kS = FresnelSchlickWithRoughness(F0, NdV, m.Roughness);
+  vec3 kD = 1.0 - kS;
 
-	vec3 diffuseBrdf = m.Albedo * (1.0 - m.Metalness); // Lambert diffuse
+  vec3 diffuseBrdf = m.Albedo * (1.0 - m.Metalness); // Lambert diffuse
   vec3 diffuse = kD * diffuseBrdf * irradiance;
 
   const float MAX_REFLECTION_LOD = 6.0;
@@ -192,41 +192,43 @@ vec3 IBLAmbientRadiance(vec3 N, vec3 V, Material m, vec3 F0)
   vec3 prefilteredColor = pow(textureLod(EnvPrefilterMap, R,  m.Roughness * MAX_REFLECTION_LOD).rgb, vec3(GAMMA));
   vec3 specular = prefilteredColor * (kS * envBRDF.x + envBRDF.y);
 
-	return (diffuse + specular) * m.Occlusion; // IBL ambient
+  return AmbientTerm * (diffuse + specular) * m.Occlusion; // IBL ambient
 }
 
 float ShadowMapVisibility(vec3 P, vec3 N) {
-  vec3 PL = (LightSpace * vec4(P, 1.0)).xyz * 0.5 + 0.5;
+  vec4 PLw = (LightSpace * vec4(P, 1.0));
+  vec3 PL = (PLw.xyz / PLw.w) * 0.5 + 0.5;
+  if (PL.z > 1.0 || PL.z < 0.0) return 0.0;
   float closestDepth = texture(ShadowMap, PL.xy).r;
   vec3 L = normalize(MainLightPosition.xyz - P * MainLightPosition.w);
-  float bias = max(0.05 * (1.0 - dot(N, L)), 0.005);
+  float bias = max(0.005 * (1.0 - dot(N, L)), 0.003);
   return ((PL.z - bias ) > closestDepth) ? 1.0 : 0.0;
 }
 
 void main()
 {
   // Sample G-Buffer
-	vec4 albedoAO = texture(GBuffer_Albedo, Texcoord);
-	vec4 emissiveRough = texture(GBuffer_Roughness, Texcoord);
-	vec3 N = normalize(texture(GBuffer_Normal, Texcoord).xyz);
-	float metal = texture(GBuffer_Metalness, Texcoord).r;
-	float D = texture(GBuffer_Depth, Texcoord).x;
+  vec4 albedoAO = texture(GBuffer_Albedo, Texcoord);
+  vec4 emissiveRough = texture(GBuffer_Roughness, Texcoord);
+  vec3 N = normalize(texture(GBuffer_Normal, Texcoord).xyz);
+  float metal = texture(GBuffer_Metalness, Texcoord).r;
+  float D = texture(GBuffer_Depth, Texcoord).x;
 
-	// Setup surface material
-	Material m;
-	m.Albedo = pow(albedoAO.rgb, vec3(GAMMA)); // Gamme to linear
-	m.Emissive = pow(emissiveRough.xyz, vec3(GAMMA));
-	m.Roughness = emissiveRough.w;
-	m.Metalness = metal;
-	m.Occlusion = albedoAO.w;
+  // Setup surface material
+  Material m;
+  m.Albedo = pow(albedoAO.rgb, vec3(GAMMA)); // Gamma to linear
+  m.Emissive = pow(emissiveRough.xyz, vec3(GAMMA));
+  m.Roughness = emissiveRough.w;
+  m.Metalness = metal;
+  m.Occlusion = albedoAO.w;
 
-	// Recompute viewspace position from UV + depth
+  // Recompute viewspace position from UV + depth
   vec3 P = ViewPositionFromDepth(Texcoord, D);
 
   // Direction to eye in viewspace
   vec3 V = normalize(-P);
 
-	// Lerp between Dia-electric = 0.04f to Metal = albedo
+  // Lerp between Dia-electric = 0.04f to Metal = albedo
   vec3 F0 = mix(vec3(0.04), m.Albedo, m.Metalness);
 
   // Shadow map visibility term
@@ -247,7 +249,7 @@ void main()
   result = Uncharted2ToneMapping(result);
 #endif
 
-	// Shader output
-	outColor = vec4(result, 1.0);
-	gl_FragDepth = D;
+  // Shader output
+  outColor = vec4(result, 1.0);
+  gl_FragDepth = D;
 }
