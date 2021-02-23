@@ -15,13 +15,17 @@ The material system uses a roughness/metallic workflow and supports any/all of t
 There is also a small tool to stitch cubemaps and bake irradiance maps (support for generating prefiltered radiance maps is NYI).
 
 # Screenshots
-![Screenshot1](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/ShadowMaps.png)
+![Screenshot1](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/GoldBunnyHDR.png)
 
-![Screenshot2](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/PurpleBuddha.png)
+![Screenshot2](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/TileBunnyHDR.png)
 
-![Screenshot3](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/ParallaxMapping.png)
+![Screenshot3](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/ShadowMaps.png)
 
-![Screenshot4](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/TerracottaSphere.png)
+![Screenshot4](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/PurpleBuddha.png)
+
+![Screenshot5](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/ParallaxMapping.png)
+
+![Screenshot6](https://raw.githubusercontent.com/tullrich/deferred/master/screenshots/TerracottaSphere.png)
 
 # References
 * Material textures come from [freepbr.com](https://freepbr.com/)

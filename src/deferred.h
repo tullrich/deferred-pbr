@@ -104,6 +104,7 @@ typedef struct
   GLint inv_view_loc;
   GLint inv_proj_loc;
   GLint light_space_loc;
+  GLint exposure_loc;
 } LightingShader;
 
 typedef struct

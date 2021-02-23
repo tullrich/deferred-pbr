@@ -72,6 +72,7 @@ static int load_lighting_shader(LightingShader* shader, const char* tonemapping_
   GL_WRAP(shader->inv_view_loc = glGetUniformLocation(shader->program, "InvView"));
   GL_WRAP(shader->inv_proj_loc = glGetUniformLocation(shader->program, "InvProjection"));
   GL_WRAP(shader->light_space_loc = glGetUniformLocation(shader->program, "LightSpace"));
+  GL_WRAP(shader->exposure_loc = glGetUniformLocation(shader->program, "Exposure"));
   return 0;
 }
 
@@ -372,6 +373,9 @@ static void render_shading(Deferred* d, const Scene *s, const ShadowMap* sm) {
   mat4x4 light;
   mat4x4_mul(light, sm->vp, inv_view);
   GL_WRAP(glUniformMatrix4fv(shader->light_space_loc, 1, GL_FALSE, (const GLfloat*)light));
+
+  // HDR Exposure value
+  GL_WRAP(glUniform1f(shader->exposure_loc, s->camera.exposure));
 
   utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
 }

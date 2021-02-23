@@ -126,6 +126,7 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, 
     ImGui::Checkbox("Auto Rotate", (bool*)&scene->camera.auto_rotate);
     ImGui::SliderFloat("Cam Zoom", (float*)&scene->camera.boom_len, 0.0f, 150.0f);
     ImGui::SliderFloat("FOVy", (float*)&scene->camera.fovy, 0.0f, 180.0f);
+    ImGui::SliderFloat("Exposure", (float*)&scene->camera.exposure, 0.0f, 1.0f);
   }
   if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::Combo("Skybox Render Mode", (int*)&renderer->deferred.skybox_mode, skybox_mode_strings, skybox_mode_strings_count);

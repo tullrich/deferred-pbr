@@ -17,6 +17,12 @@ SkyboxDesc gSkyboxes[] = {
     .prefilter_path = "environments/SanFrancisco4/SanFrancisco4_Prefilter.dds"
   },
   {
+    .name = "Paper Mill",
+    .env_path = "environments/PaperMill/PaperMill_Env.dds",
+    .irr_path = "environments/PaperMill/PaperMill_Irr.dds",
+    .prefilter_path = "environments/PaperMill/PaperMill_Prefilter.dds"
+  },
+  {
     .name = "UV Debug",
     .env_path = "environments/UVDebug/UVDebug_Env.dds",
   }

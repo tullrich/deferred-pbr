@@ -52,6 +52,7 @@ static int setup_scene(int sphere_scene) {
   gScene.camera.boom_len = 30.0f;
   gScene.camera.fovy = 72.0f;
   gScene.camera.rot[0] = gScene.camera.rot[1] = -30.0f;
+  gScene.camera.exposure = 1.0f;
 
   // Setup ambient light
   vec3_dup(gScene.ambient_color, White);

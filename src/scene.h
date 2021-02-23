@@ -41,6 +41,9 @@ typedef struct
 
   // if set, the camera rotates about the origin
   int auto_rotate;
+
+  // HDR Exposure. Defaults to 1.0f
+  float exposure;
 } Camera;
 
 void camera_update(Camera* camera, float dt);

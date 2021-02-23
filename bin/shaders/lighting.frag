@@ -22,6 +22,7 @@ uniform float MainLightIntensity;
 uniform mat4x4 InvView;
 uniform mat4x4 InvProjection;
 uniform mat4x4 LightSpace;
+uniform float Exposure;
 
 out vec4 outColor;
 
@@ -37,13 +38,12 @@ struct Material
 
 vec3 Uncharted2ToneMapping(vec3 color)
 {
-  //color *= 2;  // Hardcoded Exposure Adjustment
   float A = 0.22;//0.15;
   float B = 0.30;//0.50;
   float C = 0.10;
   float D = 0.20;
   float E = 0.01;//0.02;
-  float F = 0.22;//0.30;
+  float F = 0.30;//0.30;
   float W = 11.2;
   float exposure = 2.;
   color *= exposure;
@@ -246,7 +246,7 @@ void main()
   result = pow(result, vec3(1.0/GAMMA));
 #endif
 #ifdef TONE_MAPPING_UNCHARTED2
-  result = Uncharted2ToneMapping(result);
+  result = Uncharted2ToneMapping(Exposure*result);
 #endif
 
   // Shader output
