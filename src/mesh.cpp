@@ -230,7 +230,12 @@ static void calc_tangent(const vec3 v1, const vec3 v2, const vec3 v3,
   // |             | = ----------------- |            | |             |
   // | U.x U.y U.z |   F.s G.t - F.t G.s | -G.s   F.s | | E.x E.y E.z |
   vec3 T, U;
-  float r = 1.0f / (F[0] * G[1] - G[0] * F[1]);
+  float div = (F[0] * G[1] - G[0] * F[1]);
+  if (ALMOST_ZERO(div)) {
+    vec4_zero(ta1); vec4_zero(ta2); vec4_zero(ta3);
+    return;
+  }
+  float r = (1.0f / div);
   T[0] = (G[1] * D[0] - F[1] * E[0]) * r;
   T[1] = (G[1] * D[1] - F[1] * E[1]) * r;
   T[2] = (G[1] * D[2] - F[1] * E[2]) * r;
