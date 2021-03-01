@@ -113,7 +113,7 @@ int physics_collide_sphere_vs_plane(PhysicsRigidBody* a, PhysicsRigidBody* b, co
   vec3 contact_point;
   vec3_scale(contact_point, plane->normal, distance + sphere->radius);
   vec3_sub(contact_point, a->position, contact_point);
-  physics_contact_initialize(params->next, a, NULL, params->restitution, contact_point, plane->normal, -distance);
+  physics_contact_initialize(params->next, a, NULL, params->restitution, params->friction, contact_point, plane->normal, -distance);
   return 1;
 }
 
@@ -134,7 +134,7 @@ int physics_collide_box_vs_plane(PhysicsRigidBody* a, PhysicsRigidBody* b, const
           vec3 contact_point;
           vec3_scale(contact_point, plane->normal, -(dist - plane->d));
           vec3_add(contact_point, contact_point, vert);
-          physics_contact_initialize(params->next + found++, a, NULL, params->restitution, contact_point, plane->normal, plane->d - dist);
+          physics_contact_initialize(params->next + found++, a, NULL, params->restitution, params->friction, contact_point, plane->normal, plane->d - dist);
         }
       }
     }
@@ -264,7 +264,7 @@ int physics_collide_box_vs_box(PhysicsRigidBody* a, PhysicsRigidBody* b, const C
     }
     vec4 contact_point;
     mat4x4_mul_vec4(contact_point, b->transform, vert);
-    physics_contact_initialize(params->next, a, b, params->restitution, contact_point, normal, min_penetration);
+    physics_contact_initialize(params->next, a, b, params->restitution, params->friction, contact_point, normal, min_penetration);
     return 1;
   }
   else if (min_case < 6) {
@@ -288,7 +288,7 @@ int physics_collide_box_vs_box(PhysicsRigidBody* a, PhysicsRigidBody* b, const C
     }
     vec4 contact_point;
     mat4x4_mul_vec4(contact_point, a->transform, vert);
-    physics_contact_initialize(params->next, b, a, params->restitution, contact_point, normal, min_penetration);
+    physics_contact_initialize(params->next, b, a, params->restitution, params->friction, contact_point, normal, min_penetration);
     return 1;
   }
   else {
@@ -343,7 +343,7 @@ int physics_collide_box_vs_box(PhysicsRigidBody* a, PhysicsRigidBody* b, const C
       min_major_case > 2,
       contact_point
     );
-    physics_contact_initialize(params->next, a, b, params->restitution, contact_point, normal, min_penetration);
+    physics_contact_initialize(params->next, a, b, params->restitution, params->friction, contact_point, normal, min_penetration);
     return 1;
   }
 }
@@ -391,6 +391,7 @@ void physics_rigid_body_initialize(PhysicsRigidBody* rb, const vec3 position, co
   rb->linear_damping = rb->angular_damping = 1.0f;
   physics_rigid_body_set_mass(rb, mass);
   physics_rigid_body_calc_derived_data(rb);
+  vec3_zero(rb->last_frame_accel);
 }
 
 void physics_rigid_body_set_mass(PhysicsRigidBody* rb, float mass) {
@@ -486,15 +487,14 @@ void physics_rigid_body_integrate(PhysicsRigidBody* rb, float dt) {
   (void)(dt);
 
   // calc linear acceleration
-  vec3 acceleration;
-  vec3_add_scaled(acceleration, rb->acceleration, rb->force, rb->inverse_mass);
+  vec3_add_scaled(rb->last_frame_accel, rb->acceleration, rb->force, rb->inverse_mass);
 
   // calc angular acceleration
   vec3 angular_acceleration;
   mat3x3_mul_vec3(angular_acceleration, rb->inverse_inertia_tensor_world, rb->torque);
 
   // integrate velocity
-  vec3_add_scaled(rb->velocity, rb->velocity, acceleration, dt);
+  vec3_add_scaled(rb->velocity, rb->velocity, rb->last_frame_accel, dt);
 
   // integrate angular velocity
   vec3_add_scaled(rb->rotation, rb->rotation, angular_acceleration, dt);
@@ -584,11 +584,12 @@ void physics_force_generator_debug_render(const PhysicsForceGenerator* generator
   }
 }
 
-void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, PhysicsRigidBody* b, float restitution, const vec3 world_point, const vec3 normal, float penetration) {
+void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, PhysicsRigidBody* b, float restitution, float friction, const vec3 world_point, const vec3 normal, float penetration) {
   memset(contact, 0, sizeof(PhysicsContact));
   contact->bodies[0] = a;
   contact->bodies[1] = b;
   contact->restitution = restitution;
+  contact->friction = friction;
   contact->penetration = penetration;
   vec3_dup(contact->world_point, world_point);
   vec3_dup(contact->normal, normal);
@@ -596,15 +597,19 @@ void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, Ph
 
 // velocity of point q: v_q = a_v cross (q - p) + v
 // < 0 is a closing velocity
-float physics_contact_get_separating_velocity(const PhysicsContact* contact) {
-  vec3 velocity; // velocity of contact point on a
-  physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, velocity);
+void physics_contact_get_contact_velocity(const PhysicsContact* contact, vec3 contact_vel) {
+  physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, contact_vel);
   if (contact->bodies[1]) {
     vec3 vel_b; // initial velocity of contact point on b
     physics_rigid_body_get_velocity_at_world_point(contact->bodies[1], contact->world_point, vel_b);
-    vec3_sub(velocity, velocity, vel_b);
+    vec3_sub(contact_vel, contact_vel, vel_b);
   }
-  return vec3_mul_inner(velocity, contact->normal);
+}
+
+float physics_contact_get_separating_velocity(const PhysicsContact* contact) {
+  vec3 contact_vel;
+  physics_contact_get_contact_velocity(contact, contact_vel);
+  return vec3_mul_inner(contact_vel, contact->normal);
 }
 
 static void make_orthonormal_basis(const vec3 x, vec3 y_out, vec3 z_out) {
@@ -632,52 +637,71 @@ void physics_make_contact_to_world_mat(const PhysicsContact* contact, mat3x3 mat
   mat3x3_from_basis(mat_out, contact->normal, y_axis, z_axis);
 }
 
-void physics_contact_get_frictionless_impulse(const PhysicsContact* contact, float v_sep, vec3 out_impulse) {
-  // q_rel = q - p
-  vec3 contact_pos_a;
-  vec3_sub(contact_pos_a, contact->world_point, contact->bodies[0]->position);
-  // printf("contact_pos_a: "); vec3_print(contact_pos_a);
+static float rotation_j_per_impulse_at_point(const PhysicsRigidBody* rb, const vec3 world_point, const vec3 impulse_dir) {
+  vec3 contact_pos;
+  vec3_sub(contact_pos, world_point, rb->position); // q_rel = q - p
+  vec3 torque_per_impulse;
+  vec3_mul_cross(torque_per_impulse, contact_pos, impulse_dir); // t_per_i = (q_rel X D)   d is impulse direction
+  vec3 rotation_per_impulse;
+  mat3x3_mul_vec3(rotation_per_impulse, rb->inverse_inertia_tensor_world, torque_per_impulse); // v_per_i =  I_inv * t_per_i
+  vec3 rotation_at_contact_per_impulse;
+  vec3_mul_cross(rotation_at_contact_per_impulse, rotation_per_impulse, contact_pos); // vel_at_q = v_per_i X q_rel
+  return vec3_mul_inner(rotation_at_contact_per_impulse, impulse_dir);
+}
 
-  // t_per_i = (q_rel X D)   d is impulse direction
-  vec3 torque_per_impulse_a;
-  vec3_mul_cross(torque_per_impulse_a, contact_pos_a, contact->normal);
-  // printf("torque_per_impulse_a: "); vec3_print(torque_per_impulse_a);
-
-  // v_per_i =  I_inv * t_per_i
-  vec3 rotation_per_impulse_a;
-  mat3x3_mul_vec3(rotation_per_impulse_a, contact->bodies[0]->inverse_inertia_tensor_world, torque_per_impulse_a);
-  // printf("rotation_per_impulse_a: <"); vec3_print(rotation_per_impulse_a);
-
-  // vel_at_q = v_per_i X q_rel
-  vec3 rotation_at_contact_per_impulse_a;
-  vec3_mul_cross(rotation_at_contact_per_impulse_a, rotation_per_impulse_a, contact_pos_a);
-  // printf("rotation_at_contact_per_impulse_a: "); vec3_print(rotation_at_contact_per_impulse_a);
-
-  float delta_vel_per_impulse = vec3_mul_inner(rotation_at_contact_per_impulse_a, contact->normal);
+void physics_contact_get_frictionless_impulse(const PhysicsContact* contact, float dt, float v_sep, vec3 out_impulse) {
+  float delta_vel_per_impulse = rotation_j_per_impulse_at_point(contact->bodies[0], contact->world_point, contact->normal);
   delta_vel_per_impulse += contact->bodies[0]->inverse_mass;
   if (contact->bodies[1]) {
-    vec3 contact_pos_b;
-    vec3_sub(contact_pos_b, contact->world_point, contact->bodies[1]->position);
-    vec3 torque_per_impulse_b;
-    vec3_mul_cross(torque_per_impulse_b, contact_pos_b, contact->normal);
-    vec3 rotation_per_impulse_b;
-    mat3x3_mul_vec3(rotation_per_impulse_b, contact->bodies[1]->inverse_inertia_tensor_world, torque_per_impulse_b);
-    vec3 rotation_at_contact_per_impulse_b;
-    vec3_mul_cross(rotation_at_contact_per_impulse_b, rotation_per_impulse_b, contact_pos_b);
-    delta_vel_per_impulse += vec3_mul_inner(rotation_at_contact_per_impulse_b, contact->normal);
+    delta_vel_per_impulse += rotation_j_per_impulse_at_point(contact->bodies[1], contact->world_point, contact->normal);
     delta_vel_per_impulse += contact->bodies[1]->inverse_mass;
   }
 
   float restitution = contact->restitution;
-  const float MIN_VELOCITY = 0.02f;
+  const float MIN_VELOCITY = 0.1f;
   if (fabs(v_sep) < MIN_VELOCITY)
   {
       restitution = 0.0f;
   }
-  float desired_delta_vel = -v_sep * (1 + restitution);
+
+  float velocity_from_accel = vec3_mul_inner(contact->bodies[0]->last_frame_accel, contact->normal) * dt;
+  if (contact->bodies[1]) {
+    velocity_from_accel -= vec3_mul_inner(contact->bodies[1]->last_frame_accel, contact->normal) * dt;
+  }
+  // float desired_delta_vel = -velocity_from_accel - (v_sep - velocity_from_accel) * (1 + restitution);
+  // -velocity_from_accel - (v_sep + v_sep*restitution - velocity_from_accel - velocity_from_accel*restitution)
+  // -v_sep - v_sep*restitution + velocity_from_accel*restitution)
+   float desired_delta_vel = -v_sep - restitution * (v_sep - velocity_from_accel);
   vec3_scale(out_impulse, contact->normal, desired_delta_vel / delta_vel_per_impulse);
   PHYSICS_PRINT("restitution %f target velocity %f = delta velocity %f / vel_per_impulse %f = impulse: <%f, %f, %f> \n"
     , restitution, desired_delta_vel + v_sep, desired_delta_vel, delta_vel_per_impulse, FORMAT_VEC3(out_impulse));
+}
+
+void physics_contact_get_friction_impulse(const PhysicsContact* contact, float max_j, vec3 contact_vel, vec3 out_impulse) {
+  vec3 tangent_vel;
+  vec3_scale(tangent_vel, contact->normal, vec3_mul_inner(contact_vel, contact->normal));
+  vec3_sub(tangent_vel, contact_vel, tangent_vel);
+
+  float mag = vec3_len(tangent_vel);
+  if (mag > FLT_EPSILON) {
+    vec3 tangent;
+    vec3_norm(tangent, tangent_vel);
+    float delta_vel_per_impulse = rotation_j_per_impulse_at_point(contact->bodies[0], contact->world_point, tangent);
+    delta_vel_per_impulse += contact->bodies[0]->inverse_mass;
+
+    if (contact->bodies[1]) {
+      delta_vel_per_impulse += rotation_j_per_impulse_at_point(contact->bodies[1], contact->world_point, tangent);
+      delta_vel_per_impulse += contact->bodies[1]->inverse_mass;
+    }
+
+    float jt = fmin(fmax(mag / delta_vel_per_impulse, -contact->friction * max_j), contact->friction * max_j);
+    // printf("contact_vel <%f, %f, %f>\nnormal <%f, %f, %f>\ntangent <%f, %f, %f> mag %f delta_vel_per_impulse %f jt %f\n"
+      // , FORMAT_VEC3(contact_vel), FORMAT_VEC3(contact->normal), FORMAT_VEC3(tangent_vel), mag, delta_vel_per_impulse, jt);
+    vec3_scale(out_impulse, tangent, -jt);
+  }
+  else {
+    vec3_zero(out_impulse);
+  }
 }
 
 static void physics_contact_resolve_interpenetration(PhysicsContact* contact, float dt) {
@@ -728,40 +752,41 @@ static void physics_contact_resolve_velocity(PhysicsContact* contact, float dt) 
     physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, point_velocity);
     PHYSICS_PRINT("BEFORE linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> start sep: %f\n"
       , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity)
-      , physics_contact_get_separating_velocity(contact));
+      , v_sep);
   }
 
-  // delta_sep_v` = -v_sep - (c * v_sep)
   vec3 impulse;
-  if (ALMOST_ZERO(contact->friction)) {
-    physics_contact_get_frictionless_impulse(contact, v_sep, impulse);
-  } else {
-    // Setup contact coordinate system. Pos-X axis is in the direction of the contact normal
-    // mat3x3 contact_to_world, world_to_contact;
-    // physics_make_contact_to_world_mat(contact, contact_to_world);
-    // mat3x3_transpose(world_to_contact, contact_to_world);
-    printf("Friction NYI\n");
-    vec3_zero(impulse);
-  }
-  // apply impulse to bodies
+  physics_contact_get_frictionless_impulse(contact, dt, v_sep, impulse);
   physics_rigid_body_apply_impulse_at_world_point(contact->bodies[0], impulse, contact->world_point);
+  if (contact->bodies[1]) {
+    vec3_scale(impulse, impulse, -1.0f);
+    physics_rigid_body_apply_impulse_at_world_point(contact->bodies[1], impulse, contact->world_point);
+  }
+
+  vec3 tangent_impulse = { 0.0f };
+  if (!ALMOST_ZERO(contact->friction)) {
+    vec3 contact_vel;
+    physics_contact_get_contact_velocity(contact, contact_vel);
+    float max_j = vec3_len(impulse);
+    physics_contact_get_friction_impulse(contact, max_j, contact_vel, tangent_impulse);
+    physics_rigid_body_apply_impulse_at_world_point(contact->bodies[0], tangent_impulse, contact->world_point);
+    if (contact->bodies[1]) {
+      vec3_scale(tangent_impulse, tangent_impulse, -1.0f);
+      physics_rigid_body_apply_impulse_at_world_point(contact->bodies[1], tangent_impulse, contact->world_point);
+    }
+  }
+
   {
     vec3 point_velocity;
     physics_rigid_body_get_velocity_at_world_point(contact->bodies[0], contact->world_point, point_velocity);
     PHYSICS_PRINT("AFTER linear_velocity <%f, %f, %f> angular_velocity <%f, %f, %f> point_velocity <%f, %f, %f> new sep: %f\n"
       , FORMAT_VEC3(contact->bodies[0]->velocity), FORMAT_VEC3(contact->bodies[0]->rotation), FORMAT_VEC3(point_velocity)
       , physics_contact_get_separating_velocity(contact));
-    debug_lines_submit(contact->bodies[0]->position, contact->world_point, Yellow);
-    vec3 debug_rot;
-    vec3_add(debug_rot, contact->bodies[0]->rotation, contact->bodies[0]->position);
-    debug_lines_submit(contact->bodies[0]->position, debug_rot, Red);
-    vec3 debug_point_vel;
-    vec3_add(debug_point_vel, contact->world_point, point_velocity);
-    debug_lines_submit(contact->world_point, debug_point_vel, Blue);
-  }
-  if (contact->bodies[1]) {
-    vec3_scale(impulse, impulse, -1.0f);
-    physics_rigid_body_apply_impulse_at_world_point(contact->bodies[1], impulse, contact->world_point);
+    vec3 debug_impulse;
+    vec3_add(debug_impulse, impulse, contact->world_point);
+    debug_lines_submit(contact->world_point, debug_impulse, Red);
+    vec3_add(debug_impulse, tangent_impulse, contact->world_point);
+    debug_lines_submit(contact->world_point, debug_impulse, Yellow);
   }
 }
 

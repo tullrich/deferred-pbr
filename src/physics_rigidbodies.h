@@ -76,6 +76,9 @@ struct PhysicsRigidBody
 
   // angular drag force rad/s
   float angular_damping;
+
+  // last frames acceleration only
+  vec3 last_frame_accel;
 };
 
 void physics_rigid_body_initialize(PhysicsRigidBody* rb, const vec3 position, const quat orient, const vec3 acceleration, float mass, const PhysicsShape* shape);
@@ -157,7 +160,7 @@ struct PhysicsContact
   float penetration;
 };
 
-void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, PhysicsRigidBody* b, float restitution, const vec3 world_point, const vec3 normal, float penetration);
+void physics_contact_initialize(PhysicsContact* contact, PhysicsRigidBody* a, PhysicsRigidBody* b, float restitution, float friction, const vec3 world_point, const vec3 normal, float penetration);
 float physics_contact_get_separating_velocity(const PhysicsContact* contact);
 void physics_contact_resolve(PhysicsContact* contact, float dt);
 void physics_contact_debug_render(const PhysicsContact* contact);
