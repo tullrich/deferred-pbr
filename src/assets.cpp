@@ -9,18 +9,36 @@ SkyboxDesc gSkyboxes[] = {
     .irr_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Irr.dds",
     .prefilter_path = "environments/SaintPetersBasilica/SaintPetersBasilica_Prefilter.dds"
   },
+  {
+    .name = "Paper Mill",
+    .env_path = "environments/PaperMill/PaperMill_Env.dds",
+    .irr_path = "environments/PaperMill/PaperMill_Irr.dds",
+    .prefilter_path = "environments/PaperMill/PaperMill_Prefilter.dds"
+  },
+  {
+    .name = "Circus Arena",
+    .env_path = "environments/CircusArena/CircusArena_Env.dds",
+    .irr_path = "environments/CircusArena/CircusArena_Irr.dds",
+    .prefilter_path = "environments/CircusArena/CircusArena_Prefilter.dds"
+  },
+  {
+    .name = "Venice Sunset",
+    .env_path = "environments/VeniceSunset/VeniceSunset_Env.dds",
+    .irr_path = "environments/VeniceSunset/VeniceSunset_Irr.dds",
+    .prefilter_path = "environments/VeniceSunset/VeniceSunset_Prefilter.dds"
+  },
+  {
+    .name = "Blaubeuren Night",
+    .env_path = "environments/BlaubeurenNight/BlaubeurenNight_Env.dds",
+    .irr_path = "environments/BlaubeurenNight/BlaubeurenNight_Irr.dds",
+    .prefilter_path = "environments/BlaubeurenNight/BlaubeurenNight_Prefilter.dds"
+  },
 #ifdef ALL_ASSETS
   {
     .name = "San Francisco",
     .env_path = "environments/SanFrancisco4/SanFrancisco4_Env_512.dds",
     .irr_path = "environments/SanFrancisco4/SanFrancisco4_Irr.dds",
     .prefilter_path = "environments/SanFrancisco4/SanFrancisco4_Prefilter.dds"
-  },
-  {
-    .name = "Paper Mill",
-    .env_path = "environments/PaperMill/PaperMill_Env.dds",
-    .irr_path = "environments/PaperMill/PaperMill_Irr.dds",
-    .prefilter_path = "environments/PaperMill/PaperMill_Prefilter.dds"
   },
   {
     .name = "UV Debug",
@@ -39,6 +57,9 @@ MeshDesc gMeshes[] = {
   { .name = "Bunny UV", .path = "meshes/bunny_uv/bunny_uv.obj", .base_scale = 50.0f },
   { .name = "Water Tower", .path = "meshes/water_tower/old_water_tower_OBJ.obj" },
   { .name = "Fire Elemental", .path = "meshes/fire_elemental/fire_elemental_OBJ.obj" },
+  { .name = "Sheep", .path = "meshes/sheep_voxel/sheep_voxel.obj" },
+  { .name = "Sheep Atlas", .path = "meshes/sheep_voxel_atlas/sheep_voxel_atlas.obj" },
+  { .name = "Sheep Blender", .path = "meshes/sheep_voxel_blender/sheep_voxel_blender.obj" },
   { .name = "None" }
 };
 const int gMeshesCount = STATIC_ELEMENT_COUNT(gMeshes);
@@ -64,6 +85,35 @@ MaterialDesc gMaterials[] = {
     .emissive_base = { 0.0f, 0.0f, 0.0f },
     .height_map_scale = 1.0f
   },
+  {
+    .name = "Sheep",
+    .albedo_map_path = "meshes/sheep_voxel/Textures/palette(Clone).png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .use_point_sampling = true
+  },
+  {
+    .name = "Sheep Atlas",
+    .albedo_map_path = "meshes/sheep_voxel_atlas/Textures/palette(Clone).png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .use_point_sampling = true
+  },
+  {
+    .name = "Sheep Blender",
+    // .albedo_map_path = "meshes/sheep_voxel_atlas/Textures/palette(Clone).png",
+    .ao_map_path = "meshes/sheep_voxel_blender/sheep-ao.png",
+    .albedo_base = { 1.0f, 1.0f, 1.0f },
+    .metalness_base = 0.0f,
+    .roughness_base = 1.0f,
+    .emissive_base = { 0.0f, 0.0f, 0.0f },
+    .use_point_sampling = true
+  },
+#ifdef ALL_ASSETS
   {
     .name = "Fire Elemental",
     .albedo_map_path = "materials/FireElemental/Albedo FireElemental.png",
@@ -113,7 +163,6 @@ MaterialDesc gMaterials[] = {
     .emissive_base = { 1.0f, 1.0f, 1.0f },
     .height_map_scale = 0.015f
   },
-#ifdef ALL_ASSETS
   {
     .name = "Terracotta",
     .albedo_map_path = "materials/Terracotta/terracotta_diffuse.png",
