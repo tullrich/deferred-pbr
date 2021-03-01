@@ -105,6 +105,7 @@ typedef struct
   GLint inv_proj_loc;
   GLint light_space_loc;
   GLint exposure_loc;
+  GLint ao_strength_loc;
 } LightingShader;
 
 typedef struct
@@ -134,6 +135,7 @@ typedef struct
   Material default_mat;
   GBuffer g_buffer;
   GLuint brdf_lut_tex;
+  float ao_strength;
 } Deferred;
 
 int deferred_initialize(Deferred* d);

@@ -35,6 +35,7 @@ struct MaterialDesc
   vec3 emissive_base;
   float height_map_scale;
   Material material;
+  int use_point_sampling;
 };
 
 int material_initialize_default(Material *out);

@@ -25,19 +25,19 @@ int material_initialize_default(Material *out) {
 int material_load(Material *out, const MaterialDesc *desc) {
   memset(out, 0, sizeof(Material));
 
-  if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture(GL_TEXTURE_2D, desc->albedo_map_path)))
+  if (!desc->albedo_map_path || !(out->albedo_map = utility_load_texture(GL_TEXTURE_2D, desc->albedo_map_path, desc->use_point_sampling)))
     out->albedo_map = 0;
-  if (!desc->normal_map_path || !(out->normal_map = utility_load_texture(GL_TEXTURE_2D, desc->normal_map_path)))
-    out->normal_map= 0;
-  if (!desc->height_map_path || !(out->height_map = utility_load_texture(GL_TEXTURE_2D, desc->height_map_path)))
+  if (!desc->normal_map_path || !(out->normal_map = utility_load_texture(GL_TEXTURE_2D, desc->normal_map_path, desc->use_point_sampling)))
+    out->normal_map = 0;
+  if (!desc->height_map_path || !(out->height_map = utility_load_texture(GL_TEXTURE_2D, desc->height_map_path, desc->use_point_sampling)))
     out->height_map = 0;
-  if (!desc->metalness_map_path || !(out->metalness_map = utility_load_texture(GL_TEXTURE_2D, desc->metalness_map_path)))
+  if (!desc->metalness_map_path || !(out->metalness_map = utility_load_texture(GL_TEXTURE_2D, desc->metalness_map_path, desc->use_point_sampling)))
     out->metalness_map = 0;
-  if (!desc->roughness_map_path || !(out->roughness_map = utility_load_texture(GL_TEXTURE_2D, desc->roughness_map_path)))
+  if (!desc->roughness_map_path || !(out->roughness_map = utility_load_texture(GL_TEXTURE_2D, desc->roughness_map_path, desc->use_point_sampling)))
     out->roughness_map = 0;
-  if (!desc->ao_map_path || !(out->ao_map = utility_load_texture(GL_TEXTURE_2D, desc->ao_map_path)))
+  if (!desc->ao_map_path || !(out->ao_map = utility_load_texture(GL_TEXTURE_2D, desc->ao_map_path, desc->use_point_sampling)))
     out->ao_map = 0;
-  if (!desc->emissive_map_path || !(out->emissive_map = utility_load_texture(GL_TEXTURE_2D, desc->emissive_map_path)))
+  if (!desc->emissive_map_path || !(out->emissive_map = utility_load_texture(GL_TEXTURE_2D, desc->emissive_map_path, desc->use_point_sampling)))
     out->emissive_map = 0;
   vec3_dup(out->albedo_base, desc->albedo_base);
   out->metalness_base = desc->metalness_base;

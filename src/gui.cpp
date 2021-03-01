@@ -120,6 +120,7 @@ void gui_render(SDL_Window* window, Renderer* renderer, Scene* scene, float dt, 
   );
   ImGui::Combo("Render Mode", (int*)&renderer->deferred.render_mode, render_mode_strings, render_mode_strings_count);
   ImGui::Combo("Tonemapping Operator", (int*)&renderer->deferred.tonemapping_op, tonemapping_op_strings, tonemapping_op_strings_count);
+  ImGui::SliderFloat("AO Strength", (float*)&renderer->deferred.ao_strength, 0.0f, 10.0f);
   ImGui::Checkbox("Show Debug Lines", (bool*)&renderer->render_debug_lines);
   ImGui::Separator();
   if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {

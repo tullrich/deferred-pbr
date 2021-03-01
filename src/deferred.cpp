@@ -73,6 +73,8 @@ static int load_lighting_shader(LightingShader* shader, const char* tonemapping_
   GL_WRAP(shader->inv_proj_loc = glGetUniformLocation(shader->program, "InvProjection"));
   GL_WRAP(shader->light_space_loc = glGetUniformLocation(shader->program, "LightSpace"));
   GL_WRAP(shader->exposure_loc = glGetUniformLocation(shader->program, "Exposure"));
+  GL_WRAP(shader->ao_strength_loc = glGetUniformLocation(shader->program, "AOStrength"));
+
   return 0;
 }
 
@@ -96,6 +98,7 @@ int deferred_initialize(Deferred* d) {
   d->skybox_mode = SKYBOX_MODE_ENV_MAP;
   d->prefilter_lod = 0.0f;
   d->tonemapping_op = TONEMAPPING_OP_UNCHARTED2;
+  d->ao_strength = 1.0f;
 
   // Initialize default material
   if (material_initialize_default(&d->default_mat)) {
@@ -377,6 +380,10 @@ static void render_shading(Deferred* d, const Scene *s, const ShadowMap* sm) {
   // HDR Exposure value
   GL_WRAP(glUniform1f(shader->exposure_loc, s->camera.exposure));
 
+  // AO strength
+  GL_WRAP(glUniform1f(shader->ao_strength_loc, d->ao_strength));
+
+  // Render every pixel
   utility_draw_fullscreen_quad(shader->texcoord_loc, shader->pos_loc);
 }
 
